@@ -8,15 +8,24 @@ import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	ActivityFeed,
+	capitalize,
 	formatDuration,
+	formatInterval,
 	humanize,
 	JobStateBadge,
 	JobTypeIcon,
 	OutcomeBadge,
+	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { SettingsForm } from "@/components/kelp/maintenance/settings-form.tsx";
-import { EmptyState, ErrorState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
-import { Badge } from "@/components/reui/badge";
+import {
+	AuroraCard,
+	EmptyState,
+	ErrorState,
+	PageHeader,
+	Reveal,
+	SkeletonBlock,
+} from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
@@ -97,13 +106,16 @@ function JobTypePage() {
 		);
 	}
 
+	const runtime = config.data.runtime;
 	return (
 		<>
 			<PageHeader
 				title={name}
 				description={
-					<span className="flex items-center gap-2">
-						<JobTypeIcon jobType={jobType} className="size-4 shrink-0 text-primary" />
+					<span className="flex items-start gap-3">
+						<span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-area/15 text-area">
+							<JobTypeIcon jobType={jobType} className="size-4" />
+						</span>
 						{config.data.description}
 					</span>
 				}
@@ -130,11 +142,31 @@ function JobTypePage() {
 					)
 				}
 			/>
+			<Reveal>
+				<AuroraCard className="mb-12 grid gap-8 p-7 sm:p-8 lg:grid-cols-[1fr_1.4fr] lg:items-end">
+					<div>
+						<p className="text-[13px] text-foreground/70">
+							{runtime.enabled ? "Runs automatically" : "Runs only when started here"}
+						</p>
+						<p className="mt-3 font-[450] text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
+							{runtime.enabled
+								? capitalize(formatInterval(runtime.detectionIntervalMinutes) || "on demand")
+								: "Manual only"}
+						</p>
+					</div>
+					<dl className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+						<ScheduleFact label="Jobs per check" value={runtime.maxJobsPerDetection} />
+						<ScheduleFact label="At once in the cluster" value={runtime.globalExecutionConcurrency} />
+						<ScheduleFact label="At once per worker" value={runtime.perWorkerExecutionConcurrency} />
+						<ScheduleFact label="Retries" value={runtime.retryLimit} />
+					</dl>
+				</AuroraCard>
+			</Reveal>
 			<Tabs
 				value={tab}
 				onValueChange={(value) => navigate({ search: { tab: value as (typeof TABS)[number] } })}
 			>
-				<div className="mb-4 flex items-center justify-between gap-3">
+				<div className="mb-6 flex items-center justify-between gap-3">
 					<TabsList variant="line">
 						<TabsTrigger value="settings">Settings</TabsTrigger>
 						<TabsTrigger value="jobs">Jobs</TabsTrigger>
@@ -335,12 +367,12 @@ function HistoryTab({ jobType }: { jobType: string }) {
 	);
 }
 
-const PRIORITY_VARIANT = {
-	critical: "destructive-light",
-	high: "warning-light",
-	normal: "info-light",
-	low: "outline",
-	unspecified: "outline",
+const PRIORITY_TONE = {
+	critical: "danger",
+	high: "warning",
+	normal: "info",
+	low: "neutral",
+	unspecified: "neutral",
 } as const;
 
 function DetectionSheet({
@@ -378,12 +410,12 @@ function DetectionSheet({
 				{result && (
 					<div className="space-y-6 px-4 pb-6">
 						{result.error && (
-							<p className="rounded-lg bg-destructive/10 px-3 py-2 text-destructive text-sm">
+							<p className="rounded-md bg-destructive/10 px-4 py-3 text-destructive-foreground text-sm">
 								{result.error}
 							</p>
 						)}
 						{result.skippedReason && (
-							<p className="rounded-lg bg-muted px-3 py-2 text-sm">
+							<p className="rounded-md bg-raised px-4 py-3 text-sm">
 								Skipped: {result.skippedReason}
 								{result.eligibleAfter && ` Eligible again ${formatRelative(result.eligibleAfter)}.`}
 							</p>
@@ -393,12 +425,12 @@ function DetectionSheet({
 								<h3 className="mb-2 font-medium text-sm">Proposed jobs</h3>
 								<ul className="space-y-2">
 									{result.proposals.map((proposal) => (
-										<li key={proposal.id} className="rounded-lg border p-3">
+										<li key={proposal.id} className="rounded-md bg-raised p-4">
 											<div className="flex items-start justify-between gap-2">
 												<p className="font-medium text-sm">{proposal.summary || proposal.id}</p>
-												<Badge variant={PRIORITY_VARIANT[proposal.priority]} className="capitalize">
+												<Pill tone={PRIORITY_TONE[proposal.priority]} className="capitalize">
 													{proposal.priority === "unspecified" ? "normal" : proposal.priority}
-												</Badge>
+												</Pill>
 											</div>
 											{proposal.detail && (
 												<p className="mt-1 text-muted-foreground text-xs">{proposal.detail}</p>
@@ -408,9 +440,12 @@ function DetectionSheet({
 													{Object.entries(proposal.labels)
 														.filter(([key, value]) => value && key !== "task_type")
 														.map(([key, value]) => (
-															<Badge key={key} variant="outline" className="font-normal">
+															<span
+																key={key}
+																className="inline-flex h-6 items-center gap-1 rounded-full bg-foreground/[0.06] px-2.5 text-xs"
+															>
 																{humanize(key)}: <span className="font-mono">{value}</span>
-															</Badge>
+															</span>
 														))}
 												</div>
 											)}
@@ -430,14 +465,26 @@ function DetectionSheet({
 	);
 }
 
+function ScheduleFact({ label, value }: { label: string; value: number }) {
+	return (
+		<div className="flex flex-col-reverse gap-1.5">
+			<dt className="text-[13px] text-foreground/70">{label}</dt>
+			<dd className="font-[450] text-3xl leading-none tracking-[-0.03em] tabular">{value}</dd>
+		</div>
+	);
+}
+
 function JobTypeSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading job type">
-			<SkeletonBlock className="mt-2 mb-2 h-8 w-56" />
-			<SkeletonBlock className="mb-6 h-4 w-96 max-w-full" />
-			<SkeletonBlock className="mb-4 h-8 w-64" />
-			{[0, 1, 2].map((i) => (
-				<SkeletonBlock key={i} className="mb-4 h-48 rounded-xl" />
+			<div className="pt-12 pb-10">
+				<SkeletonBlock className="h-12 w-72" />
+				<SkeletonBlock className="mt-5 h-5 w-96 max-w-full" />
+			</div>
+			<SkeletonBlock className="mb-12 h-40 rounded-2xl" />
+			<SkeletonBlock className="mb-6 h-9 w-72 rounded-full" />
+			{[0, 1].map((i) => (
+				<SkeletonBlock key={i} className="mb-4 h-56 rounded-lg" />
 			))}
 		</div>
 	);

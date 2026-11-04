@@ -30,8 +30,8 @@ describe("retention", () => {
 
 describe("partition ring", () => {
 	test("draws arcs, closing a single full-ring partition just short", () => {
-		expect(arcPath(0, 630)).toMatch(/^M [\d.]+ [\d.]+ A 66 66 0 0 1 [\d.]+ [\d.]+$/);
-		expect(arcPath(0, 2520)).toContain("A 66 66 0 1 1");
+		expect(arcPath(0, 630)).toMatch(/^M [\d.]+ [\d.]+ A 100 100 0 0 1 [\d.]+ [\d.]+$/);
+		expect(arcPath(0, 2520)).toContain("A 100 100 0 1 1");
 		expect(arcPath(0, 10)).toBe(arcPath(0, 10, 0));
 	});
 

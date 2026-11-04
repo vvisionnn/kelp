@@ -12,7 +12,7 @@ import {
 	Waypoints,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { Badge } from "@/components/reui/badge";
+import type { ReactNode } from "react";
 import { formatRelative } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "../motion.ts";
@@ -58,20 +58,52 @@ export function sourceLabel(source: string): string {
 	return SOURCES[key] ?? humanize(key);
 }
 
-const STATE_STYLE: Record<
-	JobState,
-	{
-		label: string;
-		variant: "success-light" | "destructive-light" | "info-light" | "warning-light" | "outline";
-	}
-> = {
-	pending: { label: "Queued", variant: "outline" },
-	assigned: { label: "Assigned", variant: "info-light" },
-	running: { label: "Running", variant: "info-light" },
-	succeeded: { label: "Succeeded", variant: "success-light" },
-	failed: { label: "Failed", variant: "destructive-light" },
-	canceled: { label: "Canceled", variant: "warning-light" },
-	unknown: { label: "Unknown", variant: "outline" },
+export type Tone = "success" | "danger" | "info" | "warning" | "neutral";
+
+const TONES: Record<Tone, string> = {
+	success: "bg-success/12 text-success-foreground",
+	danger: "bg-destructive/12 text-destructive-foreground",
+	info: "bg-info/12 text-info-foreground",
+	warning: "bg-warning/14 text-warning-foreground",
+	neutral: "bg-foreground/[0.07] text-foreground/75",
+};
+
+/** A small status pill: tinted by its reserved status color, always with a dot and a word. */
+export function Pill({
+	tone,
+	pulse = false,
+	dot = true,
+	className,
+	children,
+}: {
+	tone: Tone;
+	pulse?: boolean;
+	dot?: boolean;
+	className?: string;
+	children: ReactNode;
+}) {
+	return (
+		<span
+			className={cn(
+				"inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 font-medium text-xs",
+				TONES[tone],
+				className,
+			)}
+		>
+			{dot && <span className={cn("size-1.5 rounded-full bg-current", pulse && "animate-pulse")} />}
+			{children}
+		</span>
+	);
+}
+
+const STATE_STYLE: Record<JobState, { label: string; tone: Tone }> = {
+	pending: { label: "Queued", tone: "neutral" },
+	assigned: { label: "Assigned", tone: "info" },
+	running: { label: "Running", tone: "info" },
+	succeeded: { label: "Succeeded", tone: "success" },
+	failed: { label: "Failed", tone: "danger" },
+	canceled: { label: "Canceled", tone: "warning" },
+	unknown: { label: "Unknown", tone: "neutral" },
 };
 
 export const ACTIVE_STATES: ReadonlySet<JobState> = new Set(["pending", "assigned", "running"]);
@@ -83,13 +115,12 @@ export function stateLabel(state: JobState): string {
 export function JobStateBadge({ state, progress }: { state: JobState; progress?: number }) {
 	const style = STATE_STYLE[state];
 	return (
-		<Badge variant={style.variant} className="gap-1.5">
-			{state === "running" && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
+		<Pill tone={style.tone} pulse={state === "running"}>
 			{style.label}
 			{state === "running" && progress !== undefined && progress > 0 && (
 				<span className="tabular opacity-80">{Math.round(progress)}%</span>
 			)}
-		</Badge>
+		</Pill>
 	);
 }
 
@@ -97,7 +128,7 @@ export function JobStateBadge({ state, progress }: { state: JobState; progress?:
 export function OutcomeBadge({ outcome }: { outcome: string }) {
 	if (outcome === "success") return <JobStateBadge state="succeeded" />;
 	if (outcome === "error" || outcome === "failed") return <JobStateBadge state="failed" />;
-	return <Badge variant="outline">{capitalize(outcome) || "Unknown"}</Badge>;
+	return <Pill tone="neutral">{capitalize(outcome) || "Unknown"}</Pill>;
 }
 
 /** 4193 → "4.2 s", 125000 → "2 min 5 s", 5400000 → "1 hr 30 min". */
@@ -152,7 +183,7 @@ export function ValueView({ value }: { value: DisplayValue }) {
 	if (typeof value === "string") {
 		if (value.includes("\n") || value.length > 80) {
 			return (
-				<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-muted/60 p-3 font-mono text-xs">
+				<pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-raised p-3 font-mono text-xs">
 					{value}
 				</pre>
 			);
@@ -185,7 +216,7 @@ export function KeyValues({
 	const entries = Object.entries(values);
 	if (entries.length === 0) return <p className="text-muted-foreground text-sm">{empty}</p>;
 	return (
-		<dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[minmax(8rem,auto)_1fr]">
+		<dl className="grid gap-x-8 gap-y-3.5 text-sm sm:grid-cols-[minmax(9rem,auto)_1fr]">
 			{entries.map(([key, value]) => (
 				<div key={key} className="contents">
 					<dt className="text-muted-foreground">{humanize(key)}</dt>
@@ -212,7 +243,7 @@ export function ActivityFeed({
 }) {
 	const reduced = usePrefersReducedMotion();
 	if (activities.length === 0) {
-		return <p className="py-6 text-center text-muted-foreground text-sm">No maintenance activity yet.</p>;
+		return <p className="py-10 text-center text-muted-foreground text-sm">No maintenance activity yet.</p>;
 	}
 	return (
 		<ol className={cn("relative space-y-0.5", className)}>
@@ -225,13 +256,13 @@ export function ActivityFeed({
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-						className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-lg px-2 py-2 hover:bg-muted/50"
+						className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-md px-2.5 py-2.5 transition-colors hover:bg-foreground/[0.05]"
 					>
-						<span className="mt-0.5 flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground">
+						<span className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-area/15 text-area">
 							<JobTypeIcon jobType={activity.jobType} className="size-3.5" />
 						</span>
 						<div className="min-w-0">
-							<p className="text-sm leading-snug">
+							<p className="text-sm leading-snug [overflow-wrap:anywhere]">
 								{activity.jobId ? (
 									<Link
 										to="/maintenance/jobs/$jobId"

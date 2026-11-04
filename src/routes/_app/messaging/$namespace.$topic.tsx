@@ -8,7 +8,7 @@ import type {
 } from "@shared/messaging.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, HardDrive, Inbox, Send, Users } from "lucide-react";
+import { ArrowLeft, Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { PartitionRing } from "@/components/kelp/messaging/partition-ring.tsx";
@@ -20,13 +20,14 @@ import {
 	retentionFrom,
 } from "@/components/kelp/messaging/retention.tsx";
 import {
+	AuroraCard,
 	EmptyState,
 	ErrorState,
+	Metric,
 	PageHeader,
 	Panel,
 	Reveal,
 	SkeletonBlock,
-	StatTile,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +62,10 @@ function TopicPage() {
 			<PageHeader
 				title={`${namespace}.${topic}`}
 				description={
-					<Link to="/messaging" className="inline-flex items-center gap-1 hover:text-foreground">
+					<Link
+						to="/messaging"
+						className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary px-3.5 text-[13px] text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+					>
 						<ArrowLeft className="size-3.5" />
 						All topics
 					</Link>
@@ -80,18 +84,24 @@ function TopicPage() {
 
 function TopicBody({ topic }: { topic: TopicDetail }) {
 	return (
-		<Reveal className="space-y-6">
-			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				<StatTile label="Messages" value={topic.messageCount} icon={<Inbox />} />
-				<StatTile label="Stored" value={topic.totalSize} format={formatBytes} icon={<HardDrive />} />
-				<StatTile label="Publishers" value={topic.publishers.length} icon={<Send />} />
-				<StatTile label="Subscribers" value={topic.subscribers.length} icon={<Users />} />
-			</div>
-			<div className="grid items-start gap-4 lg:grid-cols-[1.3fr_1fr]">
-				<Panel title="Partitions" description="Each partition owns a slice of the 2,520-slot key ring.">
+		<Reveal className="space-y-4">
+			<AuroraCard className="grid gap-10 p-7 sm:p-8 lg:grid-cols-[auto_1fr] lg:items-center">
+				<div>
+					<p className="mb-5 text-[13px] text-foreground/70">
+						Each partition owns a slice of the 2,520-slot key ring.
+					</p>
 					<PartitionRing partitions={topic.partitions} />
-				</Panel>
+				</div>
+				<dl className="grid grid-cols-2 gap-x-8 gap-y-8 lg:justify-self-end lg:pl-8">
+					<TopicFact label="Messages" value={topic.messageCount} />
+					<TopicFact label="Stored" value={topic.totalSize} format={formatBytes} />
+					<TopicFact label="Publishers" value={topic.publishers.length} />
+					<TopicFact label="Subscribers" value={topic.subscribers.length} />
+				</dl>
+			</AuroraCard>
+			<div className="grid items-start gap-4 lg:grid-cols-2">
 				<RetentionPanel topic={topic} />
+				<SchemaPanel keys={topic.keySchema} values={topic.valueSchema} />
 			</div>
 			<Panel title="Partition details">
 				<DataTable
@@ -107,11 +117,27 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 					}
 				/>
 			</Panel>
-			<div className="grid items-start gap-4 lg:grid-cols-[1fr_1.6fr]">
-				<SchemaPanel keys={topic.keySchema} values={topic.valueSchema} />
-				<ClientsPanel topic={topic} />
-			</div>
+			<ClientsPanel topic={topic} />
 		</Reveal>
+	);
+}
+
+function TopicFact({
+	label,
+	value,
+	format,
+}: {
+	label: string;
+	value: number;
+	format?: (n: number) => string;
+}) {
+	return (
+		<div className="flex flex-col-reverse gap-2">
+			<dt className="text-[13px] text-foreground/70">{label}</dt>
+			<dd className="font-[450] text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
+				<Metric value={value} {...(format ? { format } : {})} />
+			</dd>
+		</div>
 	);
 }
 
@@ -167,12 +193,12 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 
 function SchemaFields({ fields }: { fields: TopicSchemaField[] }) {
 	return (
-		<ul className="divide-y text-sm">
+		<ul className="divide-y divide-hairline text-sm">
 			{fields.map((field) => (
 				<li key={field.name} className="flex items-center justify-between gap-3 py-2">
 					<span className="font-mono">{field.name}</span>
 					<span className="flex items-center gap-2">
-						<Badge variant="outline" className="font-mono">
+						<Badge variant="area" className="font-mono">
 							{field.type.toLowerCase()}
 						</Badge>
 						{field.required && <Badge variant="secondary">required</Badge>}
@@ -404,15 +430,11 @@ const offsetColumns: Array<Column<ConsumerGroupOffset>> = [
 
 function TopicSkeleton() {
 	return (
-		<div className="space-y-6" role="status" aria-label="Loading topic">
-			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-24 rounded-xl" />
-				))}
-			</div>
-			<div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-				<SkeletonBlock className="h-56 rounded-xl" />
-				<SkeletonBlock className="h-56 rounded-xl" />
+		<div className="space-y-4" role="status" aria-label="Loading topic">
+			<SkeletonBlock className="h-80 rounded-2xl" />
+			<div className="grid gap-4 lg:grid-cols-2">
+				<SkeletonBlock className="h-56 rounded-lg" />
+				<SkeletonBlock className="h-56 rounded-lg" />
 			</div>
 		</div>
 	);

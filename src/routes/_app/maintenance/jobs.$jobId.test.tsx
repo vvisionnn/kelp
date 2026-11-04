@@ -47,7 +47,8 @@ describe("maintenance job page", () => {
 			[`POST ${path(detail)}/expire`]: { expired: true, job: null },
 		});
 		expect(await screen.findByRole("progressbar", { name: "Job progress" })).toBeTruthy();
-		expect(screen.getByText(/40% · Copying · copying data/)).toBeTruthy();
+		expect(screen.getByText("Copying, copying data")).toBeTruthy();
+		expect(screen.getAllByText("40%").length).toBeGreaterThan(0);
 		expect(screen.getByText("No events recorded for this job.")).toBeTruthy();
 		expect(screen.getByText("Not yet")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Expire job" }));

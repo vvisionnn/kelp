@@ -160,14 +160,14 @@ export function SettingsForm({
 
 	return (
 		<form
-			className="space-y-6 pb-20"
+			className="space-y-4 pb-20"
 			onSubmit={(event) => {
 				event.preventDefault();
 				if (count > 0 && !invalid) void save();
 			}}
 		>
 			{!canWrite && (
-				<p className="flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-muted-foreground text-sm">
+				<p className="flex w-fit items-center gap-2 rounded-full bg-secondary px-4 py-2 text-muted-foreground text-sm">
 					<Lock className="size-4" />
 					You have read-only access. Ask an administrator to change these settings.
 				</p>
@@ -249,7 +249,7 @@ export function SettingsForm({
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 24 }}
 						transition={{ type: "spring", stiffness: 420, damping: 34 }}
-						className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-xl border bg-popover/95 px-4 py-3 shadow-lg backdrop-blur"
+						className="sticky bottom-5 z-10 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-full bg-popover/85 py-2 pr-2 pl-5 shadow-(--float-shadow) backdrop-blur-xl"
 						role="region"
 						aria-label="Unsaved changes"
 					>
@@ -286,17 +286,19 @@ function SettingsSection({
 	children: ReactNode;
 }) {
 	return (
-		<section className="rounded-xl border bg-card">
-			<header className="border-b px-5 py-4">
-				<div className="flex items-center gap-2">
-					<h2 className="font-medium">{title}</h2>
+		<section className="rounded-lg bg-card">
+			<header className="px-6 pt-6 pb-2">
+				<div className="flex items-center gap-2.5">
+					<h2 className="font-medium text-lg tracking-[-0.01em]">{title}</h2>
 					{tag && (
-						<span className="rounded-md bg-muted px-1.5 py-0.5 text-muted-foreground text-xs">{tag}</span>
+						<span className="inline-flex h-6 items-center rounded-full bg-area/15 px-2.5 text-foreground/80 text-xs">
+							{tag}
+						</span>
 					)}
 				</div>
-				{description && <p className="mt-0.5 text-muted-foreground text-sm">{description}</p>}
+				{description && <p className="mt-1 text-muted-foreground text-sm">{description}</p>}
 			</header>
-			<div className="divide-y">{children}</div>
+			<div className="divide-y divide-hairline">{children}</div>
 		</section>
 	);
 }
@@ -317,7 +319,7 @@ function SettingRow({
 	children: ReactNode;
 }) {
 	return (
-		<div className={cn("grid gap-3 px-5 py-4", !wide && "md:grid-cols-[1fr_16rem] md:items-start")}>
+		<div className={cn("grid gap-3 px-6 py-5", !wide && "md:grid-cols-[1fr_16rem] md:items-start")}>
 			<div className="min-w-0">
 				<label htmlFor={id} className="font-medium text-sm">
 					{label}

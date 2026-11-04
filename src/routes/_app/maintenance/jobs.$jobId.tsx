@@ -14,8 +14,9 @@ import {
 	JobTypeIcon,
 	KeyValues,
 	sourceLabel,
+	stateLabel,
 } from "@/components/kelp/maintenance/parts.tsx";
-import { ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { AuroraCard, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import {
 	Timeline,
 	TimelineContent,
@@ -86,6 +87,11 @@ function JobPage() {
 	const active = ACTIVE_STATES.has(job.state);
 	const steps = timeline(data.activities, active);
 
+	const outcome = job.errorMessage
+		? { label: "Error", text: capitalize(job.errorMessage) }
+		: { label: "Result", text: job.resultSummary ? capitalize(job.resultSummary) : "" };
+	const duration = run ? formatDuration(run.durationMs) : elapsed(job.createdAt, job.completedAt);
+
 	return (
 		<>
 			<PageHeader
@@ -96,9 +102,9 @@ function JobPage() {
 						<Link
 							to="/maintenance/$jobType"
 							params={{ jobType: job.jobType }}
-							className="inline-flex items-center gap-1.5 hover:underline"
+							className="inline-flex h-6 items-center gap-1.5 rounded-full bg-foreground/[0.06] px-2.5 text-foreground/80 text-xs transition-colors hover:bg-foreground/10 hover:text-foreground"
 						>
-							<JobTypeIcon jobType={job.jobType} className="size-3.5" />
+							<JobTypeIcon jobType={job.jobType} className="size-3.5 text-area" />
 							{humanize(job.jobType)}
 						</Link>
 					</span>
@@ -123,69 +129,106 @@ function JobPage() {
 				}
 			/>
 
-			<Reveal className="grid items-start gap-4 lg:grid-cols-[1fr_22rem]">
+			<Reveal>
+				<AuroraCard className="mb-4 grid gap-10 p-7 sm:p-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+					<div className="min-w-0">
+						{active ? (
+							<>
+								<p className="text-[13px] text-foreground/70">
+									{job.stage ? humanize(job.stage) : "Working"}
+									{job.message && `, ${job.message}`}
+								</p>
+								<p className="mt-3 font-[450] text-6xl leading-none tracking-[-0.04em] tabular">
+									{Math.round(job.progress)}%
+								</p>
+								<Progress
+									value={job.progress}
+									aria-label="Job progress"
+									className="mt-6 [&_[data-slot=progress-indicator]]:bg-area [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-foreground/10"
+								/>
+								{outcome.text && (
+									<p className="mt-4 flex flex-wrap gap-x-2 text-[15px]">
+										<span className="text-foreground/70">{outcome.label}</span>
+										<span
+											className={cn(
+												"[overflow-wrap:anywhere]",
+												job.errorMessage ? "text-destructive-foreground" : "text-foreground/80",
+											)}
+										>
+											{outcome.text}
+										</span>
+									</p>
+								)}
+							</>
+						) : (
+							<>
+								<p className="text-[13px] text-foreground/70">{outcome.label}</p>
+								<p className="mt-3 font-[450] text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl">
+									{job.state === "succeeded" ? `Done in ${duration}` : stateLabel(job.state)}
+								</p>
+								{outcome.text && (
+									<p
+										className={cn(
+											"mt-4 max-w-[60ch] text-[15px] [overflow-wrap:anywhere]",
+											job.errorMessage ? "text-destructive-foreground" : "text-foreground/80",
+										)}
+									>
+										{outcome.text}
+									</p>
+								)}
+							</>
+						)}
+						{job.detail && <p className="mt-2 text-[13px] text-foreground/70">{job.detail}</p>}
+					</div>
+					<dl className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
+						<Fact label="Created" value={formatDateTime(job.createdAt)} />
+						<Fact label="Finished" value={job.completedAt ? formatDateTime(job.completedAt) : "Not yet"} />
+						<Fact label="Duration" value={duration} />
+						<Fact label="Attempt" value={String(job.attempt || 1)} />
+					</dl>
+				</AuroraCard>
+			</Reveal>
+
+			<Reveal delay={0.05} className="grid items-start gap-4 lg:grid-cols-[1fr_24rem]">
+				<Panel title="Timeline" description="What happened, oldest first">
+					{steps.length === 0 ? (
+						<p className="text-muted-foreground text-sm">No events recorded for this job.</p>
+					) : (
+						<Timeline value={steps.length}>
+							{steps.map((step, index) => (
+								<TimelineItem key={`${step.occurredAt}-${step.stage}-${step.message}`} step={index + 1}>
+									<TimelineHeader>
+										<TimelineSeparator />
+										<TimelineDate title={formatDateTime(step.occurredAt)}>
+											{step.occurredAt ? new Date(step.occurredAt).toLocaleTimeString() : ""}
+										</TimelineDate>
+										<TimelineTitle className="[overflow-wrap:anywhere]">
+											{capitalize(step.message)}
+										</TimelineTitle>
+										<TimelineIndicator
+											className={cn(index === steps.length - 1 && "border-area bg-area/25")}
+										/>
+									</TimelineHeader>
+									<TimelineContent>{sourceLabel(step.source)}</TimelineContent>
+								</TimelineItem>
+							))}
+						</Timeline>
+					)}
+				</Panel>
+
 				<div className="space-y-4">
-					{active && (
-						<Panel title="Progress">
-							<Progress value={job.progress} aria-label="Job progress" />
-							<p className="mt-2 text-muted-foreground text-sm">
-								{Math.round(job.progress)}% {job.stage && `· ${humanize(job.stage)}`}
-								{job.message && ` · ${job.message}`}
-							</p>
-						</Panel>
-					)}
-					{(job.errorMessage || job.resultSummary || job.detail) && (
-						<Panel title={job.errorMessage ? "Error" : "Result"}>
-							{job.errorMessage && <p className="text-destructive text-sm">{capitalize(job.errorMessage)}</p>}
-							{job.resultSummary && <p className="text-sm">{capitalize(job.resultSummary)}</p>}
-							{job.detail && <p className="mt-1 text-muted-foreground text-sm">{job.detail}</p>}
-						</Panel>
-					)}
 					<Panel title="Outputs" description="What the worker reported back">
 						<KeyValues values={job.outputs} empty="This job reported no outputs." />
 					</Panel>
 					<Panel title="Parameters" description="What the job was asked to do">
 						<KeyValues values={job.parameters} empty="This job had no parameters." />
 					</Panel>
-					<Panel title="Timeline">
-						{steps.length === 0 ? (
-							<p className="text-muted-foreground text-sm">No events recorded for this job.</p>
-						) : (
-							<Timeline value={steps.length}>
-								{steps.map((step, index) => (
-									<TimelineItem key={`${step.occurredAt}-${step.stage}-${step.message}`} step={index + 1}>
-										<TimelineHeader>
-											<TimelineSeparator />
-											<TimelineDate title={formatDateTime(step.occurredAt)}>
-												{step.occurredAt ? new Date(step.occurredAt).toLocaleTimeString() : ""}
-											</TimelineDate>
-											<TimelineTitle>{capitalize(step.message)}</TimelineTitle>
-											<TimelineIndicator
-												className={cn(index === steps.length - 1 && "border-primary bg-primary/20")}
-											/>
-										</TimelineHeader>
-										<TimelineContent>{sourceLabel(step.source)}</TimelineContent>
-									</TimelineItem>
-								))}
-							</Timeline>
-						)}
-					</Panel>
-				</div>
-
-				<div className="space-y-4">
-					<Panel title="Details">
-						<dl className="grid gap-3 text-sm">
-							<Fact label="Created" value={formatDateTime(job.createdAt)} />
-							<Fact label="Finished" value={job.completedAt ? formatDateTime(job.completedAt) : "Not yet"} />
-							<Fact
-								label="Duration"
-								value={run ? formatDuration(run.durationMs) : elapsed(job.createdAt, job.completedAt)}
-							/>
-							<Fact label="Attempt" value={String(job.attempt || 1)} />
+					<Panel title="Where it ran">
+						<dl className="grid gap-4 text-sm">
 							<Fact label="Worker" value={job.workerId || "Not assigned"} mono={Boolean(job.workerId)} />
 							<div>
 								<dt className="text-muted-foreground text-xs">Job id</dt>
-								<dd className="flex items-center gap-1">
+								<dd className="mt-0.5 flex items-center gap-1">
 									<span className="min-w-0 break-all font-mono text-xs">{job.id}</span>
 									<CopyButton value={job.id} label="Copy job id" />
 								</dd>
@@ -194,12 +237,15 @@ function JobPage() {
 					</Panel>
 					{related.length > 0 && (
 						<Panel title="Related jobs">
-							<ul className="space-y-2 text-sm">
+							<ul className="divide-y divide-hairline text-sm">
 								{[...related]
 									.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
 									.slice(0, 8)
 									.map((other) => (
-										<li key={other.id} className="flex items-center justify-between gap-2">
+										<li
+											key={other.id}
+											className="flex items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+										>
 											<Link
 												to="/maintenance/jobs/$jobId"
 												params={{ jobId: other.id }}
@@ -224,8 +270,8 @@ function JobPage() {
 function Fact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
 	return (
 		<div>
-			<dt className="text-muted-foreground text-xs">{label}</dt>
-			<dd className={cn(mono && "break-all font-mono text-xs")}>{value}</dd>
+			<dt className="text-[13px] text-muted-foreground">{label}</dt>
+			<dd className={cn("mt-0.5", mono && "break-all font-mono text-xs")}>{value}</dd>
 		</div>
 	);
 }
@@ -233,10 +279,14 @@ function Fact({ label, value, mono = false }: { label: string; value: string; mo
 function JobSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading job">
-			<SkeletonBlock className="mt-2 mb-6 h-8 w-72" />
-			<div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
-				<SkeletonBlock className="h-96 rounded-xl" />
-				<SkeletonBlock className="h-72 rounded-xl" />
+			<div className="pt-12 pb-10">
+				<SkeletonBlock className="h-12 w-96 max-w-full" />
+				<SkeletonBlock className="mt-5 h-6 w-48 rounded-full" />
+			</div>
+			<SkeletonBlock className="mb-4 h-48 rounded-2xl" />
+			<div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
+				<SkeletonBlock className="h-96 rounded-lg" />
+				<SkeletonBlock className="h-72 rounded-lg" />
 			</div>
 		</div>
 	);

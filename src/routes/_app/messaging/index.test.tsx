@@ -10,7 +10,11 @@ describe("messaging page", () => {
 		const app = renderApp("/messaging", { "GET /messaging": overview });
 		expect(await screen.findByText("127.0.0.1:17778")).toBeTruthy();
 		expect(screen.getByLabelText("Leader")).toBeTruthy();
-		expect(screen.getByText("The crowned broker balances partitions.")).toBeTruthy();
+		expect(
+			screen.getByText(
+				"The leader assigns partitions to brokers and moves them when a broker joins or leaves.",
+			),
+		).toBeTruthy();
 		const table = screen.getByRole("table");
 		expect(within(table).getByText("created")).toBeTruthy();
 		expect(within(table).getByText("1 week")).toBeTruthy();
@@ -43,7 +47,9 @@ describe("messaging page", () => {
 				],
 			},
 		});
-		expect(await screen.findByText("Brokers are electing a leader.")).toBeTruthy();
+		expect(
+			await screen.findByText("Brokers are electing a leader. Partitions are assigned once one wins."),
+		).toBeTruthy();
 		expect(screen.getByLabelText("Details unavailable")).toBeTruthy();
 		expect(within(screen.getByRole("table")).getByText("Keep forever")).toBeTruthy();
 	});
