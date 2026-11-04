@@ -3,16 +3,22 @@
  * maintenance worker from the `weed` binary that mise installs. Used for local development, the
  * review environment and CI end-to-end tests. Ctrl-C stops everything.
  *
- *   bun run stack [--data .stack] [--fresh]
+ *   bun run stack [--data .stack] [--fresh] [--offset 0]
  */
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { PORTS, S3_CREDENTIALS, waitForHttp } from "./stack-lib.ts";
+import { SeaweedGrpc } from "../server/upstream/grpc.ts";
+import { S3_CREDENTIALS, stackPorts, waitFor, waitForHttp } from "./stack-lib.ts";
 
 const { values } = parseArgs({
-	options: { data: { type: "string", default: ".stack" }, fresh: { type: "boolean", default: false } },
+	options: {
+		data: { type: "string", default: ".stack" },
+		fresh: { type: "boolean", default: false },
+		offset: { type: "string", default: "0" },
+	},
 });
+const PORTS = stackPorts(Number(values.offset));
 const dataDir = resolve(values.data ?? ".stack");
 const weed = process.env.WEED_BIN || Bun.which("weed");
 if (!weed) {
@@ -74,12 +80,22 @@ start("server", [
 	`-filer.port=${PORTS.filer}`,
 	"-s3",
 	`-s3.port=${PORTS.s3}`,
+	`-s3.port.iceberg=${PORTS.iceberg}`,
 	`-s3.config=${join(dataDir, "s3.json")}`,
 	"-volume.max=0",
 	"-master.volumeSizeLimitMB=256",
 ]);
 await ready("filer", `http://127.0.0.1:${PORTS.filer}/`);
 await ready("s3", `http://127.0.0.1:${PORTS.s3}/`);
+
+// The filer joins the cluster a few seconds after its HTTP port opens; wait until the master lists it.
+const grpc = new SeaweedGrpc(`127.0.0.1:${PORTS.master + 10000}`);
+const filerJoined = await waitFor(async () => (await grpc.listClusterNodes("filer")).length > 0);
+grpc.close();
+if (!filerJoined) {
+	console.error("[stack] the filer never registered with the master");
+	stop(1);
+}
 
 start("admin", [
 	"admin",

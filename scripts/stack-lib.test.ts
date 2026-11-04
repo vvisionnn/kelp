@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { waitForHttp } from "./stack-lib.ts";
+import { kelpEnv, PORTS, stackPorts, waitFor, waitForHttp } from "./stack-lib.ts";
 
 let server: ReturnType<typeof Bun.serve> | undefined;
 afterEach(() => server?.stop(true));
@@ -16,4 +16,31 @@ test("resolves true once the endpoint answers below 500", async () => {
 
 test("resolves false when nothing answers before the deadline", async () => {
 	expect(await waitForHttp("http://127.0.0.1:1/", { timeoutMs: 50, intervalMs: 10 })).toBe(false);
+});
+
+test("offset ports shift every service and feed the Kelp environment", () => {
+	expect(stackPorts()).toEqual({ ...PORTS });
+	const ports = stackPorts(100);
+	expect(ports).toEqual({ master: 9433, volume: 8180, filer: 8988, s3: 8433, iceberg: 8281, admin: 23746 });
+	expect(kelpEnv(ports)).toEqual({
+		KELP_ADMIN_URL: "http://127.0.0.1:23746",
+		KELP_MASTER_URL: "http://127.0.0.1:9433",
+		KELP_FILER_URL: "http://127.0.0.1:8988",
+		KELP_S3_ENDPOINT: "http://127.0.0.1:8433",
+	});
+});
+
+test("waitFor treats thrown checks as not ready and gives up at the deadline", async () => {
+	let calls = 0;
+	expect(
+		await waitFor(
+			async () => {
+				calls++;
+				if (calls === 1) throw new Error("not yet");
+				return calls === 3;
+			},
+			{ intervalMs: 1 },
+		),
+	).toBe(true);
+	expect(await waitFor(async () => false, { timeoutMs: 20, intervalMs: 5 })).toBe(false);
 });
