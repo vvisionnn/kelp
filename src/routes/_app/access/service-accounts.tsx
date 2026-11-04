@@ -11,11 +11,12 @@ import { Bot, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { z } from "zod";
 import { KeyStatusBadge } from "@/components/kelp/access/badges.tsx";
+import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
+import { AuroraCard, EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -79,23 +80,48 @@ export function describeExpiry(
 	return { text: expired ? `Expired ${formatRelative(expiresAt)}` : formatRelative(expiresAt), expired };
 }
 
+/** Headline numbers for the service accounts page, with expiry as the thing to watch. */
+export function accountStats(accounts: ServiceAccount[], now = Date.now()) {
+	const expiry = (a: ServiceAccount) =>
+		a.expiresAt ? new Date(a.expiresAt).getTime() : Number.POSITIVE_INFINITY;
+	return [
+		{ label: "Service accounts", value: accounts.length },
+		{ label: "Can sign", value: accounts.filter((a) => a.status === "Active" && expiry(a) > now).length },
+		{
+			label: "Expire within 30 days",
+			value: accounts.filter((a) => expiry(a) > now && expiry(a) <= now + 30 * DAY).length,
+		},
+		{ label: "Already expired", value: accounts.filter((a) => expiry(a) <= now).length },
+	];
+}
+
 const columns: Array<Column<ServiceAccount>> = [
 	{
 		id: "account",
 		accessorFn: (a) => a.description || a.id,
 		header: "Service account",
 		cell: ({ row }) => (
-			<div className="min-w-0">
-				<p className="truncate font-medium">{row.original.description || "No description"}</p>
-				<p className="truncate font-mono text-muted-foreground text-xs">{row.original.id}</p>
+			<div className="flex min-w-0 items-center gap-3">
+				<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-area/15 text-area">
+					<Bot className="size-4" />
+				</span>
+				<div className="min-w-0">
+					<p className="truncate font-medium">{row.original.description || "No description"}</p>
+					<p className="truncate font-mono text-muted-foreground text-xs">{row.original.id}</p>
+				</div>
 			</div>
 		),
-		size: 260,
+		size: 300,
 	},
 	{
 		accessorKey: "parentUser",
 		header: "Acts as",
-		cell: ({ row }) => <span className="font-mono">{row.original.parentUser}</span>,
+		cell: ({ row }) => (
+			<span className="flex items-center gap-2">
+				<Avatar name={row.original.parentUser} />
+				{row.original.parentUser}
+			</span>
+		),
 	},
 	{
 		accessorKey: "accessKey",
@@ -281,10 +307,17 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 	const dirty = description.trim() !== account.description || newExpiry !== undefined;
 
 	return (
-		<SheetContent className="sm:max-w-md">
-			<SheetHeader>
-				<SheetTitle>{account.description || "Service account"}</SheetTitle>
-				<SheetDescription className="font-mono text-xs">{account.id}</SheetDescription>
+		// Sheets render outside the page, so the sheet names its area for the aurora.
+		<SheetContent className="sm:max-w-md" data-area="access">
+			<SheetHeader className="p-3">
+				<AuroraCard className="rounded-xl px-5 pt-14 pb-5">
+					<SheetTitle className="font-[450] text-2xl tracking-[-0.02em]">
+						{account.description || "Service account"}
+					</SheetTitle>
+					<SheetDescription className="mt-1 font-mono text-foreground/70 text-xs">
+						{account.id}
+					</SheetDescription>
+				</AuroraCard>
 			</SheetHeader>
 			<div className="grid gap-5 px-4">
 				<dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-2 text-sm">
@@ -314,7 +347,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 				</dl>
 				{canWrite ? (
 					<>
-						<div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+						<div className="flex items-center justify-between gap-3 rounded-md bg-raised px-4 py-3 text-sm">
 							<label htmlFor="account-active">
 								<span className="block font-medium">Active</span>
 								<span className="text-muted-foreground text-xs">Inactive accounts cannot sign requests.</span>
@@ -423,7 +456,12 @@ function ServiceAccountsPage() {
 				description="Keys for automation that act on a user's behalf and can be revoked on their own."
 				actions={canWrite && <CreateServiceAccountDialog />}
 			/>
-			<Reveal>
+			{data && data.length > 0 && (
+				<Reveal className="hairline-t hairline-b mb-10 py-8">
+					<StatBand stats={accountStats(data)} />
+				</Reveal>
+			)}
+			<Reveal delay={0.05}>
 				<DataTable
 					data={data}
 					isLoading={isPending}

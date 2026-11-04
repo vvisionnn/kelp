@@ -1,10 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ScrollText, Trash2, User, X } from "lucide-react";
+import { ScrollText, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
+import { Avatar, AvatarStack } from "@/components/kelp/access/identity.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
-import { ErrorState, PageHeader, Panel, Reveal, SkeletonBlock, StatusDot } from "@/components/kelp/page.tsx";
+import {
+	AuroraCard,
+	ErrorState,
+	Panel,
+	Reveal,
+	SkeletonBlock,
+	StatBand,
+	StatusDot,
+} from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -34,7 +43,7 @@ function Roster({
 	onRemove,
 	busy,
 }: {
-	icon: ReactNode;
+	icon: (item: string) => ReactNode;
 	items: string[];
 	options: string[];
 	addLabel: string;
@@ -51,7 +60,7 @@ function Roster({
 			{items.length === 0 ? (
 				<p className="text-muted-foreground text-sm">{emptyText}</p>
 			) : (
-				<ul className="-my-2 divide-y">
+				<ul className="grid gap-2">
 					<AnimatePresence initial={false}>
 						{items.map((item) => (
 							<motion.li
@@ -60,9 +69,9 @@ function Roster({
 								initial={{ opacity: 0, y: 4 }}
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0, x: -8 }}
-								className="flex items-center gap-2 py-2 text-sm"
+								className="flex items-center gap-3 rounded-md bg-raised py-2 pr-2 pl-3 text-sm"
 							>
-								<span className="text-muted-foreground [&_svg]:size-3.5">{icon}</span>
+								<span className="flex text-area [&_svg]:size-4">{icon(item)}</span>
 								<span className="min-w-0 flex-1 truncate">{link(item)}</span>
 								{editable && (
 									<Button
@@ -150,8 +159,11 @@ function GroupPage() {
 	if (isPending)
 		return (
 			<div role="status" aria-busy="true" aria-label="Loading group">
-				<SkeletonBlock className="mt-2 mb-6 h-8 w-48" />
-				<SkeletonBlock className="h-56 rounded-xl" />
+				<SkeletonBlock className="mt-12 mb-10 h-64 rounded-2xl" />
+				<div className="grid gap-4 lg:grid-cols-2">
+					<SkeletonBlock className="h-48 rounded-lg" />
+					<SkeletonBlock className="h-48 rounded-lg" />
+				</div>
 			</div>
 		);
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
@@ -160,51 +172,70 @@ function GroupPage() {
 	const empty = group.members.length === 0 && group.policies.length === 0;
 	return (
 		<>
-			<PageHeader
-				title={group.name}
-				description={
-					group.enabled ? (
-						<StatusDot tone="good" label="Enabled. Members get every attached policy." />
-					) : (
-						<StatusDot tone="idle" label="Disabled. Its policies grant nothing until it is enabled." />
-					)
-				}
-				actions={
-					canWrite && (
-						<>
-							<div className="flex items-center gap-2 text-sm">
-								<Switch
-									id="group-enabled"
-									checked={group.enabled}
-									disabled={setEnabled.isPending}
-									onCheckedChange={(checked) => setEnabled.mutate(checked)}
-								/>
-								<label htmlFor="group-enabled">Enabled</label>
+			<Reveal className="pt-8 pb-10 sm:pt-12">
+				<AuroraCard className="p-7 sm:p-10">
+					<div className="flex flex-wrap items-start justify-between gap-6">
+						<div className="min-w-0">
+							<h1 className="truncate font-[450] text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl">
+								{group.name}
+							</h1>
+							<p className="mt-3 text-[15px] text-foreground/80">
+								{group.enabled ? (
+									<StatusDot tone="good" label="Enabled. Members get every attached policy." />
+								) : (
+									<StatusDot tone="idle" label="Disabled. Its policies grant nothing until it is enabled." />
+								)}
+							</p>
+						</div>
+						{canWrite && (
+							<div className="flex flex-wrap items-center gap-3">
+								<div className="flex h-10 items-center gap-2.5 rounded-full bg-background/60 pr-2 pl-4 text-sm backdrop-blur">
+									<label htmlFor="group-enabled">Enabled</label>
+									<Switch
+										id="group-enabled"
+										checked={group.enabled}
+										disabled={setEnabled.isPending}
+										onCheckedChange={(checked) => setEnabled.mutate(checked)}
+									/>
+								</div>
+								{empty ? (
+									<ConfirmDialog
+										trigger={
+											<Button variant="destructive">
+												<Trash2 />
+												Delete group
+											</Button>
+										}
+										title={`Delete ${group.name}?`}
+										description="The policies attached to it are kept."
+										confirmLabel="Delete group"
+										destructive
+										typeToConfirm={group.name}
+										onConfirm={() => remove.mutateAsync()}
+									/>
+								) : (
+									<span className="max-w-48 text-foreground/60 text-xs">
+										Remove its members and policies to delete it.
+									</span>
+								)}
 							</div>
-							{empty ? (
-								<ConfirmDialog
-									trigger={
-										<Button variant="destructive">
-											<Trash2 />
-											Delete group
-										</Button>
-									}
-									title={`Delete ${group.name}?`}
-									description="The policies attached to it are kept."
-									confirmLabel="Delete group"
-									destructive
-									typeToConfirm={group.name}
-									onConfirm={() => remove.mutateAsync()}
-								/>
-							) : (
-								<span className="max-w-48 text-muted-foreground text-xs">
-									Remove its members and policies to delete it.
-								</span>
-							)}
-						</>
-					)
-				}
-			/>
+						)}
+					</div>
+					<div className="mt-12 flex flex-wrap items-end justify-between gap-6">
+						<StatBand
+							className="min-w-0 flex-1"
+							stats={[
+								{ label: group.members.length === 1 ? "Member" : "Members", value: group.members.length },
+								{
+									label: group.policies.length === 1 ? "Policy granted" : "Policies granted",
+									value: group.policies.length,
+								},
+							]}
+						/>
+						{group.members.length > 0 && <AvatarStack names={group.members} max={8} size="md" />}
+					</div>
+				</AuroraCard>
+			</Reveal>
 			<div className="grid items-start gap-4 lg:grid-cols-2">
 				<Reveal>
 					<Panel
@@ -212,7 +243,7 @@ function GroupPage() {
 						description={`${group.members.length} ${group.members.length === 1 ? "user" : "users"}`}
 					>
 						<Roster
-							icon={<User />}
+							icon={(username) => <Avatar name={username} />}
 							items={group.members}
 							options={users.data ?? []}
 							addLabel="Add member"
@@ -220,11 +251,7 @@ function GroupPage() {
 							editable={canWrite}
 							busy={addMember.isPending || removeMember.isPending}
 							link={(username) => (
-								<Link
-									to="/access/users/$username"
-									params={{ username }}
-									className="font-mono hover:underline"
-								>
+								<Link to="/access/users/$username" params={{ username }} className="hover:underline">
 									{username}
 								</Link>
 							)}
@@ -236,7 +263,7 @@ function GroupPage() {
 				<Reveal delay={0.05}>
 					<Panel title="Policies" description="Every member is granted these.">
 						<Roster
-							icon={<ScrollText />}
+							icon={() => <ScrollText />}
 							items={group.policies}
 							options={policies.data ?? []}
 							addLabel="Attach policy"

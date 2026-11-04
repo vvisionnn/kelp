@@ -4,8 +4,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { NameList } from "@/components/kelp/access/badges.tsx";
+import { AvatarStack } from "@/components/kelp/access/identity.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Reveal, StatusDot } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Reveal, StatBand, StatusDot } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -34,7 +35,14 @@ const columns: Array<Column<IamGroup>> = [
 	{
 		accessorKey: "name",
 		header: "Group",
-		cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+		cell: ({ row }) => (
+			<span className="flex items-center gap-3">
+				<span className="flex size-9 items-center justify-center rounded-full bg-area/15 text-area">
+					<UsersRound className="size-4" />
+				</span>
+				<span className="font-medium">{row.original.name}</span>
+			</span>
+		),
 	},
 	{
 		id: "status",
@@ -51,7 +59,15 @@ const columns: Array<Column<IamGroup>> = [
 		id: "members",
 		accessorFn: (group) => group.members.length,
 		header: "Members",
-		cell: ({ row }) => <NameList names={row.original.members} empty="No members" />,
+		cell: ({ row }) =>
+			row.original.members.length === 0 ? (
+				<span className="text-muted-foreground">No members</span>
+			) : (
+				<span className="flex items-center gap-2.5">
+					<AvatarStack names={row.original.members} max={4} />
+					<NameList names={row.original.members} max={2} />
+				</span>
+			),
 	},
 	{
 		id: "policies",
@@ -113,6 +129,16 @@ function CreateGroupDialog() {
 	);
 }
 
+/** Headline numbers for the groups page. */
+export function groupStats(groups: IamGroup[]) {
+	return [
+		{ label: "Groups", value: groups.length },
+		{ label: "Switched off", value: groups.filter((group) => !group.enabled).length },
+		{ label: "Memberships", value: groups.reduce((sum, group) => sum + group.members.length, 0) },
+		{ label: "Policies attached", value: groups.reduce((sum, group) => sum + group.policies.length, 0) },
+	];
+}
+
 function GroupsPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
@@ -124,7 +150,12 @@ function GroupsPage() {
 				description="Share policies across users. A disabled group grants nothing."
 				actions={canWrite && <CreateGroupDialog />}
 			/>
-			<Reveal>
+			{data && data.length > 0 && (
+				<Reveal className="hairline-t hairline-b mb-10 py-8">
+					<StatBand stats={groupStats(data)} />
+				</Reveal>
+			)}
+			<Reveal delay={0.05}>
 				<DataTable
 					data={data}
 					isLoading={isPending}

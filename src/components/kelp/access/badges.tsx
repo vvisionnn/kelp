@@ -4,11 +4,11 @@ import { Badge } from "@/components/reui/badge";
 
 export function KeyStatusBadge({ status }: { status: KeyStatus }) {
 	return status === "Active" ? (
-		<Badge variant="success-light" size="sm">
+		<Badge variant="success-light" radius="full" className="px-2">
 			Active
 		</Badge>
 	) : (
-		<Badge variant="outline" size="sm" className="text-muted-foreground">
+		<Badge variant="outline" radius="full" className="px-2 text-muted-foreground">
 			Inactive
 		</Badge>
 	);
@@ -17,7 +17,7 @@ export function KeyStatusBadge({ status }: { status: KeyStatus }) {
 /** Marks users defined in the S3 config file, which SeaweedFS does not let anyone edit. */
 export function StaticBadge() {
 	return (
-		<Badge variant="info-light" size="sm" title="Defined in the S3 config file">
+		<Badge variant="info-light" radius="full" className="px-2" title="Defined in the S3 config file">
 			<FileLock2 />
 			Config file
 		</Badge>
@@ -39,7 +39,7 @@ export function NameList({
 	return (
 		<span className="flex flex-wrap items-center gap-1">
 			{shown.map((name) => (
-				<Badge key={name} variant="secondary" size="sm">
+				<Badge key={name} variant="secondary" radius="full" className="px-2">
 					{name}
 				</Badge>
 			))}

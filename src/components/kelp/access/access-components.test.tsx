@@ -5,7 +5,9 @@ import { describeActions } from "@/lib/access-queries.ts";
 import { setMedia } from "../../../../test/media.ts";
 import { settle } from "../../../../test/settle.ts";
 import { NameList } from "./badges.tsx";
+import { AvatarStack } from "./identity.tsx";
 import { NewSecretPanel } from "./new-secret.tsx";
+import { PolicyEditor } from "./policy-editor.tsx";
 import { TokenField } from "./token-field.tsx";
 
 function Tokens({ initial = [] as string[] }) {
@@ -79,5 +81,25 @@ describe("helpers", () => {
 	test("NameList collapses long lists", () => {
 		render(<NameList names={["a", "b", "c", "d"]} max={2} />);
 		expect(screen.getByText("+2")).toBeTruthy();
+	});
+});
+
+describe("AvatarStack", () => {
+	test("shows up to max avatars, then a count of the rest", () => {
+		const { container } = render(<AvatarStack names={["ana", "bo", "cy", "di"]} max={2} size="md" />);
+		expect(container.querySelectorAll("[aria-hidden]").length).toBe(2);
+		expect(screen.getByText("+2")).toBeTruthy();
+	});
+});
+
+describe("PolicyEditor", () => {
+	test("numbers every line and keeps the numbers beside the text as it scrolls", () => {
+		render(<PolicyEditor value={"{\n}"} onChange={() => {}} onState={() => {}} delayMs={60_000} />);
+		expect(screen.getByText("2 lines")).toBeTruthy();
+		const editor = screen.getByLabelText("Policy document");
+		const gutter = editor.previousElementSibling as HTMLElement;
+		editor.scrollTop = 40;
+		fireEvent.scroll(editor);
+		expect(gutter.scrollTop).toBe(editor.scrollTop);
 	});
 });
