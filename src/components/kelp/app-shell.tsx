@@ -1,4 +1,4 @@
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { LogOut, Monitor, Moon, Search, Sun } from "lucide-react";
 import { motion } from "motion/react";
@@ -51,6 +51,8 @@ declare module "@tanstack/react-router" {
 		/** Section shown before the page title in the breadcrumb. */
 		section?: string;
 		title?: string;
+		/** Names the item a detail page shows; defaults to the first URL parameter. */
+		crumb?: (params: Record<string, string>, queryClient: QueryClient) => string | undefined;
 	}
 }
 
@@ -199,7 +201,11 @@ function PageBreadcrumb() {
 	const leaf = [...matches].reverse().find((m) => m.staticData?.title);
 	const section = leaf?.staticData?.section;
 	const title = leaf?.staticData?.title;
-	const detail = Object.values((leaf?.params ?? {}) as Record<string, string>)[0];
+	const queryClient = useQueryClient();
+	// Re-render when fetches settle so names that come from loaded data appear.
+	useIsFetching();
+	const params = (leaf?.params ?? {}) as Record<string, string>;
+	const detail = leaf?.staticData?.crumb?.(params, queryClient) ?? Object.values(params)[0];
 	const crumbs = [
 		{ level: "section", text: section },
 		{ level: "title", text: title },

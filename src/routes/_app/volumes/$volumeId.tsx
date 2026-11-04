@@ -33,7 +33,7 @@ import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, collectionParam, storageQueries, volumeHealth } from "@/lib/storage-queries.ts";
 
 export const Route = createFileRoute("/_app/volumes/$volumeId")({
-	staticData: { section: "Storage", title: "Volumes" },
+	staticData: { section: "Storage", title: "Volumes", crumb: ({ volumeId }) => `Volume ${volumeId}` },
 	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: VolumePage,
 });

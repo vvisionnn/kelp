@@ -30,7 +30,12 @@ import { useCanWrite } from "@/lib/session.ts";
 const TABS = ["settings", "jobs", "history"] as const;
 
 export const Route = createFileRoute("/_app/maintenance/$jobType")({
-	staticData: { section: "Operations", title: "Maintenance" },
+	staticData: {
+		section: "Operations",
+		title: "Maintenance",
+		crumb: ({ jobType = "" }, queryClient) =>
+			queryClient.getQueryData(maintenanceQueries.jobType(jobType).queryKey)?.displayName ?? jobType,
+	},
 	validateSearch: z.object({ tab: z.enum(TABS).optional() }),
 	loader: ({ context, params }) =>
 		context.queryClient.prefetchQuery(maintenanceQueries.jobType(params.jobType)),

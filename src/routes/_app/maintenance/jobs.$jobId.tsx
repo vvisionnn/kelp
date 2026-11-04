@@ -35,7 +35,11 @@ import { useCanWrite } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/maintenance/jobs/$jobId")({
-	staticData: { section: "Operations", title: "Maintenance job" },
+	staticData: {
+		section: "Operations",
+		title: "Maintenance job",
+		crumb: ({ jobId = "" }) => `Job ${jobId.slice(0, 8)}`,
+	},
 	loader: ({ context, params }) => context.queryClient.prefetchQuery(maintenanceQueries.job(params.jobId)),
 	component: JobPage,
 });

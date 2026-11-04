@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
 import { clusterApi } from "../../../test/client-fixtures.ts";
+import { maintenanceApi } from "../../../test/maintenance-fixtures.ts";
 import { renderApp, viewerUser } from "../../../test/render-app.tsx";
 import { isActivePath } from "./app-shell.tsx";
 
@@ -15,6 +16,14 @@ describe("app shell", () => {
 		const crumbs = screen.getByRole("navigation", { name: "breadcrumb" });
 		expect(within(crumbs).getByText("Cluster")).toBeTruthy();
 		expect(within(crumbs).getByText("Nodes")).toBeTruthy();
+	});
+
+	test("detail pages name the item in the breadcrumb, not the raw URL segment", async () => {
+		const { routes, vacuumConfig } = await maintenanceApi();
+		renderApp("/maintenance/vacuum", routes);
+		const crumbs = await screen.findByRole("navigation", { name: "breadcrumb" });
+		expect(await within(crumbs).findByText(vacuumConfig.displayName)).toBeTruthy();
+		expect(within(crumbs).queryByText("vacuum")).toBeNull();
 	});
 
 	test("theme switch flips between light and dark", async () => {

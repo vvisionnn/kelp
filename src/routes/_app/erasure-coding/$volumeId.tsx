@@ -24,7 +24,7 @@ import { collectionLabel, collectionParam, serverPalette, storageQueries } from 
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/erasure-coding/$volumeId")({
-	staticData: { section: "Storage", title: "Erasure coding" },
+	staticData: { section: "Storage", title: "Erasure coding", crumb: ({ volumeId }) => `Volume ${volumeId}` },
 	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: EcVolumePage,
 });
