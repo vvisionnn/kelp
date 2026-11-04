@@ -21,8 +21,10 @@
 		"coverage": "tsr generate && bun test --coverage ./server ./shared ./scripts && bun --config=bunfig.web.toml test --coverage ./src",
 		"e2e": "playwright test",
 		"check": "bun run lint && bun run typecheck && bun run coverage && bun run build",
-		"release": "bun run scripts/release.ts",
-		"routes": "tsr generate"
+		"release": "bun scripts/release.ts",
+		"routes": "tsr generate",
+		"build:server": "bun build server/main.ts --target bun --outfile build/server.js",
+		"compose:smoke": "bun scripts/compose-smoke.ts"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.9.0",

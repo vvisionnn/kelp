@@ -100,6 +100,7 @@ if (!filerJoined) {
 start("admin", [
 	"admin",
 	`-port=${PORTS.admin}`,
+	"-port.legacy=0",
 	`-master=127.0.0.1:${PORTS.master}`,
 	`-dataDir=${join(dataDir, "admin")}`,
 ]);

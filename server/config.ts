@@ -78,7 +78,7 @@ export function loadConfig(env: Env): { config: KelpConfig; warnings: string[] }
 	return {
 		config: {
 			port: positiveNumber(env, "PORT", 3000),
-			adminUrl: urlSetting(env, "KELP_ADMIN_URL", "http://127.0.0.1:23646"),
+			adminUrl: urlSetting(env, "KELP_ADMIN_URL", "http://127.0.0.1:12535"),
 			masterUrl,
 			masterGrpc: env.KELP_MASTER_GRPC?.trim() || grpcAddress(masterUrl),
 			filerUrl,

@@ -5,7 +5,8 @@ import type { ClusterNode, MountClient, Topic } from "../../shared/api.ts";
 import { list, nanos, num, type Raw, str } from "../map/raw.ts";
 import { UpstreamError } from "./http.ts";
 
-const PROTO_DIR = join(import.meta.dir, "../../proto");
+// The bundled server (Docker image) sets KELP_PROTO_DIR; from source the protos sit at the repo root.
+const PROTO_DIR = process.env.KELP_PROTO_DIR || join(import.meta.dir, "../../proto");
 
 // biome-ignore lint/suspicious/noExplicitAny: grpc-js package definitions are untyped at runtime.
 type GrpcPackage = any;

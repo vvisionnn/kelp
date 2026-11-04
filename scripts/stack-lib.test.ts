@@ -21,9 +21,9 @@ test("resolves false when nothing answers before the deadline", async () => {
 test("offset ports shift every service and feed the Kelp environment", () => {
 	expect(stackPorts()).toEqual({ ...PORTS });
 	const ports = stackPorts(100);
-	expect(ports).toEqual({ master: 9433, volume: 8180, filer: 8988, s3: 8433, iceberg: 8281, admin: 23746 });
+	expect(ports).toEqual({ master: 9433, volume: 8180, filer: 8988, s3: 8433, iceberg: 8281, admin: 12635 });
 	expect(kelpEnv(ports)).toEqual({
-		KELP_ADMIN_URL: "http://127.0.0.1:23746",
+		KELP_ADMIN_URL: "http://127.0.0.1:12635",
 		KELP_MASTER_URL: "http://127.0.0.1:9433",
 		KELP_FILER_URL: "http://127.0.0.1:8988",
 		KELP_S3_ENDPOINT: "http://127.0.0.1:8433",

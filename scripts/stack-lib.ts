@@ -6,7 +6,7 @@ export const PORTS = {
 	filer: 8888,
 	s3: 8333,
 	iceberg: 8181,
-	admin: 23646,
+	admin: 12535,
 } as const;
 export type Ports = { [K in keyof typeof PORTS]: number };
 

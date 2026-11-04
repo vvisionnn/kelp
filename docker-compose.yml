@@ -1,0 +1,101 @@
+# Kelp + SeaweedFS as one stack. Deploy, upgrade and roll back together:
+# each Kelp release pins the SeaweedFS version it was tested against (see SEAWEEDFS_VERSION below).
+#
+#   cp .env.example .env   # set KELP_ADMIN_PASSWORD, KELP_SESSION_SECRET, S3 keys
+#   docker compose up -d
+#
+# Public ports: Kelp (3000) and the S3 API (8333). The native admin API has no authentication
+# in this setup, so it stays on the internal network and only Kelp talks to it.
+
+x-seaweedfs: &seaweedfs
+  image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.52}
+  restart: unless-stopped
+
+services:
+  seaweedfs:
+    <<: *seaweedfs
+    # Master, volume server, filer and S3 gateway in one process.
+    command: >-
+      server
+      -ip=seaweedfs
+      -ip.bind=0.0.0.0
+      -filer
+      -s3
+      -s3.port=8333
+      -master.volumeSizeLimitMB=${SEAWEEDFS_VOLUME_SIZE_LIMIT_MB:-1024}
+    environment:
+      # Bootstrap S3 admin identity. Manage everything else from Kelp.
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+    volumes:
+      - seaweedfs-data:/data
+    networks: [default, control]
+    ports:
+      - "${S3_PORT:-8333}:8333"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9333/cluster/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  admin:
+    <<: *seaweedfs
+    # The native admin API Kelp drives. It runs without its own login, so it only joins the private
+    # `control` network (no internet, no published ports) shared with Kelp, the worker and SeaweedFS.
+    command: admin -ip=0.0.0.0 -allowInsecureBind -port=12535 -port.legacy=0 -master=seaweedfs:9333 -dataDir=/data
+    environment: &worker-auth # Authenticates maintenance workers to the admin (gRPC). Only the admin and worker get it.
+      WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_WORKER_KEY:?set SEAWEEDFS_WORKER_KEY in .env}
+    volumes:
+      - seaweedfs-admin:/data
+    networks: [control]
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:12535/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  worker:
+    <<: *seaweedfs
+    # Runs maintenance jobs (vacuum, erasure coding, balancing, lifecycle) scheduled from Kelp.
+    command: worker -admin=admin:12535 -jobType=all -workingDir=/data
+    environment: *worker-auth
+    volumes:
+      - seaweedfs-worker:/data
+    networks: [control]
+    depends_on:
+      admin:
+        condition: service_healthy
+
+  kelp:
+    image: ghcr.io/vvisionnn/kelp:${KELP_VERSION:-latest}
+    build: .
+    restart: unless-stopped
+    environment:
+      KELP_ADMIN_URL: http://admin:12535
+      KELP_MASTER_URL: http://seaweedfs:9333
+      KELP_FILER_URL: http://seaweedfs:8888
+      KELP_S3_ENDPOINT: ${KELP_S3_ENDPOINT:-}
+      KELP_ADMIN_USER: ${KELP_ADMIN_USER:-admin}
+      KELP_ADMIN_PASSWORD: ${KELP_ADMIN_PASSWORD:?set KELP_ADMIN_PASSWORD in .env}
+      KELP_VIEWER_USER: ${KELP_VIEWER_USER:-}
+      KELP_VIEWER_PASSWORD: ${KELP_VIEWER_PASSWORD:-}
+      KELP_SESSION_SECRET: ${KELP_SESSION_SECRET:?set KELP_SESSION_SECRET in .env}
+    networks: [default, control]
+    ports:
+      - "${KELP_PORT:-3000}:3000"
+    depends_on:
+      admin:
+        condition: service_healthy
+
+networks:
+  control:
+    internal: true
+
+volumes:
+  seaweedfs-data:
+  seaweedfs-admin:
+  seaweedfs-worker:

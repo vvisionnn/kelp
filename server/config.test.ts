@@ -6,7 +6,7 @@ describe("loadConfig", () => {
 		const { config, warnings } = loadConfig({ KELP_ADMIN_PASSWORD: "pw", KELP_SESSION_SECRET: "s" });
 		expect(config).toMatchObject({
 			port: 3000,
-			adminUrl: "http://127.0.0.1:23646",
+			adminUrl: "http://127.0.0.1:12535",
 			masterUrl: "http://127.0.0.1:9333",
 			masterGrpc: "127.0.0.1:19333",
 			filerUrl: "http://127.0.0.1:8888",
@@ -23,7 +23,7 @@ describe("loadConfig", () => {
 	test("reads every setting from the environment", () => {
 		const { config } = loadConfig({
 			PORT: "8080",
-			KELP_ADMIN_URL: "http://admin:23646/",
+			KELP_ADMIN_URL: "http://admin:12535/",
 			KELP_MASTER_URL: "http://master:9333",
 			KELP_MASTER_GRPC: "master:19999",
 			KELP_FILER_URL: "http://filer:8888",
@@ -38,7 +38,7 @@ describe("loadConfig", () => {
 		});
 		expect(config).toMatchObject({
 			port: 8080,
-			adminUrl: "http://admin:23646",
+			adminUrl: "http://admin:12535",
 			masterGrpc: "master:19999",
 			filerGrpc: "filer:18888",
 			s3Endpoint: "https://s3.example.com",
