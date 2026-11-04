@@ -151,7 +151,7 @@ export function StatBand({
 				<div
 					key={stat.label}
 					className={cn(
-						"flex flex-col-reverse justify-end gap-2 px-6 first:pl-0 sm:flex-1",
+						"flex flex-col-reverse justify-end gap-2 pr-4 sm:flex-1 sm:px-6 sm:first:pl-0",
 						index > 0 && "border-hairline sm:border-l",
 					)}
 				>
