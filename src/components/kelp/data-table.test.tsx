@@ -94,6 +94,21 @@ describe("DataTable", () => {
 		expect(within(screen.getByRole("table")).getByText("bucket-1")).toBeTruthy();
 	});
 
+	test("plain text headers sort their column", async () => {
+		render(<DataTable data={rows.slice(0, 3)} columns={columns} getRowId={(r) => r.id} empty={null} />);
+		const cells = () =>
+			screen
+				.getAllByRole("cell")
+				.map((c) => c.textContent)
+				.filter((t) => t?.startsWith("bucket-"));
+		expect(cells()).toEqual(["bucket-0", "bucket-1", "bucket-2"]);
+		const size = () => screen.getByRole("button", { name: /Size/ });
+		fireEvent.click(size());
+		expect(cells()).toEqual(["bucket-0", "bucket-1", "bucket-2"]);
+		fireEvent.click(size());
+		expect(cells()).toEqual(["bucket-2", "bucket-1", "bucket-0"]);
+	});
+
 	test("matchesSearch needs every term", () => {
 		expect(matchesSearch("media us-east", "MEDIA east")).toBe(true);
 		expect(matchesSearch("media", "media west")).toBe(false);

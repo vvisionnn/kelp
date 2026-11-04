@@ -18,7 +18,7 @@ import { formatBytes, formatCount, formatPercent, formatRelative } from "@/lib/f
 import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
-import { PRESSED, sortable } from "./common.tsx";
+import { PRESSED } from "./common.tsx";
 import { useVolumeActions } from "./volume-actions.ts";
 
 export type VolumeFilter = "all" | "attention" | "read-only" | "vacuum";
@@ -104,7 +104,7 @@ export function volumeColumns({
 	const columns: Array<Column<StorageVolume> | false> = [
 		{
 			accessorKey: "id",
-			header: sortable("Volume"),
+			header: "Volume",
 			cell: ({ row }) => (
 				<Link
 					to="/volumes/$volumeId"
@@ -129,7 +129,7 @@ export function volumeColumns({
 		},
 		{
 			accessorKey: "size",
-			header: sortable("Size"),
+			header: "Size",
 			cell: ({ row }) => (
 				<div>
 					<span className="tabular">{formatBytes(row.original.size)}</span>
@@ -139,12 +139,12 @@ export function volumeColumns({
 		},
 		{
 			accessorKey: "fileCount",
-			header: sortable("Files"),
+			header: "Files",
 			cell: ({ row }) => <span className="tabular">{formatCount(row.original.fileCount)}</span>,
 		},
 		{
 			accessorKey: "garbageRatio",
-			header: sortable("Garbage"),
+			header: "Garbage",
 			cell: ({ row }) => (
 				<span
 					className={cn(
@@ -161,7 +161,7 @@ export function volumeColumns({
 		{
 			id: "copies",
 			accessorFn: (v) => v.replicas.length,
-			header: sortable("Copies"),
+			header: "Copies",
 			cell: ({ row }) => (
 				<span className="tabular">
 					{row.original.replicas.length}
@@ -172,7 +172,7 @@ export function volumeColumns({
 		{
 			id: "status",
 			accessorFn: (v) => volumeHealth(v).label,
-			header: sortable("Status"),
+			header: "Status",
 			cell: ({ row }) => {
 				const health = volumeHealth(row.original);
 				return <StatusDot tone={health.tone} label={health.label} />;
@@ -180,7 +180,7 @@ export function volumeColumns({
 		},
 		{
 			accessorKey: "modifiedAt",
-			header: sortable("Last write"),
+			header: "Last write",
 			cell: ({ row }) => (
 				<span className="text-muted-foreground text-xs">{formatRelative(row.original.modifiedAt)}</span>
 			),

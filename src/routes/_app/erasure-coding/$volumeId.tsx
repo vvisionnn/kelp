@@ -14,7 +14,7 @@ import {
 	StatTile,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { sortable, Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
+import { Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
 import { ecHealth, shardCounts } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ServerLegend, ShardMap, serverFill, shardRanges } from "@/components/kelp/storage/shard-map.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
@@ -33,7 +33,7 @@ function placementColumns(palette: Map<string, number>): Array<Column<EcPlacemen
 	return [
 		{
 			accessorKey: "server",
-			header: sortable("Server"),
+			header: "Server",
 			cell: ({ row }) => (
 				<div className="flex items-center gap-2.5">
 					<span className={cn("size-2.5 shrink-0 rounded-[3px]", serverFill(palette, row.original.server))} />
@@ -49,7 +49,7 @@ function placementColumns(palette: Map<string, number>): Array<Column<EcPlacemen
 		{
 			id: "shards",
 			accessorFn: (p) => p.shards.length,
-			header: sortable("Shards"),
+			header: "Shards",
 			cell: ({ row }) => (
 				<span className="tabular">
 					{row.original.shards.length}
@@ -61,7 +61,7 @@ function placementColumns(palette: Map<string, number>): Array<Column<EcPlacemen
 		},
 		{
 			accessorKey: "size",
-			header: sortable("Size"),
+			header: "Size",
 			cell: ({ row }) => <span className="tabular">{formatBytes(row.original.size)}</span>,
 		},
 	];

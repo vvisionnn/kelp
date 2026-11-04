@@ -7,7 +7,6 @@ import { EmptyState, StatusDot } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount } from "@/lib/format.ts";
 import { collectionLabel, serverPalette } from "@/lib/storage-queries.ts";
-import { sortable } from "./common.tsx";
 import { ServerLegend, ShardMap } from "./shard-map.tsx";
 
 export function ecHealth(ec: EcVolume): { tone: "good" | "warn" | "bad"; label: string } {
@@ -50,7 +49,7 @@ export function EcVolumeList({
 		const all: Array<Column<EcVolume> | false> = [
 			{
 				accessorKey: "id",
-				header: sortable("Volume"),
+				header: "Volume",
 				cell: ({ row }) => (
 					<Link
 						to="/erasure-coding/$volumeId"
@@ -83,7 +82,7 @@ export function EcVolumeList({
 			{
 				id: "health",
 				accessorFn: (ec) => ec.missingShards.length,
-				header: sortable("Health"),
+				header: "Health",
 				cell: ({ row }) => {
 					const health = ecHealth(row.original);
 					return <StatusDot tone={health.tone} label={health.label} />;
@@ -91,12 +90,12 @@ export function EcVolumeList({
 			},
 			{
 				accessorKey: "size",
-				header: sortable("Size"),
+				header: "Size",
 				cell: ({ row }) => <span className="tabular">{formatBytes(row.original.size)}</span>,
 			},
 			{
 				accessorKey: "fileCount",
-				header: sortable("Files"),
+				header: "Files",
 				cell: ({ row }) => <span className="tabular">{formatCount(row.original.fileCount)}</span>,
 			},
 		];

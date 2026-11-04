@@ -9,6 +9,7 @@ import {
 	type DataGridFeatures,
 	dataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header";
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
@@ -48,6 +49,10 @@ export function matchesSearch(text: string, query: string): boolean {
 		.every((term) => haystack.includes(term));
 }
 
+function headerWithSort<T extends object>(title: string): Column<T>["header"] {
+	return ({ column }) => <DataGridColumnHeader column={column} title={title} />;
+}
+
 export function DataTable<T extends object>({
 	data,
 	columns,
@@ -80,7 +85,13 @@ export function DataTable<T extends object>({
 	useEffect(() => setPagination((p) => ({ ...p, pageIndex: 0 })), [query]);
 
 	const allColumns = useMemo<Array<Column<T>>>(() => {
-		if (!bulkActions) return columns;
+		// Text headers become sort menus; custom header renderers are left alone.
+		const sortableColumns = columns.map((column) =>
+			typeof column.header === "string" && column.enableSorting !== false
+				? Object.assign({}, column, { header: headerWithSort<T>(column.header) })
+				: column,
+		);
+		if (!bulkActions) return sortableColumns;
 		const select: Column<T> = {
 			id: "select",
 			header: ({ table }) => (
@@ -103,7 +114,7 @@ export function DataTable<T extends object>({
 			enableSorting: false,
 			enableHiding: false,
 		};
-		return [select, ...columns];
+		return [select, ...sortableColumns];
 	}, [columns, bulkActions]);
 
 	const table = useTable({

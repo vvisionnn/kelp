@@ -6,7 +6,6 @@ import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
 import { CollectionShare } from "@/components/kelp/storage/collection-share.tsx";
-import { sortable } from "@/components/kelp/storage/common.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -21,7 +20,7 @@ export const Route = createFileRoute("/_app/collections/")({
 export const collectionColumns: Array<Column<StorageCollection>> = [
 	{
 		accessorKey: "name",
-		header: sortable("Collection"),
+		header: "Collection",
 		cell: ({ row }) => (
 			<Link
 				to="/collections/$name"
@@ -37,17 +36,17 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 	},
 	{
 		accessorKey: "size",
-		header: sortable("Size"),
+		header: "Size",
 		cell: ({ row }) => <span className="tabular">{formatBytes(row.original.size)}</span>,
 	},
 	{
 		accessorKey: "fileCount",
-		header: sortable("Files"),
+		header: "Files",
 		cell: ({ row }) => <span className="tabular">{formatCount(row.original.fileCount)}</span>,
 	},
 	{
 		accessorKey: "volumeCount",
-		header: sortable("Volumes"),
+		header: "Volumes",
 		cell: ({ row }) => (
 			<span className="tabular">
 				{row.original.volumeCount}
@@ -60,7 +59,7 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 	{
 		id: "garbage",
 		accessorFn: (c) => ratio(c.deletedBytes, c.size),
-		header: sortable("Garbage"),
+		header: "Garbage",
 		cell: ({ row }) => (
 			<span className="text-muted-foreground tabular">
 				{row.original.deletedBytes > 0

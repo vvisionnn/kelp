@@ -24,7 +24,7 @@ import {
 	StatusDot,
 } from "@/components/kelp/page.tsx";
 import { describeReplication } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Facts, sortable, Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
+import { Facts, Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
 import { useVolumeActions } from "@/components/kelp/storage/volume-actions.ts";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -56,7 +56,7 @@ function replicaColumns(volume: StorageVolume, canWrite: boolean): Array<Column<
 	return [
 		{
 			accessorKey: "server",
-			header: sortable("Server"),
+			header: "Server",
 			cell: ({ row }) => (
 				<div>
 					<p className="font-mono">{row.original.server}</p>
@@ -79,13 +79,13 @@ function replicaColumns(volume: StorageVolume, canWrite: boolean): Array<Column<
 		},
 		{
 			accessorKey: "size",
-			header: sortable("Size"),
+			header: "Size",
 			size: 110,
 			cell: ({ row }) => <span className="tabular">{formatBytes(row.original.size)}</span>,
 		},
 		{
 			accessorKey: "fileCount",
-			header: sortable("Files"),
+			header: "Files",
 			size: 150,
 			cell: ({ row }) => (
 				<span className="tabular">
@@ -98,13 +98,13 @@ function replicaColumns(volume: StorageVolume, canWrite: boolean): Array<Column<
 		},
 		{
 			accessorKey: "compactRevision",
-			header: sortable("Compactions"),
+			header: "Compactions",
 			size: 120,
 			cell: ({ row }) => <span className="tabular">{row.original.compactRevision}</span>,
 		},
 		{
 			accessorKey: "modifiedAt",
-			header: sortable("Last write"),
+			header: "Last write",
 			size: 120,
 			cell: ({ row }) => (
 				<span className="text-muted-foreground text-xs">{formatRelative(row.original.modifiedAt)}</span>
