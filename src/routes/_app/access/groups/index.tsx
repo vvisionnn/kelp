@@ -4,7 +4,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { NameList } from "@/components/kelp/access/badges.tsx";
-import { AvatarStack } from "@/components/kelp/access/identity.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Reveal, StatBand, StatusDot } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
@@ -37,8 +36,8 @@ const columns: Array<Column<IamGroup>> = [
 		header: "Group",
 		cell: ({ row }) => (
 			<span className="flex items-center gap-3">
-				<span className="flex size-9 items-center justify-center rounded-full bg-area/15 text-area">
-					<UsersRound className="size-4" />
+				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground [&_svg]:size-3.5">
+					<UsersRound />
 				</span>
 				<span className="font-medium">{row.original.name}</span>
 			</span>
@@ -63,10 +62,7 @@ const columns: Array<Column<IamGroup>> = [
 			row.original.members.length === 0 ? (
 				<span className="text-muted-foreground">No members</span>
 			) : (
-				<span className="flex items-center gap-2.5">
-					<AvatarStack names={row.original.members} max={4} />
-					<NameList names={row.original.members} max={2} />
-				</span>
+				<NameList names={row.original.members} max={3} />
 			),
 	},
 	{
@@ -151,7 +147,7 @@ function GroupsPage() {
 				actions={canWrite && <CreateGroupDialog />}
 			/>
 			{data && data.length > 0 && (
-				<Reveal className="hairline-t hairline-b mb-10 py-8">
+				<Reveal className="mb-6">
 					<StatBand stats={groupStats(data)} />
 				</Reveal>
 			)}

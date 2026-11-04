@@ -14,7 +14,7 @@ import { useAction } from "@/lib/mutations.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { ConfirmDialog } from "../confirm-dialog.tsx";
 import { CopyButton } from "../copy-button.tsx";
-import { AuroraCard, Panel, Reveal } from "../page.tsx";
+import { Reveal, Section } from "../page.tsx";
 import { Avatar } from "./identity.tsx";
 import { type EditorState, formatPolicy, POLICY_TEMPLATES, PolicyEditor } from "./policy-editor.tsx";
 
@@ -24,46 +24,44 @@ function UsedBy({ policy }: { policy: IamPolicy }) {
 	const { users, groups } = policy.attachedTo;
 	const count = users.length + groups.length;
 	return (
-		<section>
-			<AuroraCard className="p-6">
-				<h2 className="font-medium text-[15px]">Used by</h2>
-				<p className="mt-6 flex items-baseline gap-2">
-					<span className="font-[450] text-5xl leading-none tracking-[-0.04em] tabular">{count}</span>
-					<span className="text-[13px] text-foreground/70">{count === 1 ? "attachment" : "attachments"}</span>
-				</p>
-				<p className="mt-2 text-[13px] text-foreground/70">Detach it everywhere before deleting.</p>
-				{count === 0 ? (
-					<p className="mt-5 text-sm">Not attached to anyone.</p>
-				) : (
-					<ul className="mt-5 flex flex-wrap gap-2 text-[13px]">
-						{users.map((username) => (
-							<li key={`u-${username}`}>
-								<Link
-									to="/access/users/$username"
-									params={{ username }}
-									className="flex h-8 items-center gap-2 rounded-full bg-background/60 pr-3 pl-1 backdrop-blur hover:bg-background/80"
-								>
-									<Avatar name={username} size="sm" className="size-6" />
-									{username}
-								</Link>
-							</li>
-						))}
-						{groups.map((name) => (
-							<li key={`g-${name}`}>
-								<Link
-									to="/access/groups/$name"
-									params={{ name }}
-									className="flex h-8 items-center gap-2 rounded-full bg-background/60 px-3 backdrop-blur hover:bg-background/80"
-								>
+		<Section
+			title="Used by"
+			description={`${count} ${count === 1 ? "attachment" : "attachments"}. Detach it everywhere before deleting.`}
+			className="mt-0 min-w-0"
+		>
+			{count === 0 ? (
+				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">Not attached to anyone.</p>
+			) : (
+				<ul className="group-sheet divide-y divide-border text-[13px]">
+					{users.map((username) => (
+						<li key={`u-${username}`}>
+							<Link
+								to="/access/users/$username"
+								params={{ username }}
+								className="flex h-10 items-center gap-2.5 px-4 hover:bg-raised/70"
+							>
+								<Avatar name={username} />
+								{username}
+							</Link>
+						</li>
+					))}
+					{groups.map((name) => (
+						<li key={`g-${name}`}>
+							<Link
+								to="/access/groups/$name"
+								params={{ name }}
+								className="flex h-10 items-center gap-2.5 px-4 hover:bg-raised/70"
+							>
+								<span className="flex size-6 items-center justify-center rounded-full bg-secondary text-muted-foreground">
 									<UsersRound className="size-3.5" />
-									{name}
-								</Link>
-							</li>
-						))}
-					</ul>
-				)}
-			</AuroraCard>
-		</section>
+								</span>
+								{name}
+							</Link>
+						</li>
+					))}
+				</ul>
+			)}
+		</Section>
 	);
 }
 
@@ -71,16 +69,20 @@ function Principals() {
 	const { data } = useQuery(accessQueries.principals());
 	if (!data || data.length === 0) return null;
 	return (
-		<Panel title="Principals" description="Reference these in a Principal element.">
-			<ul className="grid gap-1">
+		<Section
+			title="Principals"
+			description="Reference these in a Principal element."
+			className="mt-0 min-w-0"
+		>
+			<ul className="group-sheet divide-y divide-border">
 				{data.map((arn) => (
-					<li key={arn} className="flex items-center gap-1 rounded-sm py-0.5 pl-1 hover:bg-raised">
-						<span className="min-w-0 flex-1 truncate font-mono text-xs">{arn}</span>
+					<li key={arn} className="flex h-9 items-center gap-1 pr-1.5 pl-4">
+						<span className="min-w-0 flex-1 truncate font-mono text-[12px]">{arn}</span>
 						<CopyButton value={arn} label={`Copy ${arn}`} />
 					</li>
 				))}
 			</ul>
-		</Panel>
+		</Section>
 	);
 }
 
@@ -124,8 +126,8 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 	const attached = policy ? policy.attachedTo.users.length + policy.attachedTo.groups.length : 0;
 
 	return (
-		<div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-			<Reveal>
+		<div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+			<Reveal className="min-w-0 lg:col-span-8">
 				<div>
 					<form
 						className="grid gap-4"
@@ -135,7 +137,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 						}}
 					>
 						{!policy && (
-							<div className="grid gap-4 rounded-lg bg-card p-6 sm:grid-cols-2">
+							<div className="group-sheet grid gap-4 p-4 sm:grid-cols-2">
 								<Field>
 									<FieldLabel htmlFor="policy-name">Name</FieldLabel>
 									<Input
@@ -185,7 +187,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 						{canWrite && (
 							<div className="flex flex-wrap items-center justify-between gap-2">
 								{policy && attached > 0 ? (
-									<p className="text-muted-foreground text-xs">
+									<p className="text-[12px] text-muted-foreground">
 										Detach it from {attached} {attached === 1 ? "place" : "places"} before deleting.
 									</p>
 								) : policy ? (
@@ -225,16 +227,10 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 					</form>
 				</div>
 			</Reveal>
-			<div className="grid gap-4">
-				{policy && (
-					<Reveal delay={0.05}>
-						<UsedBy policy={policy} />
-					</Reveal>
-				)}
-				<Reveal delay={0.08}>
-					<Principals />
-				</Reveal>
-			</div>
+			<Reveal delay={0.05} className="grid min-w-0 gap-8 lg:col-span-4">
+				{policy && <UsedBy policy={policy} />}
+				<Principals />
+			</Reveal>
 		</div>
 	);
 }
