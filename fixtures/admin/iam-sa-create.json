@@ -1,0 +1,1 @@
+{"message":"Service account created successfully","service_account":{"id":"sa:bob:002800232799","parent_user":"bob","description":"nightly backups","access_key_id":"AKIAKELPEXAMPLE00003","secret_access_key":"example-secret-4-not-a-real-key","status":"Active","create_date":"2026-11-04T22:15:39.740202+08:00","expiration":"2027-06-30T08:00:00+08:00"}}
