@@ -17,7 +17,7 @@
 
 ![Kelp overview in the dark theme](docs/screenshots/overview.png)
 
-Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: one consistent design, sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
+Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: a design of its own (monochrome, with one aurora color per area; see [DESIGN.md](DESIGN.md)), sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
 
 ## What you can do
 
@@ -38,12 +38,12 @@ Kelp manages a SeaweedFS cluster without changing it. It drives the native admin
     <td><img src="docs/screenshots/erasure-coding.png" alt="Shard map of an erasure-coded volume"></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/files.png" alt="File browser with an image preview"></td>
+    <td><img src="docs/screenshots/files.png" alt="File browser with an image preview, light theme"></td>
     <td><img src="docs/screenshots/table.png" alt="Iceberg table schema"></td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/maintenance.png" alt="Maintenance job types"></td>
-    <td><img src="docs/screenshots/user.png" alt="A user's keys, groups and policies"></td>
+    <td><img src="docs/screenshots/user.png" alt="A user's keys, groups and policies, light theme"></td>
   </tr>
 </table>
 
@@ -137,6 +137,7 @@ src/            React 19, TanStack Router and Query, Tailwind 4, Base UI, motion
   components/   kelp/ is Kelp's own; ui/, reui/ and react-bits/ are vendored registries
 fixtures/       Real responses captured from SeaweedFS 4.52, used by the unit tests
 e2e/            Playwright specs
+DESIGN.md       Kelp's design system: color, type, components, layout and motion
 scripts/        Local stack, seed data, review environment, releases
 ```
 
