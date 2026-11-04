@@ -96,8 +96,8 @@ export function JobStateBadge({ state, progress }: { state: JobState; progress?:
 /** Outcome of a run ("success" / "error") with the same visual language as job states. */
 export function OutcomeBadge({ outcome }: { outcome: string }) {
 	if (outcome === "success") return <JobStateBadge state="succeeded" />;
-	if (outcome === "error") return <JobStateBadge state="failed" />;
-	return <Badge variant="outline">{outcome || "Unknown"}</Badge>;
+	if (outcome === "error" || outcome === "failed") return <JobStateBadge state="failed" />;
+	return <Badge variant="outline">{capitalize(outcome) || "Unknown"}</Badge>;
 }
 
 /** 4193 → "4.2 s", 125000 → "2 min 5 s", 5400000 → "1 hr 30 min". */

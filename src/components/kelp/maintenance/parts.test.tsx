@@ -105,7 +105,7 @@ describe("badges and icons", () => {
 		expect(screen.getAllByText("Failed")).toHaveLength(2);
 		expect(screen.getByText("Succeeded")).toBeTruthy();
 		expect(screen.getByText("Unknown")).toBeTruthy();
-		expect(screen.getByText("skipped")).toBeTruthy();
+		expect(screen.getByText("Skipped")).toBeTruthy();
 		expect(container.querySelectorAll("svg").length).toBe(2);
 	});
 });

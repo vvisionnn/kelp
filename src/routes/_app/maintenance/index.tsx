@@ -49,7 +49,10 @@ export function maintenanceSummary(overview: MaintenanceOverview): {
 	if (overview.workerCount === 0) {
 		return { tone: "bad", text: "No workers are connected, so nothing can run. Start `weed worker`." };
 	}
-	const failing = overview.jobTypes.filter((t) => t.lastRunStatus && t.lastRunStatus !== "success");
+	// "skipped" (cooldown, nothing to do) is normal; only errors count as failures.
+	const failing = overview.jobTypes.filter(
+		(t) => t.lastRunStatus === "error" || t.lastRunStatus === "failed",
+	);
 	if (failing.length > 0) {
 		return { tone: "warn", text: `${failing.map((t) => t.displayName).join(", ")} failed on the last run.` };
 	}
