@@ -1,24 +1,16 @@
 import type { TableBucket } from "@shared/tables.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, Database, ScrollText, Table2 } from "lucide-react";
+import { ChevronRight, Database, ScrollText, Table2 } from "lucide-react";
 import { motion } from "motion/react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
-import {
-	AuroraCard,
-	EmptyState,
-	ErrorState,
-	PageHeader,
-	Reveal,
-	SkeletonBlock,
-} from "@/components/kelp/page.tsx";
+import { EmptyState, ErrorState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { CreateBucketDialog } from "@/components/kelp/tables/create-dialogs.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { streamsQueries } from "@/lib/streams-queries.ts";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/tables/")({
 	staticData: { section: "Object store", title: "Tables" },
@@ -61,15 +53,12 @@ function TablesPage() {
 			/>
 			{isPending ? (
 				<div
-					className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]"
+					className="grid gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]"
 					role="status"
 					aria-label="Loading table buckets"
 				>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<SkeletonBlock className="h-56 rounded-lg" />
-						<SkeletonBlock className="h-56 rounded-lg" />
-					</div>
-					<SkeletonBlock className="h-96 rounded-2xl" />
+					<SkeletonBlock className="h-48 rounded-xl" />
+					<SkeletonBlock className="h-80 rounded-xl" />
 				</div>
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
@@ -80,13 +69,10 @@ function TablesPage() {
 					description="Create a table bucket to give engines like Spark, Trino or DuckDB an Iceberg warehouse on SeaweedFS."
 				/>
 			) : (
-				<Reveal className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-					<section
-						aria-label="Table buckets"
-						className={cn("grid content-start gap-4", data.buckets.length > 1 && "sm:grid-cols-2")}
-					>
+				<Reveal className="grid gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+					<section aria-label="Table buckets" className="group-sheet h-fit divide-y divide-border">
 						{data.buckets.map((bucket, index) => (
-							<BucketCard key={bucket.arn} bucket={bucket} index={index} />
+							<BucketRow key={bucket.arn} bucket={bucket} index={index} />
 						))}
 					</section>
 					<ConnectCard port={data.icebergPort} example={data.buckets[0]?.name ?? "analytics"} />
@@ -96,43 +82,36 @@ function TablesPage() {
 	);
 }
 
-function BucketCard({ bucket, index }: { bucket: TableBucket; index: number }) {
+function BucketRow({ bucket, index }: { bucket: TableBucket; index: number }) {
 	const reduced = usePrefersReducedMotion();
 	return (
 		<motion.div
-			initial={reduced ? false : { opacity: 0, y: 8 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.3, delay: reduced ? 0 : index * 0.05 }}
+			initial={reduced ? false : { opacity: 0 }}
+			animate={{ opacity: 1 }}
+			transition={{ duration: 0.2, delay: reduced ? 0 : index * 0.03 }}
 		>
 			<Link
 				to="/tables/$bucket"
 				params={{ bucket: bucket.name }}
-				className="group flex h-full min-h-56 flex-col rounded-lg bg-card p-6 transition-colors hover:bg-raised"
+				className="group flex items-center gap-3 px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-raised/70"
 			>
-				<div className="flex items-start justify-between gap-3">
-					<span className="flex size-10 items-center justify-center rounded-md bg-area/15 text-area">
-						<Table2 className="size-5" />
-					</span>
-					<ArrowUpRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
-				</div>
-				<span className="mt-8 block truncate font-mono text-xl tracking-tight">{bucket.name}</span>
-				<span className="mt-1 text-[13px] text-muted-foreground">
-					{bucket.format.toLowerCase()} warehouse
+				<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-raised text-muted-foreground">
+					<Table2 className="size-4" />
 				</span>
-				<div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-6 text-[13px] text-muted-foreground">
-					<dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-						<dt>Owner</dt>
-						<dd className="text-foreground">{bucket.owner || "admin"}</dd>
-						<dt>Created</dt>
-						<dd className="text-foreground">{formatDateTime(bucket.createdAt)}</dd>
-					</dl>
-					{bucket.policyStatements > 0 && (
-						<Badge variant="area">
-							<ScrollText />
-							{bucket.policyStatements} policy {bucket.policyStatements === 1 ? "rule" : "rules"}
-						</Badge>
-					)}
-				</div>
+				<span className="min-w-0 flex-1">
+					<span className="block truncate font-medium font-mono text-[13px]">{bucket.name}</span>
+					<span className="block text-[12px] text-muted-foreground">
+						{bucket.format.toLowerCase()} warehouse, owned by {bucket.owner || "admin"}, created{" "}
+						{formatDateTime(bucket.createdAt)}
+					</span>
+				</span>
+				{bucket.policyStatements > 0 && (
+					<Badge variant="secondary">
+						<ScrollText />
+						{bucket.policyStatements} policy {bucket.policyStatements === 1 ? "rule" : "rules"}
+					</Badge>
+				)}
+				<ChevronRight className="size-4 text-tertiary transition-transform group-hover:translate-x-0.5" />
 			</Link>
 		</motion.div>
 	);
@@ -152,9 +131,9 @@ function ConnectCard({ port, example }: { port: number | null; example: string }
 		")",
 	].join("\n");
 	return (
-		<AuroraCard className="p-7 sm:p-8">
-			<h2 className="font-[450] text-2xl tracking-[-0.02em]">Connect a query engine</h2>
-			<p className="mt-2 text-[15px] text-foreground/75">
+		<section className="group-sheet h-fit p-4">
+			<h2 className="font-semibold text-[13px]">Connect a query engine</h2>
+			<p className="mt-0.5 text-[12px] text-muted-foreground">
 				Any Iceberg REST client works. Sign in with an S3 access key as OAuth client credentials.
 			</p>
 			<dl className="mt-8 grid gap-4 text-sm">
@@ -166,18 +145,18 @@ function ConnectCard({ port, example }: { port: number | null; example: string }
 					</dd>
 				</div>
 				<div>
-					<dt className="text-[13px] text-foreground/65">Warehouse</dt>
-					<dd className="mt-1 font-mono text-[15px]">s3://&lt;table-bucket&gt;</dd>
+					<dt className="text-[12px] text-muted-foreground">Warehouse</dt>
+					<dd className="mt-0.5 font-mono text-[13px]">s3://&lt;table-bucket&gt;</dd>
 				</div>
 			</dl>
-			<div className="relative mt-6">
-				<pre className="overflow-x-auto rounded-md bg-background/75 p-4 font-mono text-xs leading-relaxed backdrop-blur">
+			<div className="relative mt-4">
+				<pre className="overflow-x-auto rounded-lg bg-raised p-3.5 pr-10 font-mono text-[12px] leading-relaxed">
 					{pyiceberg}
 				</pre>
 				<span className="absolute top-2 right-2">
 					<CopyButton value={pyiceberg} label="Copy PyIceberg example" />
 				</span>
 			</div>
-		</AuroraCard>
+		</section>
 	);
 }

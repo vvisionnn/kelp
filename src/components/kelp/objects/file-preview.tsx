@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, FileQuestion, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { AuroraCard, ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +101,7 @@ function TextPreview({ file }: { file: FileDetails }) {
 	if (error) return <ErrorState error={error} />;
 	return (
 		<div className="grid gap-2">
-			<pre className="max-h-[50svh] overflow-auto rounded-md bg-background/80 p-4 backdrop-blur font-mono text-xs leading-relaxed [font-variant-ligatures:none]">
+			<pre className="max-h-[50svh] overflow-auto rounded-md bg-card p-4 font-mono text-[12px] leading-relaxed [font-variant-ligatures:none]">
 				{formatText(data, file.name, complete)}
 			</pre>
 			{!complete && (
@@ -143,8 +143,8 @@ function Preview({ file }: { file: FileDetails }) {
 			return <TextPreview file={file} />;
 		default:
 			return (
-				<div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-foreground/75 text-sm">
-					<span className="flex size-11 items-center justify-center rounded-full bg-background/60 backdrop-blur">
+				<div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-[13px] text-muted-foreground">
+					<span className="flex size-11 items-center justify-center rounded-full bg-card">
 						<FileQuestion className="size-5" />
 					</span>
 					Kelp cannot preview this type of file. Download it to open it.
@@ -155,7 +155,7 @@ function Preview({ file }: { file: FileDetails }) {
 
 function Property({ label, children }: { label: string; children: ReactNode }) {
 	return (
-		<div className="grid grid-cols-[7rem_1fr] gap-3 py-1.5 text-sm">
+		<div className="grid grid-cols-[6.5rem_1fr] gap-3 px-3 py-2 text-[13px]">
 			<dt className="text-muted-foreground">{label}</dt>
 			<dd className="min-w-0 break-words">{children}</dd>
 		</div>
@@ -242,10 +242,10 @@ function TagsEditor({ file }: { file: FileDetails }) {
 function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string | null | undefined }) {
 	const url = s3Url(s3Endpoint, file.path);
 	return (
-		<div className="grid grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-6">
-			<AuroraCard className="p-3 [--aurora-strength:0.45] dark:[--aurora-strength:0.8]">
+		<div className="grid grid-cols-[minmax(0,1fr)] gap-5 px-4 pb-6">
+			<div className="rounded-xl bg-raised p-3 dark:bg-card">
 				<Preview file={file} />
-			</AuroraCard>
+			</div>
 			<div className="flex flex-wrap gap-2">
 				<Button render={<a href={contentUrl(file.path, true)} download={file.name} />}>
 					<Download />
@@ -253,8 +253,8 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 				</Button>
 			</div>
 			<section>
-				<h3 className="mb-1 font-medium text-sm">Properties</h3>
-				<dl className="divide-y divide-hairline">
+				<h3 className="mb-1.5 px-1 font-semibold text-[13px]">Properties</h3>
+				<dl className="group-sheet divide-y divide-border">
 					<Property label="Path">
 						<span className="flex min-w-0 items-start justify-between gap-1">
 							<span className="min-w-0 break-all font-mono text-xs">{file.path}</span>
@@ -293,10 +293,10 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			</section>
 			{file.versions.length > 0 && (
 				<section aria-labelledby="versions-heading">
-					<h3 id="versions-heading" className="mb-2 font-medium text-sm">
+					<h3 id="versions-heading" className="mb-1.5 px-1 font-semibold text-[13px]">
 						Versions
 					</h3>
-					<ol className="divide-y divide-hairline rounded-md bg-raised text-xs">
+					<ol className="group-sheet divide-y divide-border text-[12px]">
 						{file.versions.map((version) => (
 							<li key={version.versionId} className="flex items-center gap-3 px-3 py-2">
 								<span className="min-w-0 flex-1">
@@ -328,10 +328,10 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			)}
 			{file.chunkList.length > 0 && (
 				<section>
-					<h3 className="mb-2 font-medium text-sm">
+					<h3 className="mb-1.5 px-1 font-semibold text-[13px]">
 						Chunks <span className="text-muted-foreground">({file.chunkList.length})</span>
 					</h3>
-					<ul className="max-h-48 divide-y divide-hairline overflow-auto rounded-md bg-raised text-xs">
+					<ul className="max-h-48 group-sheet divide-y divide-border overflow-auto text-[12px]">
 						{file.chunkList.map((chunk) => (
 							<li key={chunk.fileId} className="flex items-center justify-between gap-3 px-3 py-1.5">
 								<span className="font-mono">{chunk.fileId}</span>
@@ -345,8 +345,8 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			)}
 			{Object.keys(file.attributes).length > 0 && (
 				<section>
-					<h3 className="mb-1 font-medium text-sm">Attributes</h3>
-					<dl className="divide-y divide-hairline">
+					<h3 className="mb-1.5 px-1 font-semibold text-[13px]">Attributes</h3>
+					<dl className="group-sheet divide-y divide-border">
 						{Object.entries(file.attributes).map(([key, value]) => (
 							<Property key={key} label={key}>
 								<span className="break-all font-mono text-xs">{value}</span>
@@ -357,10 +357,10 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			)}
 			{Object.keys(file.s3Tags).length > 0 && (
 				<section aria-labelledby="s3-tags-heading">
-					<h3 id="s3-tags-heading" className="mb-1 font-medium text-sm">
+					<h3 id="s3-tags-heading" className="mb-1.5 px-1 font-semibold text-[13px]">
 						S3 object tags
 					</h3>
-					<dl className="divide-y divide-hairline">
+					<dl className="group-sheet divide-y divide-border">
 						{Object.entries(file.s3Tags).map(([key, value]) => (
 							<Property key={key} label={key}>
 								{value}
@@ -370,7 +370,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 				</section>
 			)}
 			<section>
-				<h3 className="mb-2 font-medium text-sm">Tags</h3>
+				<h3 className="mb-1.5 px-1 font-semibold text-[13px]">Tags</h3>
 				<TagsEditor file={file} />
 			</section>
 		</div>
@@ -387,10 +387,7 @@ export function FilePreviewSheet({ path, onClose }: { path: string | null; onClo
 	const name = path?.slice(path.lastIndexOf("/") + 1) ?? "";
 	return (
 		<Sheet open={path !== null} onOpenChange={(open) => !open && onClose()}>
-			<SheetContent
-				data-area="objects"
-				className="w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-xl"
-			>
+			<SheetContent className="w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-xl">
 				<SheetHeader className="flex-row items-center gap-3 pr-12">
 					<FileType type={getFileType(name)} size="sm" aria-hidden="true" />
 					<div className="min-w-0">
@@ -400,7 +397,7 @@ export function FilePreviewSheet({ path, onClose }: { path: string | null; onClo
 				</SheetHeader>
 				{isPending ? (
 					<div className="grid gap-3 px-4">
-						<SkeletonBlock className="h-56 rounded-2xl" />
+						<SkeletonBlock className="h-56 rounded-xl" />
 						<SkeletonBlock className="h-40 rounded-lg" />
 					</div>
 				) : error ? (

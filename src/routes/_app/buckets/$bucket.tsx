@@ -9,13 +9,12 @@ import { BucketSettings } from "@/components/kelp/objects/bucket-settings.tsx";
 import { FileBrowser } from "@/components/kelp/objects/file-browser.tsx";
 import { LifecycleEditor } from "@/components/kelp/objects/lifecycle-editor.tsx";
 import { PolicyEditor } from "@/components/kelp/objects/policy-editor.tsx";
-import { Facts } from "@/components/kelp/objects/showcase.tsx";
 import {
-	AuroraCard,
 	CapacityBar,
 	ErrorState,
+	InfoList,
+	Metric,
 	PageHeader,
-	Panel,
 	Reveal,
 	SkeletonBlock,
 } from "@/components/kelp/page.tsx";
@@ -55,12 +54,17 @@ function BucketPage() {
 
 	if (isPending) {
 		return (
-			<div className="grid gap-4 pt-6" role="status" aria-busy="true" aria-label="Loading bucket">
-				<SkeletonBlock className="mt-6 h-12 w-72" />
-				<div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-					<SkeletonBlock className="h-64 rounded-2xl" />
-					<SkeletonBlock className="h-64 rounded-lg" />
+			<div role="status" aria-busy="true" aria-label="Loading bucket">
+				<div className="flex items-center gap-3 pt-2 pb-6">
+					<SkeletonBlock className="size-9 rounded-[9px]" />
+					<SkeletonBlock className="h-7 w-48" />
 				</div>
+				<div className="grid gap-3 lg:grid-cols-12">
+					<SkeletonBlock className="h-[124px] rounded-xl lg:col-span-4" />
+					<SkeletonBlock className="h-[124px] rounded-xl lg:col-span-4" />
+					<SkeletonBlock className="h-[124px] rounded-xl lg:col-span-4" />
+				</div>
+				<SkeletonBlock className="mt-6 h-80 rounded-xl" />
 			</div>
 		);
 	}
@@ -75,7 +79,7 @@ function BucketPage() {
 					canWrite && (
 						<ConfirmDialog
 							trigger={
-								<Button variant="ghost" className="text-destructive">
+								<Button variant="destructive">
 									<Trash2 />
 									Delete bucket
 								</Button>
@@ -90,25 +94,41 @@ function BucketPage() {
 					)
 				}
 			/>
-			<Reveal className="mb-12 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-				<UsageCard bucket={bucket} />
-				<Panel>
-					<Facts
-						items={[
-							{ label: "On disk", value: formatBytes(bucket.physicalSize) },
-							{
-								label: "Stored files",
-								value: bucket.storedFiles === null ? "—" : formatCount(bucket.storedFiles),
-							},
-							{ label: "Volumes", value: formatCount(bucket.volumes) },
-							{ label: "Owner", value: bucket.owner || "Admins only", mono: Boolean(bucket.owner) },
-							{ label: "Created", value: formatDateTime(bucket.createdAt) },
-						]}
+			<Reveal className="mb-8 grid gap-3 lg:grid-cols-12">
+				<UsageWidget bucket={bucket} />
+				<section className="group-sheet grid grid-cols-2 gap-x-4 gap-y-3 p-4 lg:col-span-4">
+					<SmallStat label="On disk" value={formatBytes(bucket.physicalSize)} />
+					<SmallStat
+						label="Stored files"
+						value={bucket.storedFiles === null ? "—" : formatCount(bucket.storedFiles)}
 					/>
-				</Panel>
+					<SmallStat label="Volumes" value={formatCount(bucket.volumes)} />
+					<SmallStat
+						label="Lifecycle rules"
+						value={bucket.lifecycle.rules ? `${bucket.lifecycle.enabled} active` : "None"}
+					/>
+				</section>
+				<InfoList
+					className="lg:col-span-4"
+					items={[
+						{
+							label: "Owner",
+							value: bucket.owner ? (
+								<span className="font-mono text-[12px]">{bucket.owner}</span>
+							) : (
+								<span className="text-muted-foreground">Admins only</span>
+							),
+						},
+						{ label: "Created", value: formatDateTime(bucket.createdAt) },
+						{
+							label: "Address",
+							value: <span className="font-mono text-[12px]">s3://{bucket.name}</span>,
+						},
+					]}
+				/>
 			</Reveal>
 			<Tabs value={tab} onValueChange={(value) => navigate({ search: { tab: value as Tab } })}>
-				<TabsList className="mb-6">
+				<TabsList className="mb-4">
 					<TabsTrigger value="objects">Objects</TabsTrigger>
 					<TabsTrigger value="settings">Settings</TabsTrigger>
 					<TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
@@ -138,35 +158,38 @@ function BucketPage() {
 	);
 }
 
-/** The bucket's signature: how full it is against its quota, or simply how much it holds. */
-function UsageCard({ bucket }: { bucket: Bucket }) {
+/** How full the bucket is against its quota, or simply how much it holds. */
+function UsageWidget({ bucket }: { bucket: Bucket }) {
 	const quota = bucket.quota.enabled;
 	return (
-		<AuroraCard className="flex min-h-64 flex-col p-7 sm:p-8">
-			<span className="text-[13px] text-foreground/70">{quota ? "Quota used" : "Object data"}</span>
-			<div className="mt-auto pt-12">
-				<p className="font-[450] text-5xl leading-none tracking-[-0.04em] sm:text-6xl">
-					{quota
-						? formatPercent(ratio(bucket.logicalSize, bucket.quota.bytes))
-						: formatBytes(bucket.logicalSize)}
-				</p>
+		<section className="group-sheet flex flex-col p-4 lg:col-span-4">
+			<p className="text-[13px] text-muted-foreground">{quota ? "Quota used" : "Object data"}</p>
+			<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
 				{quota ? (
-					<>
-						<CapacityBar
-							used={bucket.logicalSize}
-							total={bucket.quota.bytes}
-							className="mt-6 h-2 bg-foreground/10"
-						/>
-						<p className="mt-3 text-[15px] text-foreground/75 tabular">
-							{formatBytes(bucket.logicalSize)} of {formatBytes(bucket.quota.bytes)}
-						</p>
-					</>
+					<Metric value={ratio(bucket.logicalSize, bucket.quota.bytes)} format={formatPercent} />
 				) : (
-					<p className="mt-4 text-[15px] text-foreground/75">
-						No quota. Set one in Settings to cap this bucket.
-					</p>
+					<Metric value={bucket.logicalSize} format={formatBytes} />
 				)}
-			</div>
-		</AuroraCard>
+			</p>
+			{quota ? (
+				<>
+					<CapacityBar used={bucket.logicalSize} total={bucket.quota.bytes} className="mt-auto" />
+					<p className="mt-1.5 text-[12px] text-muted-foreground tabular">
+						{formatBytes(bucket.logicalSize)} of {formatBytes(bucket.quota.bytes)}
+					</p>
+				</>
+			) : (
+				<p className="mt-auto text-[12px] text-muted-foreground">No quota. Set one in Settings.</p>
+			)}
+		</section>
+	);
+}
+
+function SmallStat({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="min-w-0">
+			<p className="text-[12px] text-muted-foreground">{label}</p>
+			<p className="metric truncate font-semibold text-[20px] leading-6">{value}</p>
+		</div>
 	);
 }

@@ -85,8 +85,8 @@ function Fact({ label, value, note }: { label: string; value: string; note: stri
 	return (
 		<div className="grid gap-0.5">
 			<dt className="text-[13px] text-muted-foreground">{label}</dt>
-			<dd className="mt-1 font-[450] text-2xl tracking-[-0.02em]">{value}</dd>
-			<dd className="text-[13px] text-muted-foreground">{note}</dd>
+			<dd className="font-semibold text-[15px]">{value}</dd>
+			<dd className="text-[12px] text-muted-foreground">{note}</dd>
 		</div>
 	);
 }
@@ -120,7 +120,7 @@ function ProtectionPanel({ bucket }: { bucket: Bucket }) {
 
 export function BucketSettings({ bucket }: { bucket: Bucket }) {
 	return (
-		<div className="grid gap-4 lg:grid-cols-2">
+		<div className="grid gap-3 lg:grid-cols-2">
 			<QuotaPanel bucket={bucket} />
 			<OwnerPanel bucket={bucket} />
 			<div className="lg:col-span-2">

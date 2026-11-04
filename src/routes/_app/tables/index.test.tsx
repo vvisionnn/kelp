@@ -12,7 +12,7 @@ describe("tables page", () => {
 		const { list } = await tablesApi();
 		renderApp("/tables", { "GET /tables/buckets": list, "GET /system/config": config });
 		const card = await screen.findByRole("link", { name: /analytics/ });
-		expect(within(card).getByText("kelp-dev")).toBeTruthy();
+		expect(within(card).getByText(/owned by kelp-dev/)).toBeTruthy();
 		expect(within(card).getByText("1 policy rule")).toBeTruthy();
 		expect(await screen.findByText("https://s3.example.com:8181")).toBeTruthy();
 		expect(screen.getByText(/warehouse="s3:\/\/analytics"/)).toBeTruthy();
