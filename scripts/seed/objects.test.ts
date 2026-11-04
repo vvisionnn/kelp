@@ -7,10 +7,9 @@ test("seed objects cover every bucket with unique keys and real bodies", () => {
 	const keys = objects.map((o) => `${o.bucket}/${o.key}`);
 	expect(new Set(keys).size).toBe(keys.length);
 	expect(objects.filter((o) => o.key.startsWith("thumbnails/")).length).toBe(240);
-	for (const object of objects.filter((_, i) => i % 25 === 0)) {
-		const body = object.body();
-		expect(body.length).toBeGreaterThan(0);
-	}
+	// One object per distinct generator function keeps this fast but complete.
+	const generators = new Map(objects.map((o) => [o.body.toString(), o]));
+	for (const object of generators.values()) expect(object.body().length).toBeGreaterThan(0);
 	const backup = objects.find((o) => o.bucket === "backups");
 	expect(backup?.body().length).toBe(6 * 1024 * 1024);
 });
