@@ -19,10 +19,16 @@ export function PageHeader({
 	actions?: ReactNode;
 }) {
 	return (
-		<div className="flex flex-wrap items-end justify-between gap-4 pt-2 pb-6">
+		<div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 pt-8 pb-10 sm:pt-12">
 			<div className="min-w-0">
-				<h1 className="font-semibold text-2xl tracking-tight [font-stretch:92%]">{title}</h1>
-				{description && <div className="mt-1 max-w-prose text-muted-foreground text-sm">{description}</div>}
+				<h1 className="text-balance font-[450] text-4xl leading-[1.05] tracking-[-0.025em] sm:text-5xl">
+					{title}
+				</h1>
+				{description && (
+					<div className="mt-4 max-w-[62ch] text-[17px] text-muted-foreground leading-relaxed">
+						{description}
+					</div>
+				)}
 			</div>
 			{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
 		</div>
@@ -66,17 +72,17 @@ export function Panel({
 	className?: string;
 }) {
 	return (
-		<section className={cn("rounded-xl border bg-card text-card-foreground", className)}>
+		<section className={cn("rounded-lg bg-card text-card-foreground", className)}>
 			{(title || actions) && (
-				<header className="flex items-start justify-between gap-3 px-5 pt-4">
+				<header className="flex items-start justify-between gap-3 px-6 pt-5">
 					<div>
-						{title && <h2 className="font-medium text-sm">{title}</h2>}
-						{description && <p className="mt-0.5 text-muted-foreground text-xs">{description}</p>}
+						{title && <h2 className="font-medium text-[15px]">{title}</h2>}
+						{description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
 					</div>
 					{actions}
 				</header>
 			)}
-			<div className="p-5">{children}</div>
+			<div className="p-6">{children}</div>
 		</section>
 	);
 }
@@ -115,15 +121,65 @@ export function StatTile({
 	icon?: ReactNode;
 }) {
 	return (
-		<div className="rounded-xl border bg-card px-5 py-4">
-			<div className="flex items-center justify-between text-muted-foreground text-sm">
+		<div className="rounded-lg bg-card px-6 py-5">
+			<div className="flex items-center justify-between text-[13px] text-muted-foreground">
 				<span>{label}</span>
-				<span className="[&_svg]:size-4">{icon}</span>
+				<span className="text-area [&_svg]:size-4">{icon}</span>
 			</div>
-			<div className="mt-2 font-semibold text-2xl tracking-tight [font-stretch:90%]">
+			<div className="mt-3 font-[450] text-[32px] leading-none tracking-[-0.03em]">
 				<Metric value={value} {...(format ? { format } : {})} />
 			</div>
-			{hint && <div className="mt-1 text-muted-foreground text-xs">{hint}</div>}
+			{hint && <div className="mt-2 text-[13px] text-muted-foreground">{hint}</div>}
+		</div>
+	);
+}
+
+/**
+ * The x.ai stat row: big numbers side by side, split by hairlines, labels underneath. Sits on the
+ * page, not in a card.
+ */
+export function StatBand({
+	stats,
+	className,
+}: {
+	stats: Array<{ label: string; value: number; format?: (n: number) => string; hint?: ReactNode }>;
+	className?: string;
+}) {
+	return (
+		<dl className={cn("grid grid-cols-2 gap-y-8 sm:flex", className)}>
+			{stats.map((stat, index) => (
+				<div
+					key={stat.label}
+					className={cn(
+						"flex flex-col-reverse justify-end gap-2 px-6 first:pl-0 sm:flex-1",
+						index > 0 && "border-hairline sm:border-l",
+					)}
+				>
+					<dt className="text-[13px] text-muted-foreground">
+						{stat.label}
+						{stat.hint && <span className="block text-foreground/40">{stat.hint}</span>}
+					</dt>
+					<dd className="font-[450] text-4xl leading-none tracking-[-0.035em] sm:text-[44px]">
+						<Metric value={stat.value} {...(stat.format ? { format: stat.format } : {})} />
+					</dd>
+				</div>
+			))}
+		</dl>
+	);
+}
+
+/**
+ * A card lit by the area's aurora, with a sheen that sweeps across on hover. The signature
+ * surface: use one or two per page, for the thing the page is about.
+ */
+export function AuroraCard({ children, className }: { children: ReactNode; className?: string }) {
+	return (
+		<div className={cn("aurora group/aurora rounded-2xl", className)}>
+			<span
+				aria-hidden="true"
+				className="pointer-events-none absolute inset-0 z-10 -translate-x-full bg-[linear-gradient(120deg,transparent_35%,var(--sheen)_50%,transparent_65%)] transition-transform duration-1000 ease-out group-hover/aurora:translate-x-full motion-reduce:hidden"
+			/>
+			{children}
 		</div>
 	);
 }
@@ -131,11 +187,11 @@ export function StatTile({
 /** Used/total bar. Turns amber past 80% and red past 95%, always with a text value beside it. */
 export function CapacityBar({ used, total, className }: { used: number; total: number; className?: string }) {
 	const fraction = ratio(used, total);
-	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "bg-primary";
+	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "bg-area";
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: a native <meter> cannot animate its fill.
 		<div
-			className={cn("h-1.5 w-full overflow-hidden rounded-full bg-muted", className)}
+			className={cn("h-1.5 w-full overflow-hidden rounded-full bg-foreground/[0.08]", className)}
 			role="meter"
 			aria-valuemin={0}
 			aria-valuemax={100}
@@ -187,12 +243,12 @@ export function EmptyState({
 	action?: ReactNode;
 }) {
 	return (
-		<div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-14 text-center">
-			<span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-5">
+		<div className="aurora flex flex-col items-center justify-center gap-4 rounded-2xl px-6 py-16 text-center [--aurora-strength:0.35]">
+			<span className="flex size-12 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur [&_svg]:size-5">
 				{icon}
 			</span>
 			<div>
-				<p className="font-medium">{title}</p>
+				<p className="font-medium text-lg tracking-tight">{title}</p>
 				<p className="mt-1 max-w-sm text-muted-foreground text-sm">{description}</p>
 			</div>
 			{action}
@@ -204,10 +260,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 	const upstream = error instanceof ApiError ? error.upstream : undefined;
 	const message = error instanceof Error ? error.message : "Something went wrong";
 	return (
-		<div
-			role="alert"
-			className="flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-5"
-		>
+		<div role="alert" className="flex flex-col items-start gap-3 rounded-lg bg-destructive/8 p-6">
 			<div className="flex items-center gap-2 font-medium text-destructive">
 				<AlertTriangle className="size-4" />
 				{upstream ? `SeaweedFS ${upstream} reported a problem` : "Could not load this data"}

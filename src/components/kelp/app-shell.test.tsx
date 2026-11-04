@@ -7,15 +7,24 @@ import { renderApp, viewerUser } from "../../../test/render-app.tsx";
 import { isActivePath } from "./app-shell.tsx";
 
 describe("app shell", () => {
-	test("sidebar highlights the current section and breadcrumbs name the page", async () => {
+	test("the page wears its area's hue and the area's pages show as pills", async () => {
 		const { routes } = await clusterApi();
-		renderApp("/cluster", routes);
-		await screen.findByText("Leader");
-		const active = screen.getAllByRole("link").filter((l) => l.hasAttribute("data-active"));
-		expect(active.map((l) => l.textContent)).toEqual(["Nodes"]);
-		const crumbs = screen.getByRole("navigation", { name: "breadcrumb" });
-		expect(within(crumbs).getByText("Cluster")).toBeTruthy();
-		expect(within(crumbs).getByText("Nodes")).toBeTruthy();
+		const { container } = renderApp("/volumes", routes);
+		const pages = await screen.findByRole("navigation", { name: "Storage" });
+		const active = within(pages)
+			.getAllByRole("link")
+			.filter((l) => l.hasAttribute("data-active"));
+		expect(active.map((l) => l.textContent)).toEqual(["Volumes"]);
+		expect(container.querySelector("[data-area]")?.getAttribute("data-area")).toBe("storage");
+		expect(screen.queryByRole("navigation", { name: "breadcrumb" })).toBeNull();
+	});
+
+	test("the overview has no page pills and uses the neutral spectrum", async () => {
+		const { routes } = await clusterApi();
+		const { container } = renderApp("/", routes);
+		await screen.findByText("Disk capacity");
+		expect(container.querySelector("[data-area]")?.getAttribute("data-area")).toBe("home");
+		expect(screen.queryByRole("navigation", { name: "Overview" })).toBeNull();
 	});
 
 	test("detail pages name the item in the breadcrumb, not the raw URL segment", async () => {
@@ -38,8 +47,8 @@ describe("app shell", () => {
 	test("account menu shows the role and changes theme", async () => {
 		const { routes } = await clusterApi();
 		renderApp("/", routes, viewerUser);
+		fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
 		expect(await screen.findByText("Read-only")).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Dark" }));
 		expect(localStorage.getItem("kelp-theme")).toBe("dark");
 	});
@@ -47,8 +56,8 @@ describe("app shell", () => {
 	test("account menu signs out", async () => {
 		const { routes } = await clusterApi();
 		const app = renderApp("/", routes);
+		fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
 		expect(await screen.findByText("Administrator")).toBeTruthy();
-		fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
 		fireEvent.click(await screen.findByRole("menuitem", { name: "Sign out" }));
 		await waitFor(() => expect(app.router.state.location.pathname).toBe("/login"));
 		expect(app.api.last("POST", "/auth/logout")).toBeTruthy();

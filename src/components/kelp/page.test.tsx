@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api.ts";
 import { setMedia } from "../../../test/media.ts";
 import { settle } from "../../../test/settle.ts";
 import { ThemeProvider } from "../theme-provider.tsx";
-import { AmbientThreads } from "./ambient-threads.tsx";
+import { AmbientRays } from "./ambient.tsx";
 import { KelpMark, Wordmark } from "./brand.tsx";
 import { canUseWebGL2 } from "./motion.ts";
 import {
@@ -67,7 +67,7 @@ describe("page primitives", () => {
 		);
 		const meters = screen.getAllByRole("meter");
 		expect(meters.map((m) => m.getAttribute("aria-valuenow"))).toEqual(["10", "85", "99", "0"]);
-		expect(meters[0]?.firstElementChild?.className).toContain("bg-primary");
+		expect(meters[0]?.firstElementChild?.className).toContain("bg-area");
 		expect(meters[1]?.firstElementChild?.className).toContain("bg-warning");
 		expect(meters[2]?.firstElementChild?.className).toContain("bg-destructive");
 	});
@@ -135,10 +135,10 @@ describe("ambient threads", () => {
 
 	test("stays out of the way without WebGL2 or with reduced motion", () => {
 		expect(canUseWebGL2()).toBe(false);
-		const { container } = render(<AmbientThreads color="#3dd6bc" />);
+		const { container } = render(<AmbientRays color="#8fd0ff" light={false} />);
 		expect(container.innerHTML).toBe("");
 		fakeWebGL2();
-		const reduced = render(<AmbientThreads color="#3dd6bc" />);
+		const reduced = render(<AmbientRays color="#8fd0ff" light={false} />);
 		expect(reduced.container.innerHTML).toBe("");
 	});
 
@@ -152,15 +152,17 @@ describe("ambient threads", () => {
 		expect(canUseWebGL2()).toBe(false);
 	});
 
-	test("renders the effect when allowed, pauses in background tabs, and fails quietly", async () => {
+	test("renders the effect when allowed, unmounts in background tabs, and fails quietly", async () => {
 		fakeWebGL2();
 		setMedia("(prefers-reduced-motion: reduce)", false);
 		const original = console.error;
 		console.error = () => {};
-		const { container } = render(<AmbientThreads color="#3dd6bc" className="threads" />);
+		const { container } = render(<AmbientRays color="#8fd0ff" light={false} className="rays" />);
 		Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
 		document.dispatchEvent(new Event("visibilitychange"));
+		expect(container.querySelector(".rays")).toBeNull();
 		Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+		document.dispatchEvent(new Event("visibilitychange"));
 		await settle(100);
 		console.error = original;
 		// The fake context cannot run shaders, so the boundary swallows the failure.

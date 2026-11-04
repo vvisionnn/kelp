@@ -170,7 +170,7 @@ export function DataTable<T extends object>({
 						initial={{ opacity: 0, y: -4 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -4 }}
-						className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+						className="flex flex-wrap items-center gap-2 rounded-full bg-secondary py-1.5 pr-1.5 pl-4 text-sm"
 					>
 						<span className="font-medium tabular">{selected.length} selected</span>
 						<div className="ml-auto flex flex-wrap gap-2">{bulkActions(selected, clear)}</div>
@@ -191,7 +191,7 @@ export function DataTable<T extends object>({
 					loadingMode="skeleton"
 					emptyMessage={query ? `Nothing matches "${query}".` : "No results."}
 					{...(onRowClick ? { onRowClick } : {})}
-					tableLayout={{ headerSticky: true, headerBackground: true, rowBorder: true, dense: false }}
+					tableLayout={{ headerBackground: false, rowBorder: true, dense: false }}
 				>
 					<div className="w-full space-y-2.5">
 						<DataGridContainer>

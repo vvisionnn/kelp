@@ -1,31 +1,37 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/instrument-sans/standard.css";
-@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
 	--font-heading: var(--font-sans);
-	--font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
-	--font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
-	--color-sidebar-ring: var(--sidebar-ring);
-	--color-sidebar-border: var(--sidebar-border);
-	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-	--color-sidebar-accent: var(--sidebar-accent);
-	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-	--color-sidebar-primary: var(--sidebar-primary);
-	--color-sidebar-foreground: var(--sidebar-foreground);
-	--color-sidebar: var(--sidebar);
-	--color-chart-5: var(--chart-5);
-	--color-chart-4: var(--chart-4);
-	--color-chart-3: var(--chart-3);
-	--color-chart-2: var(--chart-2);
-	--color-chart-1: var(--chart-1);
+	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
+	--color-sidebar-ring: var(--ring);
+	--color-sidebar-border: var(--border);
+	--color-sidebar-accent-foreground: var(--foreground);
+	--color-sidebar-accent: var(--accent);
+	--color-sidebar-primary-foreground: var(--primary-foreground);
+	--color-sidebar-primary: var(--primary);
+	--color-sidebar-foreground: var(--foreground);
+	--color-sidebar: var(--background);
+	--color-chart-5: var(--data-5);
+	--color-chart-4: var(--data-4);
+	--color-chart-3: var(--data-3);
+	--color-chart-2: var(--data-2);
+	--color-chart-1: var(--data-1);
+	--color-data-1: var(--data-1);
+	--color-data-2: var(--data-2);
+	--color-data-3: var(--data-3);
+	--color-data-4: var(--data-4);
+	--color-data-5: var(--data-5);
 	--color-ring: var(--ring);
 	--color-input: var(--input);
 	--color-border: var(--border);
+	--color-hairline: var(--hairline);
 	--color-destructive: var(--destructive);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
@@ -39,15 +45,19 @@
 	--color-popover: var(--popover);
 	--color-card-foreground: var(--card-foreground);
 	--color-card: var(--card);
+	--color-raised: var(--raised);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
-	--radius-sm: calc(var(--radius) * 0.6);
-	--radius-md: calc(var(--radius) * 0.8);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) * 1.4);
-	--radius-2xl: calc(var(--radius) * 1.8);
-	--radius-3xl: calc(var(--radius) * 2.2);
-	--radius-4xl: calc(var(--radius) * 2.6);
+	--color-area: var(--area-core);
+	--color-area-data: var(--area-data);
+	--radius-xs: 6px;
+	--radius-sm: 8px;
+	--radius-md: 12px;
+	--radius-lg: 16px;
+	--radius-xl: 20px;
+	--radius-2xl: 24px;
+	--radius-3xl: 28px;
+	--radius-4xl: 9999px;
 	--color-invert-foreground: var(--invert-foreground);
 	--color-invert: var(--invert);
 	--color-warning-foreground: var(--warning-foreground);
@@ -60,97 +70,131 @@
 }
 
 /*
- * Kelp palette. Light is "tidepool": cool sea-mist surfaces. Dark is "abyss": deep green-black
- * with a bioluminescent sea-glass accent. Chart slots are validated for CVD separation and
- * contrast against their own surface (dataviz validate_palette.js).
+ * Kelp design system (see DESIGN.md). Chrome is monochrome: Foam/Shell in light, Abyss/Trench in
+ * dark. Color comes from five area auroras, the validated data palette and reserved status colors.
  */
 :root {
-	--background: #f2f6f5;
-	--foreground: #0f1f1c;
-	--card: #ffffff;
-	--card-foreground: #0f1f1c;
+	--background: #ffffff;
+	--foreground: #0a0a0a;
+	--card: #f8f7f5;
+	--card-foreground: #0a0a0a;
 	--popover: #ffffff;
-	--popover-foreground: #0f1f1c;
-	--primary: #0e7a6d;
-	--primary-foreground: #f4fbf9;
-	--secondary: #e6eeec;
-	--secondary-foreground: #10302a;
-	--muted: #e9f0ee;
-	--muted-foreground: #566b66;
-	--accent: #dcebe6;
-	--accent-foreground: #0f3a33;
-	--destructive: #c93a3a;
-	--destructive-foreground: #8f1f1f;
-	--border: #dae4e1;
-	--input: #cfdcd8;
-	--ring: #0e8f80;
-	--chart-1: #0e8f80;
-	--chart-2: #b7871c;
-	--chart-3: #2f6bd8;
-	--chart-4: #d9573f;
-	--chart-5: #8a5cd0;
-	--radius: 0.7rem;
-	--sidebar: #eaf1ef;
-	--sidebar-foreground: #10201d;
-	--sidebar-primary: #0e7a6d;
-	--sidebar-primary-foreground: #f4fbf9;
-	--sidebar-accent: #dbe8e4;
-	--sidebar-accent-foreground: #0f2e28;
-	--sidebar-border: #d3dfdb;
-	--sidebar-ring: #0e8f80;
-	--success: #1e8e5a;
-	--success-foreground: #0f5133;
-	--info: #2f6bd8;
-	--info-foreground: #1d4590;
-	--warning: #c98a12;
-	--warning-foreground: #7a520a;
-	--invert: #10201d;
-	--invert-foreground: #eef6f4;
-	--glow: rgb(14 143 128 / 0.18);
+	--popover-foreground: #0a0a0a;
+	--raised: #f2f3f7;
+	--primary: #0a0a0a;
+	--primary-foreground: #ffffff;
+	--secondary: #f2f3f7;
+	--secondary-foreground: #0a0a0a;
+	--muted: #f2f3f7;
+	--muted-foreground: #646a73;
+	--accent: #eceef3;
+	--accent-foreground: #0a0a0a;
+	--destructive: #d6394f;
+	--destructive-foreground: #b4233a;
+	--border: #e4e7ee;
+	--hairline: rgb(10 10 10 / 0.07);
+	--input: rgb(10 10 10 / 0.14);
+	--ring: rgb(10 10 10 / 0.55);
+	--success: #16a34a;
+	--success-foreground: #11793a;
+	--info: #2563c9;
+	--info-foreground: #1d4fa3;
+	--warning: #b45309;
+	--warning-foreground: #92400e;
+	--invert: #0a0a0a;
+	--invert-foreground: #ffffff;
+	/* Data palette (light): blue, coral, teal, violet, amber, in this order. */
+	--data-1: #2563c9;
+	--data-2: #c8452e;
+	--data-3: #0e8a79;
+	--data-4: #7d55c7;
+	--data-5: #9a7012;
+	--spectrum: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316, #eab308);
+	--aurora-base: var(--card);
+	--aurora-strength: 0.6;
+	--grain-opacity: 0.05;
+	--float-shadow: 0 24px 48px -16px rgb(10 10 10 / 0.18), 0 0 0 1px rgb(10 10 10 / 0.06);
+	--sheen: rgb(255 255 255 / 0.55);
+	--radius: 1rem;
+	/* Area defaults to the neutral spectrum until a page declares its area. */
+	--area-deep: #3a3d44;
+	--area-core: #6366f1;
+	--area-glow: #ec4899;
+	--area-data: var(--data-1);
 }
 
 .dark {
-	--background: #081210;
-	--foreground: #e4efec;
-	--card: #0f1c19;
-	--card-foreground: #e4efec;
-	--popover: #0f1c19;
-	--popover-foreground: #e4efec;
-	--primary: #3dd6bc;
-	--primary-foreground: #052520;
-	--secondary: #152622;
-	--secondary-foreground: #dcebe7;
-	--muted: #13221e;
-	--muted-foreground: #8da39d;
-	--accent: #17302a;
-	--accent-foreground: #d7f2eb;
-	--destructive: #f06464;
-	--destructive-foreground: #ff9a9a;
-	--border: #1d302b;
-	--input: #243a34;
-	--ring: #2fb8a2;
-	--chart-1: #1fa591;
-	--chart-2: #b98b2a;
-	--chart-3: #5486e8;
-	--chart-4: #e26c52;
-	--chart-5: #9d74e0;
-	--sidebar: #0b1714;
-	--sidebar-foreground: #d7e6e2;
-	--sidebar-primary: #3dd6bc;
-	--sidebar-primary-foreground: #052520;
-	--sidebar-accent: #132520;
-	--sidebar-accent-foreground: #e4efec;
-	--sidebar-border: #172924;
-	--sidebar-ring: #2fb8a2;
-	--success: #3cc282;
-	--success-foreground: #8fe6bd;
-	--info: #6f9bf5;
-	--info-foreground: #a9c4ff;
-	--warning: #e2b24a;
-	--warning-foreground: #f3d38f;
-	--invert: #dcebe7;
-	--invert-foreground: #0b1714;
-	--glow: rgb(61 214 188 / 0.16);
+	--background: #0a0a0a;
+	--foreground: #e7e9ee;
+	--card: #1a1a1a;
+	--card-foreground: #e7e9ee;
+	--popover: #1a1a1a;
+	--popover-foreground: #e7e9ee;
+	--raised: #212121;
+	--primary: #ffffff;
+	--primary-foreground: #0a0a0a;
+	--secondary: #212121;
+	--secondary-foreground: #ffffff;
+	--muted: #1f1f1f;
+	--muted-foreground: #8e939b;
+	--accent: #262626;
+	--accent-foreground: #ffffff;
+	--destructive: #f0607e;
+	--destructive-foreground: #ff9bb0;
+	--border: #1f2228;
+	--hairline: rgb(255 255 255 / 0.08);
+	--input: rgb(255 255 255 / 0.12);
+	--ring: rgb(255 255 255 / 0.55);
+	--success: #4ade80;
+	--success-foreground: #86efac;
+	--info: #5b9cf0;
+	--info-foreground: #a3c6ff;
+	--warning: #facc15;
+	--warning-foreground: #fde68a;
+	--invert: #ffffff;
+	--invert-foreground: #0a0a0a;
+	/* Data palette (dark): same hues stepped for the dark surfaces. */
+	--data-1: #2f86e0;
+	--data-2: #d9573f;
+	--data-3: #1fa591;
+	--data-4: #9d74e0;
+	--data-5: #b98b2a;
+	--aurora-strength: 1;
+	--grain-opacity: 0.08;
+	--float-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
+	--sheen: rgb(255 255 255 / 0.1);
+}
+
+/* Area hues. A page sets `data-area` on its wrapper; the aurora, badges and data series follow. */
+[data-area="storage"] {
+	--area-deep: #0b2a5c;
+	--area-core: #2f86e0;
+	--area-glow: #8fd0ff;
+	--area-data: var(--data-1);
+}
+[data-area="objects"] {
+	--area-deep: #5c0f2a;
+	--area-core: #f0607e;
+	--area-glow: #ffb199;
+	--area-data: var(--data-2);
+}
+[data-area="operations"] {
+	--area-deep: #062e33;
+	--area-core: #1fa591;
+	--area-glow: #a3f0e2;
+	--area-data: var(--data-3);
+}
+[data-area="cluster"] {
+	--area-deep: #241552;
+	--area-core: #8b6cf0;
+	--area-glow: #c9b6ff;
+	--area-data: var(--data-4);
+}
+[data-area="access"] {
+	--area-deep: #4a1d05;
+	--area-core: #f28a2e;
+	--area-glow: #ffd18a;
+	--area-data: var(--data-5);
 }
 
 @layer base {
@@ -159,17 +203,86 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		font-size: 15px;
+		line-height: 1.6;
 	}
 	html {
 		@apply font-sans antialiased;
-		font-feature-settings: "ss01", "cv11";
+		color-scheme: light;
+	}
+	html.dark {
+		color-scheme: dark;
 	}
 	::selection {
-		background: color-mix(in oklab, var(--primary) 28%, transparent);
+		background: color-mix(in oklab, var(--area-core) 35%, transparent);
+	}
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
 	}
 }
 
-/* Tide shimmer used by skeletons: a soft band of light sweeping across, like light through water. */
+/*
+ * Aurora: the area's mesh gradient over the card surface, with film grain. It drifts slowly; the
+ * reduced-motion rule below stops it.
+ */
+@layer components {
+	.aurora {
+		position: relative;
+		isolation: isolate;
+		overflow: hidden;
+		background-color: var(--aurora-base);
+		/* The low corner: the deep stop at night, the glow stop by day (deep reads as grime on white). */
+		--aurora-low: var(--area-glow);
+	}
+	.dark .aurora {
+		--aurora-low: var(--area-deep);
+	}
+	.aurora::before {
+		content: "";
+		position: absolute;
+		inset: -12%;
+		z-index: -1;
+		background:
+			radial-gradient(
+				at 0% 100%,
+				color-mix(in oklab, var(--aurora-low) calc(var(--aurora-strength) * 100%), transparent) 0,
+				transparent 58%
+			),
+			radial-gradient(
+				at 55% 45%,
+				color-mix(in oklab, var(--area-core) calc(var(--aurora-strength) * 55%), transparent) 0,
+				transparent 62%
+			),
+			radial-gradient(
+				at 100% 0%,
+				color-mix(in oklab, var(--area-glow) calc(var(--aurora-strength) * 45%), transparent) 0,
+				transparent 52%
+			);
+		animation: kelp-aurora-drift 40s ease-in-out infinite alternate;
+	}
+	.aurora::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		opacity: var(--grain-opacity);
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		mix-blend-mode: overlay;
+	}
+}
+
+@keyframes kelp-aurora-drift {
+	from {
+		transform: translate3d(-3%, 2%, 0) scale(1);
+	}
+	to {
+		transform: translate3d(3%, -2%, 0) scale(1.06);
+	}
+}
+
+/* Tide shimmer used by skeletons: a soft band of light sweeping across. */
 @keyframes kelp-tide {
 	from {
 		background-position: 150% 0;
@@ -194,6 +307,19 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* The Kelp spectrum as a fill (progress, underlines, hairline accents). */
+@utility spectrum {
+	background-image: var(--spectrum);
+}
+
+@utility hairline-b {
+	border-bottom: 1px solid var(--hairline);
+}
+
+@utility hairline-t {
+	border-top: 1px solid var(--hairline);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
@@ -201,5 +327,31 @@
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
+	}
+}
+
+/*
+ * The area's light at the top of every page: a wide, faint aurora behind the header and hero, so
+ * each area has its own color without tinting any surface.
+ */
+@layer components {
+	.area-glow {
+		position: absolute;
+		inset: 0 0 auto;
+		height: 560px;
+		z-index: -1;
+		pointer-events: none;
+		background:
+			radial-gradient(
+				60% 70% at 12% 0%,
+				color-mix(in oklab, var(--area-core) calc(var(--aurora-strength) * 22%), transparent),
+				transparent 70%
+			),
+			radial-gradient(
+				45% 55% at 88% 0%,
+				color-mix(in oklab, var(--area-glow) calc(var(--aurora-strength) * 14%), transparent),
+				transparent 70%
+			);
+		mask-image: linear-gradient(to bottom, black, transparent);
 	}
 }

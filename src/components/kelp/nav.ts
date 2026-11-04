@@ -25,16 +25,25 @@ export interface NavItem {
 	keywords?: string;
 }
 
+/** The area hue a section's pages wear (see DESIGN.md); the overview uses the neutral spectrum. */
+export type Area = "home" | "cluster" | "storage" | "objects" | "access" | "operations";
+
 export interface NavSection {
 	title: string;
+	area: Area;
 	items: NavItem[];
 }
 
 export const NAV: NavSection[] = [
 	{
+		title: "Overview",
+		area: "home",
+		items: [{ title: "Overview", to: "/", icon: LayoutDashboard, keywords: "dashboard home health" }],
+	},
+	{
 		title: "Cluster",
+		area: "cluster",
 		items: [
-			{ title: "Overview", to: "/", icon: LayoutDashboard, keywords: "dashboard home health" },
 			{
 				title: "Nodes",
 				to: "/cluster",
@@ -45,6 +54,7 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: "Storage",
+		area: "storage",
 		items: [
 			{ title: "Volumes", to: "/volumes", icon: HardDrive, keywords: "vacuum read-only grow" },
 			{ title: "Collections", to: "/collections", icon: Layers },
@@ -53,6 +63,7 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: "Object store",
+		area: "objects",
 		items: [
 			{ title: "Buckets", to: "/buckets", icon: Archive, keywords: "s3 quota lifecycle policy versioning" },
 			{ title: "Files", to: "/files", icon: FolderTree, keywords: "filer browse upload" },
@@ -61,6 +72,7 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: "Access",
+		area: "access",
 		items: [
 			{ title: "Users", to: "/access/users", icon: Users, keywords: "iam access keys" },
 			{ title: "Groups", to: "/access/groups", icon: UsersRound },
@@ -70,6 +82,7 @@ export const NAV: NavSection[] = [
 	},
 	{
 		title: "Operations",
+		area: "operations",
 		items: [
 			{
 				title: "Maintenance",
@@ -86,3 +99,8 @@ export const NAV: NavSection[] = [
 export const NAV_ITEMS = NAV.flatMap((section) =>
 	section.items.map((item) => ({ ...item, section: section.title })),
 );
+
+/** The nav section a page belongs to, from its route's `staticData.section` (none means the overview). */
+export function sectionFor(section: string | undefined): NavSection {
+	return NAV.find((s) => s.title === section) ?? (NAV[0] as NavSection);
+}

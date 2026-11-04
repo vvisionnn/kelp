@@ -2,7 +2,8 @@ import { type QueryClient, useIsFetching, useQueryClient } from "@tanstack/react
 import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { LogOut, Monitor, Moon, Search, Sun } from "lucide-react";
 import { motion } from "motion/react";
-import { Fragment, type ReactNode, useEffect } from "react";
+import { type ComponentProps, type CSSProperties, Fragment, type ReactNode, useEffect } from "react";
+import PillNav from "@/components/react-bits/PillNav.tsx";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -23,28 +24,13 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
-import {
-	Sidebar,
-	SidebarContent,
-	SidebarFooter,
-	SidebarGroup,
-	SidebarGroupContent,
-	SidebarGroupLabel,
-	SidebarHeader,
-	SidebarInset,
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	SidebarProvider,
-	SidebarRail,
-	SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
 import { sessionQuery, useSession, useSignOut } from "@/lib/session.ts";
+import { cn } from "@/lib/utils";
 import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
 import { CommandMenu, useCommandMenu } from "./command-menu.tsx";
-import { NAV } from "./nav.ts";
+import { NAV, type NavSection, sectionFor } from "./nav.ts";
 
 declare module "@tanstack/react-router" {
 	interface StaticDataRouteOption {
@@ -61,64 +47,81 @@ export function isActivePath(pathname: string, to: string): boolean {
 	return to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 }
 
-function AppSidebar() {
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
+/** The deepest route with a title: it names the page and, through its section, the area. */
+function useLeaf() {
+	const matches = useMatches();
+	return [...matches].reverse().find((m) => m.staticData?.title);
+}
+
+/** Adapts PillNav's `href` links to the router. */
+function RouterLink({ href, ...props }: ComponentProps<"a"> & { href: string }) {
+	return <Link to={href as "/"} {...props} />;
+}
+
+/** Glass and pill colors for PillNav in Kelp's palette (white pill on dark, ink pill on light). */
+const PILL_COLORS: Record<"light" | "dark", CSSProperties> = {
+	dark: {
+		"--pn-surface": "rgba(26, 26, 26, 0.72)",
+		"--pn-text": "rgba(231, 233, 238, 0.62)",
+		"--pn-strong": "#ffffff",
+		"--pn-pill": "#ffffff",
+		"--pn-pill-ink": "#0a0a0a",
+	} as CSSProperties,
+	light: {
+		"--pn-surface": "rgba(242, 243, 247, 0.85)",
+		"--pn-text": "rgba(10, 10, 10, 0.6)",
+		"--pn-strong": "#0a0a0a",
+		"--pn-pill": "#0a0a0a",
+		"--pn-pill-ink": "#ffffff",
+	} as CSSProperties,
+};
+
+function AreaNav({ current }: { current: NavSection }) {
+	const { resolvedTheme } = useTheme();
 	return (
-		<Sidebar collapsible="icon" variant="inset">
-			<SidebarHeader>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton size="lg" render={<Link to="/" />} tooltip="Kelp">
-							<span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
-								<KelpMark className="size-5" />
-							</span>
-							<span className="grid leading-tight">
-								<span className="font-semibold tracking-tight">Kelp</span>
-								<span className="text-sidebar-foreground/60 text-xs">SeaweedFS console</span>
-							</span>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarHeader>
-			<SidebarContent>
-				{NAV.map((section) => (
-					<SidebarGroup key={section.title}>
-						<SidebarGroupLabel>{section.title}</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								{section.items.map((item) => {
-									const active = isActivePath(pathname, item.to);
-									return (
-										<SidebarMenuItem key={item.to}>
-											<SidebarMenuButton
-												isActive={active}
-												tooltip={item.title}
-												render={<Link to={item.to as "/"} />}
-												className="relative"
-											>
-												{active && (
-													<motion.span
-														layoutId="nav-active"
-														className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-sidebar-primary"
-														transition={{ type: "spring", stiffness: 500, damping: 40 }}
-													/>
-												)}
-												<item.icon />
-												<span>{item.title}</span>
-											</SidebarMenuButton>
-										</SidebarMenuItem>
-									);
-								})}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				))}
-			</SidebarContent>
-			<SidebarFooter>
-				<UserMenu />
-			</SidebarFooter>
-			<SidebarRail />
-		</Sidebar>
+		<PillNav
+			items={NAV.map((section) => ({ label: section.title, href: section.items[0]?.to ?? "/" }))}
+			activeHref={current.items[0]?.to}
+			linkComponent={RouterLink}
+			theme={resolvedTheme}
+			style={PILL_COLORS[resolvedTheme]}
+			size="sm"
+			itemStyle="plain"
+			hoverEffect="glide"
+			indicator="pill"
+			ariaLabel="Areas"
+		/>
+	);
+}
+
+/** The current area's pages as pills under the top bar. */
+function SectionNav({ section }: { section: NavSection }) {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	if (section.items.length < 2) return null;
+	return (
+		<nav aria-label={section.title} className="-mx-1 flex gap-1 overflow-x-auto px-1 py-3">
+			{section.items.map((item) => {
+				const active = isActivePath(pathname, item.to);
+				return (
+					<Link
+						key={item.to}
+						to={item.to as "/"}
+						data-active={active ? "" : undefined}
+						className="relative flex h-8 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] text-foreground/60 transition-colors hover:text-foreground data-active:text-foreground [&_svg]:size-3.5"
+					>
+						{active && (
+							<motion.span
+								layoutId="section-nav-active"
+								className="absolute inset-0 -z-10 rounded-full bg-secondary"
+								transition={{ type: "spring", stiffness: 500, damping: 40 }}
+							/>
+						)}
+						<item.icon />
+						{item.title}
+					</Link>
+				);
+			})}
+		</nav>
 	);
 }
 
@@ -134,47 +137,49 @@ function UserMenu() {
 	const signOut = useSignOut();
 	const navigate = useNavigate();
 	return (
-		<SidebarMenu>
-			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<SidebarMenuButton size="lg" aria-label="Account menu">
-								<span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent font-medium text-sm uppercase">
-									{user.name.slice(0, 1)}
-								</span>
-								<span className="grid leading-tight">
-									<span className="truncate font-medium">{user.name}</span>
-									<span className="text-sidebar-foreground/60 text-xs">
-										{user.role === "admin" ? "Administrator" : "Read-only"}
-									</span>
-								</span>
-							</SidebarMenuButton>
-						}
-					/>
-					<DropdownMenuContent side="top" align="start" className="w-56">
-						<DropdownMenuGroup>
-							<DropdownMenuLabel>Theme</DropdownMenuLabel>
-							<DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
-								{THEMES.map((option) => (
-									<DropdownMenuRadioItem key={option.value} value={option.value}>
-										{option.icon}
-										{option.label}
-									</DropdownMenuRadioItem>
-								))}
-							</DropdownMenuRadioGroup>
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							onClick={() => signOut.mutate(undefined, { onSettled: () => navigate({ to: "/login" }) })}
-						>
-							<LogOut />
-							Sign out
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</SidebarMenuItem>
-		</SidebarMenu>
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<button
+						type="button"
+						aria-label="Account menu"
+						className="flex h-9 items-center gap-2 rounded-full bg-secondary py-1 pr-3.5 pl-1 text-[13px] transition-colors hover:bg-accent"
+					>
+						<span className="flex size-7 items-center justify-center rounded-full bg-[image:var(--spectrum)] font-medium text-white text-xs uppercase">
+							{user.name.slice(0, 1)}
+						</span>
+						<span className="hidden max-w-28 truncate font-medium sm:block">{user.name}</span>
+					</button>
+				}
+			/>
+			<DropdownMenuContent align="end" className="w-60">
+				<DropdownMenuGroup>
+					<DropdownMenuLabel className="flex flex-col gap-0.5">
+						<span className="truncate font-medium text-foreground text-sm">{user.name}</span>
+						<span>{user.role === "admin" ? "Administrator" : "Read-only"}</span>
+					</DropdownMenuLabel>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuLabel>Theme</DropdownMenuLabel>
+					<DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+						{THEMES.map((option) => (
+							<DropdownMenuRadioItem key={option.value} value={option.value}>
+								{option.icon}
+								{option.label}
+							</DropdownMenuRadioItem>
+						))}
+					</DropdownMenuRadioGroup>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					onClick={() => signOut.mutate(undefined, { onSettled: () => navigate({ to: "/login" }) })}
+				>
+					<LogOut />
+					Sign out
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
@@ -196,47 +201,41 @@ function ThemeSwitch() {
 	);
 }
 
-function PageBreadcrumb() {
-	const matches = useMatches();
-	const leaf = [...matches].reverse().find((m) => m.staticData?.title);
-	const section = leaf?.staticData?.section;
-	const title = leaf?.staticData?.title;
+/** On detail pages, the trail back to the list the item came from. */
+function DetailBreadcrumb() {
+	const leaf = useLeaf();
 	const queryClient = useQueryClient();
 	// Re-render when fetches settle so names that come from loaded data appear.
 	useIsFetching();
 	const params = (leaf?.params ?? {}) as Record<string, string>;
 	const detail = leaf?.staticData?.crumb?.(params, queryClient) ?? Object.values(params)[0];
-	const crumbs = [
-		{ level: "section", text: section },
-		{ level: "title", text: title },
-		{ level: "detail", text: detail },
-	].filter((crumb): crumb is { level: string; text: string } => Boolean(crumb.text));
+	if (!detail) return null;
+	const crumbs = [leaf?.staticData?.section, leaf?.staticData?.title].filter(Boolean) as string[];
 	return (
-		<Breadcrumb>
+		<Breadcrumb className="pt-4">
 			<BreadcrumbList>
-				{crumbs.map(({ level, text }, index) => (
-					<Fragment key={level}>
-						{index > 0 && <BreadcrumbSeparator />}
+				{crumbs.map((text) => (
+					<Fragment key={text}>
 						<BreadcrumbItem>
-							{index === crumbs.length - 1 ? (
-								<BreadcrumbPage className="max-w-64 truncate">{text}</BreadcrumbPage>
-							) : (
-								<span className="text-muted-foreground">{text}</span>
-							)}
+							<span className="text-muted-foreground">{text}</span>
 						</BreadcrumbItem>
+						<BreadcrumbSeparator />
 					</Fragment>
 				))}
+				<BreadcrumbItem>
+					<BreadcrumbPage className="max-w-64 truncate">{detail}</BreadcrumbPage>
+				</BreadcrumbItem>
 			</BreadcrumbList>
 		</Breadcrumb>
 	);
 }
 
-/** A thin tide line under the top bar while any data is loading in the background. */
+/** The spectrum hairline under the top bar while any data is loading in the background. */
 function FetchIndicator() {
 	const fetching = useIsFetching() > 0;
 	return (
 		<div className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">
-			{fetching && <div className="tide h-full w-full bg-primary/40" />}
+			{fetching && <div className="spectrum h-full w-full animate-pulse" />}
 		</div>
 	);
 }
@@ -256,38 +255,53 @@ function useSessionWatcher() {
 	}, [queryClient, router]);
 }
 
+/** Kelp's page width: 1232px of content, as on x.ai. */
+export const CONTAINER = "mx-auto w-full max-w-[1280px] px-4 sm:px-6";
+
 export function AppShell() {
 	useSessionWatcher();
 	const command = useCommandMenu();
+	const section = sectionFor(useLeaf()?.staticData?.section);
 	return (
-		<SidebarProvider>
-			<AppSidebar />
-			<SidebarInset className="min-w-0">
-				<header className="relative flex h-14 shrink-0 items-center gap-3 px-4">
-					<SidebarTrigger className="-ml-1" />
-					<PageBreadcrumb />
-					<div className="ml-auto flex items-center gap-1">
+		<div data-area={section.area} className="relative isolate flex min-h-svh flex-col">
+			<div className="area-glow" aria-hidden="true" />
+			<header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
+				<div className={cn(CONTAINER, "flex h-16 items-center gap-3")}>
+					<Link
+						to="/"
+						className="flex shrink-0 items-center gap-2 rounded-full pr-2 font-semibold tracking-tight"
+					>
+						<KelpMark className="size-7" />
+						<span className="hidden text-[17px] md:block">Kelp</span>
+					</Link>
+					<div className="flex min-w-0 flex-1 justify-center">
+						<AreaNav current={section} />
+					</div>
+					<div className="flex shrink-0 items-center gap-1.5">
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
-							className="hidden w-56 justify-between text-muted-foreground sm:flex"
+							aria-label="Search"
+							className="w-9 px-0 text-muted-foreground sm:w-auto sm:pr-1.5 sm:pl-3.5"
 							onClick={() => command.setOpen(true)}
 						>
-							<span className="flex items-center gap-2">
-								<Search />
-								Search
-							</span>
-							<Kbd>⌘K</Kbd>
+							<Search />
+							<span className="hidden sm:inline">Search</span>
+							<Kbd className="ml-3 hidden rounded-full sm:inline-flex">⌘K</Kbd>
 						</Button>
 						<ThemeSwitch />
+						<UserMenu />
 					</div>
-					<FetchIndicator />
-				</header>
-				<div className="flex min-w-0 flex-1 flex-col px-4 pt-2 pb-10 sm:px-6">
-					<Outlet />
 				</div>
-			</SidebarInset>
+				<div className="hairline-b" />
+				<FetchIndicator />
+			</header>
+			<main className={cn(CONTAINER, "flex min-w-0 flex-1 flex-col pb-24")}>
+				<SectionNav section={section} />
+				<DetailBreadcrumb />
+				<Outlet />
+			</main>
 			<CommandMenu open={command.open} onOpenChange={command.setOpen} />
-		</SidebarProvider>
+		</div>
 	);
 }
