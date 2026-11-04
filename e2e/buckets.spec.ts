@@ -97,7 +97,8 @@ test("objects in a versioned bucket show as objects with their version history",
 	await dialog.getByLabel("Name").fill(name);
 	await dialog.getByRole("switch", { name: /Keep every version/ }).click();
 	await dialog.getByRole("button", { name: "Create bucket" }).click();
-	await expect(page.getByText("Versioned")).toBeVisible();
+	await expect(page).toHaveURL(new RegExp(`/buckets/${name}$`));
+	await expect(page.getByRole("heading", { name })).toBeVisible();
 
 	// Two S3 writes of the same key create two versions in SeaweedFS's `notes.md.versions/` folder.
 	await s3Put(s3, S3_CREDENTIALS, name, "notes.md", "first draft", "text/markdown");
