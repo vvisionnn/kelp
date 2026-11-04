@@ -11,13 +11,13 @@ import { TokenField } from "@/components/kelp/access/token-field.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import {
-	AuroraCard,
 	EmptyState,
 	ErrorState,
-	Panel,
+	InfoList,
+	PageHeader,
 	Reveal,
+	Section,
 	SkeletonBlock,
-	StatBand,
 } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -56,94 +56,92 @@ function UserPage() {
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
 
 	const editable = canWrite && !user.isStatic;
+	const active = user.accessKeys.filter((key) => key.status === "Active").length;
 	return (
 		<>
-			<Reveal className="pt-8 pb-10 sm:pt-12">
-				<AuroraCard className="p-7 sm:p-10">
-					<div className="flex flex-wrap items-start justify-between gap-6">
-						<div className="flex min-w-0 items-center gap-5">
-							<Avatar name={user.username} size="lg" />
-							<div className="min-w-0">
-								<h1 className="truncate font-[450] text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl">
-									{user.username}
-								</h1>
-								<p className="mt-2 flex flex-wrap items-center gap-2 text-[15px] text-foreground/70">
-									{user.email || "No email"}
-									{user.isStatic && <StaticBadge />}
-								</p>
-							</div>
-						</div>
-						{editable && (
-							<ConfirmDialog
-								trigger={
-									<Button variant="destructive">
-										<Trash2 />
-										Delete user
-									</Button>
-								}
-								title={`Delete ${user.username}?`}
-								description="Their access keys stop working immediately. Service accounts they own are not deleted."
-								confirmLabel="Delete user"
-								destructive
-								typeToConfirm={user.username}
-								onConfirm={() => remove.mutateAsync()}
-							/>
-						)}
-					</div>
-					<StatBand
-						className="mt-12"
-						stats={[
-							{ label: "Access keys", value: user.accessKeys.length },
-							{
-								label: "Active",
-								value: user.accessKeys.filter((key) => key.status === "Active").length,
-							},
-							{ label: "Groups", value: user.groups.length },
-							{ label: "Policies", value: user.policies.length },
-						]}
-					/>
-				</AuroraCard>
-				{user.isStatic && (
-					<p className="mt-4 flex items-start gap-2.5 rounded-lg bg-card px-5 py-4 text-muted-foreground text-sm">
-						<FileLock2 className="mt-0.5 size-4 shrink-0" />
-						This user is defined in the S3 config file. Edit that file to change it; SeaweedFS keeps it
-						read-only here.
-					</p>
-				)}
-			</Reveal>
-			<div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
-				<div className="grid gap-4">
-					<Reveal delay={0.05}>
-						<KeysPanel user={user} editable={editable} />
-					</Reveal>
-					<Reveal delay={0.08}>
-						<PermissionsPanel
-							key={JSON.stringify([user.email, user.actions, user.policies])}
-							user={user}
-							editable={editable}
+			<PageHeader
+				title={user.username}
+				description={`${user.email || "No email"}, ${plural(user.accessKeys.length, "access key")}, ${plural(user.groups.length, "group")}`}
+				actions={
+					editable && (
+						<ConfirmDialog
+							trigger={
+								<Button variant="destructive">
+									<Trash2 />
+									Delete user
+								</Button>
+							}
+							title={`Delete ${user.username}?`}
+							description="Their access keys stop working immediately. Service accounts they own are not deleted."
+							confirmLabel="Delete user"
+							destructive
+							typeToConfirm={user.username}
+							onConfirm={() => remove.mutateAsync()}
 						/>
-					</Reveal>
+					)
+				}
+			/>
+			{user.isStatic && (
+				<p className="mb-6 flex items-start gap-2 rounded-lg bg-secondary px-3.5 py-2.5 text-[13px] text-muted-foreground">
+					<FileLock2 className="mt-px size-4 shrink-0" />
+					This user is defined in the S3 config file. Edit that file to change it; SeaweedFS keeps it
+					read-only here.
+				</p>
+			)}
+			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<div className="grid min-w-0 gap-8 lg:col-span-8">
+					<KeysSection user={user} editable={editable} />
+					<PermissionsSection
+						key={JSON.stringify([user.email, user.actions, user.policies])}
+						user={user}
+						editable={editable}
+					/>
 				</div>
-				<div className="grid gap-4">
-					<Reveal delay={0.1}>
-						<GroupsPanel user={user} editable={canWrite} />
-					</Reveal>
-					<Reveal delay={0.12}>
-						<ServiceAccountsPanel username={user.username} />
-					</Reveal>
+				<div className="grid min-w-0 gap-8 lg:col-span-4">
+					<Section title="Details" className="mt-0">
+						<InfoList
+							items={[
+								{
+									label: "User",
+									value: (
+										<span className="flex items-center justify-end gap-2">
+											<Avatar name={user.username} />
+											{user.username}
+										</span>
+									),
+								},
+								{ label: "Email", value: user.email || <span className="text-tertiary">None</span> },
+								{ label: "Keys that can sign", value: <span className="tabular">{active}</span> },
+								{ label: "Policies", value: <span className="tabular">{user.policies.length}</span> },
+								{ label: "Defined in", value: user.isStatic ? <StaticBadge /> : "Kelp and the admin API" },
+							]}
+						/>
+					</Section>
+					<GroupsSection user={user} editable={canWrite} />
+					<ServiceAccountsSection username={user.username} />
 				</div>
-			</div>
+			</Reveal>
 		</>
 	);
+}
+
+function plural(count: number, noun: string): string {
+	return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 function UserSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading user">
-			<SkeletonBlock className="mt-12 mb-10 h-64 rounded-2xl" />
-			<div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-				<SkeletonBlock className="h-64 rounded-lg" />
-				<SkeletonBlock className="h-40 rounded-lg" />
+			<div className="flex items-center gap-3 pt-2 pb-6">
+				<SkeletonBlock className="size-9 rounded-[9px]" />
+				<div className="space-y-1.5">
+					<SkeletonBlock className="h-7 w-40" />
+					<SkeletonBlock className="h-4 w-64" />
+				</div>
+			</div>
+			<div className="grid gap-6 lg:grid-cols-12">
+				<SkeletonBlock className="h-64 rounded-xl lg:col-span-8" />
+				<SkeletonBlock className="h-48 rounded-xl lg:col-span-4" />
 			</div>
 		</div>
 	);
@@ -171,11 +169,11 @@ function KeyRow({
 			initial={{ opacity: 0, y: 4 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, x: -8 }}
-			className="flex flex-wrap items-center gap-3 rounded-md bg-raised py-2.5 pr-2.5 pl-4"
+			className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 pl-4"
 		>
 			<div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
-				<KeyRound className="size-4 shrink-0 text-area" />
-				<span className="truncate font-mono text-sm">{accessKey.accessKey}</span>
+				<KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
+				<span className="truncate font-mono text-[13px]">{accessKey.accessKey}</span>
 				<CopyButton value={accessKey.accessKey} label="Copy access key" />
 			</div>
 			<KeyStatusBadge status={accessKey.status} />
@@ -183,6 +181,7 @@ function KeyRow({
 				<>
 					<Switch
 						aria-label={`Active: ${accessKey.accessKey}`}
+						size="sm"
 						checked={accessKey.status === "Active"}
 						disabled={setStatus.isPending}
 						onCheckedChange={(checked) => setStatus.mutate(checked ? "Active" : "Inactive")}
@@ -210,12 +209,13 @@ function KeyRow({
 	);
 }
 
-function KeysPanel({ user, editable }: { user: IamUser; editable: boolean }) {
+function KeysSection({ user, editable }: { user: IamUser; editable: boolean }) {
 	return (
-		<Panel
+		<Section
 			title="Access keys"
 			description="Turn a key off to pause it without losing it."
 			actions={editable && <CreateKeyDialog username={user.username} />}
+			className="mt-0"
 		>
 			{user.accessKeys.length === 0 ? (
 				<EmptyState
@@ -224,7 +224,7 @@ function KeysPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 					description="This user cannot sign S3 requests yet."
 				/>
 			) : (
-				<ul className="grid gap-2">
+				<ul className="group-sheet divide-y divide-border">
 					<AnimatePresence initial={false}>
 						{user.accessKeys.map((key) => (
 							<KeyRow key={key.accessKey} username={user.username} accessKey={key} editable={editable} />
@@ -232,11 +232,11 @@ function KeysPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 					</AnimatePresence>
 				</ul>
 			)}
-		</Panel>
+		</Section>
 	);
 }
 
-function PermissionsPanel({ user, editable }: { user: IamUser; editable: boolean }) {
+function PermissionsSection({ user, editable }: { user: IamUser; editable: boolean }) {
 	const [email, setEmail] = useState(user.email);
 	const [actions, setActions] = useState(user.actions);
 	const [policies, setPolicies] = useState(user.policies);
@@ -257,12 +257,13 @@ function PermissionsPanel({ user, editable }: { user: IamUser; editable: boolean
 	};
 
 	return (
-		<Panel
+		<Section
 			title="Profile and permissions"
 			description="Actions are SeaweedFS's built-in grants; policies are IAM documents."
+			className="mt-0"
 		>
 			<form
-				className="grid gap-4"
+				className="group-sheet divide-y divide-border [&>*]:px-4 [&>*]:py-3.5"
 				onSubmit={(event) => {
 					event.preventDefault();
 					save.mutate({ email: email.trim(), actions, policies });
@@ -306,7 +307,7 @@ function PermissionsPanel({ user, editable }: { user: IamUser; editable: boolean
 							initial={{ opacity: 0, y: 6 }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: 6 }}
-							className="hairline-t flex items-center justify-end gap-2 pt-4"
+							className="flex items-center justify-end gap-2 bg-raised/50"
 						>
 							<Button type="button" variant="ghost" onClick={reset}>
 								Discard
@@ -319,11 +320,11 @@ function PermissionsPanel({ user, editable }: { user: IamUser; editable: boolean
 					)}
 				</AnimatePresence>
 			</form>
-		</Panel>
+		</Section>
 	);
 }
 
-function GroupsPanel({ user, editable }: { user: IamUser; editable: boolean }) {
+function GroupsSection({ user, editable }: { user: IamUser; editable: boolean }) {
 	const groups = useQuery({ ...accessQueries.groups(), enabled: editable });
 	const membership = (group: string) => `/iam/groups/${encodeURIComponent(group)}/members`;
 	const join = useAction({
@@ -339,19 +340,20 @@ function GroupsPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 	const available = (groups.data ?? []).map((g) => g.name).filter((name) => !user.groups.includes(name));
 
 	return (
-		<Panel title="Groups" description="Members inherit every policy attached to a group.">
-			<div className="grid gap-3">
+		<Section title="Groups" description="Members inherit every policy attached to a group." className="mt-0">
+			<div className="grid gap-2">
 				{user.groups.length === 0 ? (
-					<p className="text-muted-foreground text-sm">Not in any group.</p>
+					<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">Not in any group.</p>
 				) : (
-					<ul className="flex flex-wrap gap-2">
+					<ul className="group-sheet divide-y divide-border">
 						{user.groups.map((group) => (
-							<li
-								key={group}
-								className="flex h-8 items-center gap-1.5 rounded-full bg-secondary pr-1 pl-3 text-[13px]"
-							>
-								<UsersRound className="size-3.5 text-area" />
-								<Link to="/access/groups/$name" params={{ name: group }} className="hover:underline">
+							<li key={group} className="flex h-10 items-center gap-2.5 pr-2 pl-4 text-[13px]">
+								<UsersRound className="size-3.5 text-muted-foreground" />
+								<Link
+									to="/access/groups/$name"
+									params={{ name: group }}
+									className="min-w-0 flex-1 truncate hover:underline"
+								>
 									{group}
 								</Link>
 								{editable && (
@@ -384,27 +386,28 @@ function GroupsPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 					</Select>
 				)}
 			</div>
-		</Panel>
+		</Section>
 	);
 }
 
-function ServiceAccountsPanel({ username }: { username: string }) {
+function ServiceAccountsSection({ username }: { username: string }) {
 	const { data } = useQuery({
 		...accessQueries.serviceAccounts(),
 		select: (accounts) => accounts.filter((a) => a.parentUser === username),
 	});
 	return (
-		<Panel title="Service accounts" description="Separate keys that act on this user's behalf.">
+		<Section
+			title="Service accounts"
+			description="Separate keys that act on this user's behalf."
+			className="mt-0"
+		>
 			{!data || data.length === 0 ? (
-				<p className="text-muted-foreground text-sm">None.</p>
+				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">None.</p>
 			) : (
-				<ul className="grid gap-2">
+				<ul className="group-sheet divide-y divide-border">
 					{data.map((account) => (
-						<li
-							key={account.id}
-							className="flex items-center gap-2.5 rounded-md bg-raised px-3.5 py-2.5 text-sm"
-						>
-							<Bot className="size-4 text-area" />
+						<li key={account.id} className="flex h-10 items-center gap-2.5 px-4 text-[13px]">
+							<Bot className="size-3.5 text-muted-foreground" />
 							<Link
 								to="/access/service-accounts"
 								search={{ account: account.id }}
@@ -417,6 +420,6 @@ function ServiceAccountsPanel({ username }: { username: string }) {
 					))}
 				</ul>
 			)}
-		</Panel>
+		</Section>
 	);
 }

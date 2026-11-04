@@ -16,7 +16,7 @@ import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { AuroraCard, EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import { EmptyState, InfoList, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -102,12 +102,12 @@ const columns: Array<Column<ServiceAccount>> = [
 		header: "Service account",
 		cell: ({ row }) => (
 			<div className="flex min-w-0 items-center gap-3">
-				<span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-area/15 text-area">
-					<Bot className="size-4" />
+				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground [&_svg]:size-3.5">
+					<Bot />
 				</span>
 				<div className="min-w-0">
 					<p className="truncate font-medium">{row.original.description || "No description"}</p>
-					<p className="truncate font-mono text-muted-foreground text-xs">{row.original.id}</p>
+					<p className="truncate font-mono text-[12px] text-muted-foreground">{row.original.id}</p>
 				</div>
 			</div>
 		),
@@ -126,7 +126,7 @@ const columns: Array<Column<ServiceAccount>> = [
 	{
 		accessorKey: "accessKey",
 		header: "Access key",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.accessKey}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.accessKey}</span>,
 	},
 	{
 		accessorKey: "status",
@@ -140,7 +140,9 @@ const columns: Array<Column<ServiceAccount>> = [
 		cell: ({ row }) => {
 			const { text, expired } = describeExpiry(row.original.expiresAt);
 			return (
-				<span className={expired ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>{text}</span>
+				<span className={expired ? "text-[12px] text-destructive" : "text-[12px] text-muted-foreground"}>
+					{text}
+				</span>
 			);
 		},
 	},
@@ -307,50 +309,63 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 	const dirty = description.trim() !== account.description || newExpiry !== undefined;
 
 	return (
-		// Sheets render outside the page, so the sheet names its area for the aurora.
-		<SheetContent className="sm:max-w-md" data-area="access">
-			<SheetHeader className="p-3">
-				<AuroraCard className="rounded-xl px-5 pt-14 pb-5">
-					<SheetTitle className="font-[450] text-2xl tracking-[-0.02em]">
+		<SheetContent className="bg-background sm:max-w-md">
+			<SheetHeader className="flex-row items-center gap-3 px-4 pt-4 pb-0">
+				<span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-[#7d7aff] text-white">
+					<Bot className="size-5" />
+				</span>
+				<div className="min-w-0">
+					<SheetTitle className="truncate font-bold text-[17px] tracking-[-0.012em]">
 						{account.description || "Service account"}
 					</SheetTitle>
-					<SheetDescription className="mt-1 font-mono text-foreground/70 text-xs">
-						{account.id}
-					</SheetDescription>
-				</AuroraCard>
+					<SheetDescription className="truncate font-mono text-[12px]">{account.id}</SheetDescription>
+				</div>
 			</SheetHeader>
-			<div className="grid gap-5 px-4">
-				<dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-2 text-sm">
-					<dt className="text-muted-foreground">Acts as</dt>
-					<dd>
-						<Link
-							to="/access/users/$username"
-							params={{ username: account.parentUser }}
-							className="font-mono hover:underline"
-						>
-							{account.parentUser}
-						</Link>
-					</dd>
-					<dt className="text-muted-foreground">Access key</dt>
-					<dd className="flex items-center gap-1 font-mono text-xs">
-						{account.accessKey}
-						<CopyButton value={account.accessKey} label="Copy access key" />
-					</dd>
-					<dt className="text-muted-foreground">Created</dt>
-					<dd>{formatDateTime(account.createdAt)}</dd>
-					<dt className="text-muted-foreground">Expires</dt>
-					<dd className={expiry.expired ? "text-destructive" : ""}>
-						{account.expiresAt
-							? `${formatDateTime(account.expiresAt)}${expiry.expired ? " (expired)" : ""}`
-							: "Never"}
-					</dd>
-				</dl>
+			<div className="grid gap-5 overflow-y-auto px-4 pb-4">
+				<InfoList
+					items={[
+						{
+							label: "Acts as",
+							value: (
+								<Link
+									to="/access/users/$username"
+									params={{ username: account.parentUser }}
+									className="font-mono hover:underline"
+								>
+									{account.parentUser}
+								</Link>
+							),
+						},
+						{
+							label: "Access key",
+							value: (
+								<span className="flex items-center justify-end gap-1 font-mono text-[12px]">
+									{account.accessKey}
+									<CopyButton value={account.accessKey} label="Copy access key" />
+								</span>
+							),
+						},
+						{ label: "Created", value: formatDateTime(account.createdAt) },
+						{
+							label: "Expires",
+							value: (
+								<span className={expiry.expired ? "text-destructive" : ""}>
+									{account.expiresAt
+										? `${formatDateTime(account.expiresAt)}${expiry.expired ? " (expired)" : ""}`
+										: "Never"}
+								</span>
+							),
+						},
+					]}
+				/>
 				{canWrite ? (
 					<>
-						<div className="flex items-center justify-between gap-3 rounded-md bg-raised px-4 py-3 text-sm">
+						<div className="group-sheet flex items-center justify-between gap-3 px-4 py-3 text-[13px]">
 							<label htmlFor="account-active">
 								<span className="block font-medium">Active</span>
-								<span className="text-muted-foreground text-xs">Inactive accounts cannot sign requests.</span>
+								<span className="text-[12px] text-muted-foreground">
+									Inactive accounts cannot sign requests.
+								</span>
 							</label>
 							<Switch
 								id="account-active"
@@ -360,7 +375,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 							/>
 						</div>
 						<form
-							className="grid gap-4"
+							className="group-sheet grid gap-4 p-4"
 							onSubmit={(event) => {
 								event.preventDefault();
 								update.mutate({
@@ -417,7 +432,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 						</form>
 					</>
 				) : (
-					<p className="text-muted-foreground text-sm">Status: {account.status}</p>
+					<p className="text-[13px] text-muted-foreground">Status: {account.status}</p>
 				)}
 			</div>
 			{canWrite && (
@@ -457,7 +472,7 @@ function ServiceAccountsPage() {
 				actions={canWrite && <CreateServiceAccountDialog />}
 			/>
 			{data && data.length > 0 && (
-				<Reveal className="hairline-t hairline-b mb-10 py-8">
+				<Reveal className="mb-6">
 					<StatBand stats={accountStats(data)} />
 				</Reveal>
 			)}

@@ -21,8 +21,8 @@ const columns: Array<Column<IamPolicy>> = [
 		header: "Policy",
 		cell: ({ row }) => (
 			<span className="flex items-center gap-3">
-				<span className="flex size-9 items-center justify-center rounded-full bg-area/15 text-area">
-					<ScrollText className="size-4" />
+				<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground [&_svg]:size-3.5">
+					<ScrollText />
 				</span>
 				<span className="font-medium">{row.original.name}</span>
 			</span>
@@ -46,7 +46,7 @@ const columns: Array<Column<IamPolicy>> = [
 		accessorKey: "updatedAt",
 		header: "Updated",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.updatedAt)}</span>
+			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.updatedAt)}</span>
 		),
 	},
 ];
@@ -83,7 +83,7 @@ function PoliciesPage() {
 				actions={canWrite && <NewPolicyButton />}
 			/>
 			{data && data.length > 0 && (
-				<Reveal className="hairline-t hairline-b mb-10 py-8">
+				<Reveal className="mb-6">
 					<StatBand stats={policyStats(data)} />
 				</Reveal>
 			)}

@@ -28,7 +28,7 @@ export const userColumns: Array<Column<IamUser>> = [
 						<span className="truncate">{row.original.username}</span>
 						{row.original.isStatic && <StaticBadge />}
 					</p>
-					<p className="truncate text-muted-foreground text-xs">{row.original.email || "No email"}</p>
+					<p className="truncate text-[12px] text-muted-foreground">{row.original.email || "No email"}</p>
 				</div>
 			</div>
 		),
@@ -44,7 +44,7 @@ export const userColumns: Array<Column<IamUser>> = [
 			return (
 				<span className="tabular">
 					{keys.length}
-					{inactive > 0 && <span className="text-muted-foreground text-xs"> ({inactive} inactive)</span>}
+					{inactive > 0 && <span className="text-[12px] text-muted-foreground"> ({inactive} inactive)</span>}
 				</span>
 			);
 		},
@@ -53,7 +53,7 @@ export const userColumns: Array<Column<IamUser>> = [
 		id: "permissions",
 		accessorFn: (user) => describeActions(user.actions),
 		header: "Permissions",
-		cell: ({ row }) => <span className="text-sm">{describeActions(row.original.actions)}</span>,
+		cell: ({ row }) => <span>{describeActions(row.original.actions)}</span>,
 		size: 220,
 	},
 	{
@@ -94,7 +94,7 @@ function UsersPage() {
 				actions={canWrite && <CreateUserDialog />}
 			/>
 			{data && data.length > 0 && (
-				<Reveal className="hairline-t hairline-b mb-10 py-8">
+				<Reveal className="mb-6">
 					<StatBand stats={userStats(data)} />
 				</Reveal>
 			)}

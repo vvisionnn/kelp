@@ -1,30 +1,37 @@
 import type { KeyStatus } from "@shared/iam.ts";
 import { FileLock2 } from "lucide-react";
-import { Badge } from "@/components/reui/badge";
+import { cn } from "@/lib/utils";
 
+/** A key's state as a status pill: a dot and a word, tinted only when it is active. */
 export function KeyStatusBadge({ status }: { status: KeyStatus }) {
-	return status === "Active" ? (
-		<Badge variant="success-light" radius="full" className="px-2">
-			Active
-		</Badge>
-	) : (
-		<Badge variant="outline" radius="full" className="px-2 text-muted-foreground">
-			Inactive
-		</Badge>
+	const active = status === "Active";
+	return (
+		<span
+			className={cn(
+				"inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[12px]",
+				active ? "bg-success/12 text-success-foreground" : "bg-secondary text-muted-foreground",
+			)}
+		>
+			<span className={cn("size-1.5 rounded-full", active ? "bg-success" : "bg-tertiary")} />
+			{active ? "Active" : "Inactive"}
+		</span>
 	);
 }
 
 /** Marks users defined in the S3 config file, which SeaweedFS does not let anyone edit. */
 export function StaticBadge() {
 	return (
-		<Badge variant="info-light" radius="full" className="px-2" title="Defined in the S3 config file">
+		<span
+			className="inline-flex h-5 shrink-0 items-center gap-1 rounded-sm bg-secondary px-1.5 text-[12px] text-muted-foreground [&_svg]:size-3"
+			title="Defined in the S3 config file"
+		>
 			<FileLock2 />
 			Config file
-		</Badge>
+		</span>
 	);
 }
 
-/** A compact list of names that collapses to "+N" past `max`. */
+/** A compact list of names as neutral tags that collapses to "+N" past `max`. */
 export function NameList({
 	names,
 	max = 3,
@@ -34,16 +41,16 @@ export function NameList({
 	max?: number;
 	empty?: string;
 }) {
-	if (names.length === 0) return <span className="text-muted-foreground">{empty}</span>;
+	if (names.length === 0) return <span className="text-tertiary">{empty}</span>;
 	const shown = names.slice(0, max);
 	return (
 		<span className="flex flex-wrap items-center gap-1">
 			{shown.map((name) => (
-				<Badge key={name} variant="secondary" radius="full" className="px-2">
+				<span key={name} className="inline-flex h-5 items-center rounded-sm bg-secondary px-1.5 text-[12px]">
 					{name}
-				</Badge>
+				</span>
 			))}
-			{names.length > max && <span className="text-muted-foreground text-xs">+{names.length - max}</span>}
+			{names.length > max && <span className="text-[12px] text-muted-foreground">+{names.length - max}</span>}
 		</span>
 	);
 }

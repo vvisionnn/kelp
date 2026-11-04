@@ -127,25 +127,20 @@ export function PolicyEditor({
 	const lines = value.split("\n").length;
 	const gutter = useRef<HTMLDivElement>(null);
 	return (
-		<div className="overflow-hidden rounded-lg bg-raised ring-1 ring-hairline focus-within:ring-foreground/20">
-			<div className="hairline-b flex h-11 items-center justify-between gap-3 px-4">
-				<label htmlFor={id} className="flex items-center gap-2 font-medium text-[13px]">
-					<span className="flex gap-1.5" aria-hidden="true">
-						<span className="size-2.5 rounded-full bg-foreground/15" />
-						<span className="size-2.5 rounded-full bg-foreground/15" />
-						<span className="size-2.5 rounded-full bg-area" />
-					</span>
+		<div className="group-sheet overflow-hidden focus-within:ring-3 focus-within:ring-primary/25">
+			<div className="flex h-9 items-center justify-between gap-3 border-border border-b px-4">
+				<label htmlFor={id} className="font-semibold text-[13px]">
 					Policy document
 				</label>
 				<span className="font-mono text-[11px] text-muted-foreground tabular">
 					{lines} {lines === 1 ? "line" : "lines"}
 				</span>
 			</div>
-			<div className="relative flex">
+			<div className="relative flex bg-raised/60">
 				<div
 					ref={gutter}
 					aria-hidden="true"
-					className="pointer-events-none w-11 shrink-0 select-none overflow-hidden py-3 pr-3 text-right font-mono text-[13px] text-muted-foreground/50 leading-relaxed tabular"
+					className="pointer-events-none w-11 shrink-0 select-none overflow-hidden py-3 pr-3 text-right font-mono text-[12px] text-tertiary leading-5 tabular"
 				>
 					{Array.from({ length: lines }, (_, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: line numbers are their own identity.
@@ -164,13 +159,13 @@ export function PolicyEditor({
 					}}
 					aria-invalid={state.status === "invalid"}
 					rows={Math.min(Math.max(lines + 1, 10), 28)}
-					className="min-w-0 flex-1 resize-none bg-transparent py-3 pr-4 font-mono text-[13px] leading-relaxed outline-none disabled:opacity-70"
+					className="min-w-0 flex-1 resize-none bg-transparent py-3 pr-4 font-mono text-[12px] leading-5 outline-none disabled:opacity-70"
 				/>
 			</div>
 			<div
 				role="status"
 				className={cn(
-					"hairline-t flex min-h-10 items-center gap-1.5 px-4 text-xs",
+					"flex min-h-9 items-center gap-1.5 border-border border-t px-4 text-[12px]",
 					state.status === "invalid" ? "bg-destructive/8 text-destructive" : "text-muted-foreground",
 				)}
 			>
