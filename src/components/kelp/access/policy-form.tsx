@@ -1,7 +1,7 @@
 import type { IamPolicy, PolicyDocument } from "@shared/iam.ts";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Trash2, User, UsersRound } from "lucide-react";
+import { Trash2, UsersRound } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -14,38 +14,56 @@ import { useAction } from "@/lib/mutations.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { ConfirmDialog } from "../confirm-dialog.tsx";
 import { CopyButton } from "../copy-button.tsx";
-import { Panel, Reveal } from "../page.tsx";
+import { AuroraCard, Panel, Reveal } from "../page.tsx";
+import { Avatar } from "./identity.tsx";
 import { type EditorState, formatPolicy, POLICY_TEMPLATES, PolicyEditor } from "./policy-editor.tsx";
 
 const invalidate = [[...ACCESS_KEY]];
 
 function UsedBy({ policy }: { policy: IamPolicy }) {
 	const { users, groups } = policy.attachedTo;
+	const count = users.length + groups.length;
 	return (
-		<Panel title="Used by" description="Detach it everywhere before deleting.">
-			{users.length + groups.length === 0 ? (
-				<p className="text-muted-foreground text-sm">Not attached to anyone.</p>
-			) : (
-				<ul className="grid gap-2 text-sm">
-					{users.map((username) => (
-						<li key={`u-${username}`} className="flex items-center gap-2">
-							<User className="size-3.5 text-muted-foreground" />
-							<Link to="/access/users/$username" params={{ username }} className="font-mono hover:underline">
-								{username}
-							</Link>
-						</li>
-					))}
-					{groups.map((name) => (
-						<li key={`g-${name}`} className="flex items-center gap-2">
-							<UsersRound className="size-3.5 text-muted-foreground" />
-							<Link to="/access/groups/$name" params={{ name }} className="hover:underline">
-								{name}
-							</Link>
-						</li>
-					))}
-				</ul>
-			)}
-		</Panel>
+		<section>
+			<AuroraCard className="p-6">
+				<h2 className="font-medium text-[15px]">Used by</h2>
+				<p className="mt-6 flex items-baseline gap-2">
+					<span className="font-[450] text-5xl leading-none tracking-[-0.04em] tabular">{count}</span>
+					<span className="text-[13px] text-foreground/70">{count === 1 ? "attachment" : "attachments"}</span>
+				</p>
+				<p className="mt-2 text-[13px] text-foreground/70">Detach it everywhere before deleting.</p>
+				{count === 0 ? (
+					<p className="mt-5 text-sm">Not attached to anyone.</p>
+				) : (
+					<ul className="mt-5 flex flex-wrap gap-2 text-[13px]">
+						{users.map((username) => (
+							<li key={`u-${username}`}>
+								<Link
+									to="/access/users/$username"
+									params={{ username }}
+									className="flex h-8 items-center gap-2 rounded-full bg-background/60 pr-3 pl-1 backdrop-blur hover:bg-background/80"
+								>
+									<Avatar name={username} size="sm" className="size-6" />
+									{username}
+								</Link>
+							</li>
+						))}
+						{groups.map((name) => (
+							<li key={`g-${name}`}>
+								<Link
+									to="/access/groups/$name"
+									params={{ name }}
+									className="flex h-8 items-center gap-2 rounded-full bg-background/60 px-3 backdrop-blur hover:bg-background/80"
+								>
+									<UsersRound className="size-3.5" />
+									{name}
+								</Link>
+							</li>
+						))}
+					</ul>
+				)}
+			</AuroraCard>
+		</section>
 	);
 }
 
@@ -56,7 +74,7 @@ function Principals() {
 		<Panel title="Principals" description="Reference these in a Principal element.">
 			<ul className="grid gap-1">
 				{data.map((arn) => (
-					<li key={arn} className="flex items-center gap-1">
+					<li key={arn} className="flex items-center gap-1 rounded-sm py-0.5 pl-1 hover:bg-raised">
 						<span className="min-w-0 flex-1 truncate font-mono text-xs">{arn}</span>
 						<CopyButton value={arn} label={`Copy ${arn}`} />
 					</li>
@@ -106,9 +124,9 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 	const attached = policy ? policy.attachedTo.users.length + policy.attachedTo.groups.length : 0;
 
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+		<div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
 			<Reveal>
-				<Panel>
+				<div>
 					<form
 						className="grid gap-4"
 						onSubmit={(event) => {
@@ -117,7 +135,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 						}}
 					>
 						{!policy && (
-							<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-4 rounded-lg bg-card p-6 sm:grid-cols-2">
 								<Field>
 									<FieldLabel htmlFor="policy-name">Name</FieldLabel>
 									<Input
@@ -157,7 +175,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 													current.replaceAll(`:::${bucket}`, `:::${e.target.value || "my-bucket"}`),
 												);
 											}}
-											className="w-32 font-mono"
+											className="w-36 font-mono"
 										/>
 									</div>
 								</Field>
@@ -165,7 +183,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 						)}
 						<PolicyEditor value={text} onChange={setText} onState={onState} disabled={!canWrite} />
 						{canWrite && (
-							<div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+							<div className="flex flex-wrap items-center justify-between gap-2">
 								{policy && attached > 0 ? (
 									<p className="text-muted-foreground text-xs">
 										Detach it from {attached} {attached === 1 ? "place" : "places"} before deleting.
@@ -205,7 +223,7 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 							</div>
 						)}
 					</form>
-				</Panel>
+				</div>
 			</Reveal>
 			<div className="grid gap-4">
 				{policy && (

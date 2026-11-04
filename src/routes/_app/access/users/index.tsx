@@ -4,8 +4,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { NameList, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateUserDialog } from "@/components/kelp/access/create-user-dialog.tsx";
+import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { accessQueries, describeActions } from "@/lib/access-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
@@ -20,15 +21,18 @@ export const userColumns: Array<Column<IamUser>> = [
 		accessorKey: "username",
 		header: "User",
 		cell: ({ row }) => (
-			<div className="min-w-0">
-				<p className="flex items-center gap-2 font-medium">
-					<span className="truncate font-mono">{row.original.username}</span>
-					{row.original.isStatic && <StaticBadge />}
-				</p>
-				<p className="truncate text-muted-foreground text-xs">{row.original.email || "No email"}</p>
+			<div className="flex min-w-0 items-center gap-3">
+				<Avatar name={row.original.username} size="md" />
+				<div className="min-w-0">
+					<p className="flex items-center gap-2 font-medium">
+						<span className="truncate">{row.original.username}</span>
+						{row.original.isStatic && <StaticBadge />}
+					</p>
+					<p className="truncate text-muted-foreground text-xs">{row.original.email || "No email"}</p>
+				</div>
 			</div>
 		),
-		size: 240,
+		size: 280,
 	},
 	{
 		id: "keys",
@@ -66,6 +70,18 @@ export const userColumns: Array<Column<IamUser>> = [
 	},
 ];
 
+/** Headline numbers for the users page: who exists and how many of their keys can sign. */
+export function userStats(users: IamUser[]) {
+	const keys = users.flatMap((user) => user.accessKeys);
+	const inactive = keys.filter((key) => key.status === "Inactive").length;
+	return [
+		{ label: "Users", value: users.length },
+		{ label: "Keys that can sign", value: keys.length - inactive },
+		{ label: "Paused keys", value: inactive },
+		{ label: "Admins", value: users.filter((user) => user.actions.includes("Admin")).length },
+	];
+}
+
 function UsersPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
@@ -77,7 +93,12 @@ function UsersPage() {
 				description="People and apps that sign S3 requests with access keys."
 				actions={canWrite && <CreateUserDialog />}
 			/>
-			<Reveal>
+			{data && data.length > 0 && (
+				<Reveal className="hairline-t hairline-b mb-10 py-8">
+					<StatBand stats={userStats(data)} />
+				</Reveal>
+			)}
+			<Reveal delay={0.05}>
 				<DataTable
 					data={data}
 					isLoading={isPending}

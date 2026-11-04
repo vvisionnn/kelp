@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, ScrollText } from "lucide-react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { accessQueries, describeUsage } from "@/lib/access-queries.ts";
 import { formatRelative } from "@/lib/format.ts";
@@ -19,7 +19,14 @@ const columns: Array<Column<IamPolicy>> = [
 	{
 		accessorKey: "name",
 		header: "Policy",
-		cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+		cell: ({ row }) => (
+			<span className="flex items-center gap-3">
+				<span className="flex size-9 items-center justify-center rounded-full bg-area/15 text-area">
+					<ScrollText className="size-4" />
+				</span>
+				<span className="font-medium">{row.original.name}</span>
+			</span>
+		),
 	},
 	{
 		accessorKey: "statementCount",
@@ -44,6 +51,17 @@ const columns: Array<Column<IamPolicy>> = [
 	},
 ];
 
+/** Headline numbers for the policies page. */
+export function policyStats(policies: IamPolicy[]) {
+	const used = policies.filter((p) => p.attachedTo.users.length + p.attachedTo.groups.length > 0).length;
+	return [
+		{ label: "Policies", value: policies.length },
+		{ label: "Attached somewhere", value: used },
+		{ label: "Not attached", value: policies.length - used },
+		{ label: "Statements in all", value: policies.reduce((sum, p) => sum + p.statementCount, 0) },
+	];
+}
+
 function NewPolicyButton() {
 	return (
 		<Button render={<Link to="/access/policies/new" />}>
@@ -64,7 +82,12 @@ function PoliciesPage() {
 				description="IAM policy documents you attach to users and groups."
 				actions={canWrite && <NewPolicyButton />}
 			/>
-			<Reveal>
+			{data && data.length > 0 && (
+				<Reveal className="hairline-t hairline-b mb-10 py-8">
+					<StatBand stats={policyStats(data)} />
+				</Reveal>
+			)}
+			<Reveal delay={0.05}>
 				<DataTable
 					data={data}
 					isLoading={isPending}

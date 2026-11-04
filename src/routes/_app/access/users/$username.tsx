@@ -1,15 +1,24 @@
 import type { AccessKeyInfo, IamUser, KeyStatus, UpdateUserRequest } from "@shared/iam.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Bot, KeyRound, Trash2, UsersRound, X } from "lucide-react";
+import { Bot, FileLock2, KeyRound, Trash2, UsersRound, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { KeyStatusBadge, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateKeyDialog } from "@/components/kelp/access/create-key-dialog.tsx";
+import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { TokenField } from "@/components/kelp/access/token-field.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import {
+	AuroraCard,
+	EmptyState,
+	ErrorState,
+	Panel,
+	Reveal,
+	SkeletonBlock,
+	StatBand,
+} from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -49,45 +58,65 @@ function UserPage() {
 	const editable = canWrite && !user.isStatic;
 	return (
 		<>
-			<PageHeader
-				title={user.username}
-				description={
-					<span className="flex flex-wrap items-center gap-2">
-						{user.email || "No email"}
-						{user.isStatic && <StaticBadge />}
-					</span>
-				}
-				actions={
-					editable && (
-						<ConfirmDialog
-							trigger={
-								<Button variant="destructive">
-									<Trash2 />
-									Delete user
-								</Button>
-							}
-							title={`Delete ${user.username}?`}
-							description="Their access keys stop working immediately. Service accounts they own are not deleted."
-							confirmLabel="Delete user"
-							destructive
-							typeToConfirm={user.username}
-							onConfirm={() => remove.mutateAsync()}
-						/>
-					)
-				}
-			/>
-			{user.isStatic && (
-				<p className="mb-4 rounded-lg border bg-muted/40 px-4 py-3 text-muted-foreground text-sm">
-					This user is defined in the S3 config file. Edit that file to change it; SeaweedFS keeps it
-					read-only here.
-				</p>
-			)}
+			<Reveal className="pt-8 pb-10 sm:pt-12">
+				<AuroraCard className="p-7 sm:p-10">
+					<div className="flex flex-wrap items-start justify-between gap-6">
+						<div className="flex min-w-0 items-center gap-5">
+							<Avatar name={user.username} size="lg" />
+							<div className="min-w-0">
+								<h1 className="truncate font-[450] text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl">
+									{user.username}
+								</h1>
+								<p className="mt-2 flex flex-wrap items-center gap-2 text-[15px] text-foreground/70">
+									{user.email || "No email"}
+									{user.isStatic && <StaticBadge />}
+								</p>
+							</div>
+						</div>
+						{editable && (
+							<ConfirmDialog
+								trigger={
+									<Button variant="destructive">
+										<Trash2 />
+										Delete user
+									</Button>
+								}
+								title={`Delete ${user.username}?`}
+								description="Their access keys stop working immediately. Service accounts they own are not deleted."
+								confirmLabel="Delete user"
+								destructive
+								typeToConfirm={user.username}
+								onConfirm={() => remove.mutateAsync()}
+							/>
+						)}
+					</div>
+					<StatBand
+						className="mt-12"
+						stats={[
+							{ label: "Access keys", value: user.accessKeys.length },
+							{
+								label: "Active",
+								value: user.accessKeys.filter((key) => key.status === "Active").length,
+							},
+							{ label: "Groups", value: user.groups.length },
+							{ label: "Policies", value: user.policies.length },
+						]}
+					/>
+				</AuroraCard>
+				{user.isStatic && (
+					<p className="mt-4 flex items-start gap-2.5 rounded-lg bg-card px-5 py-4 text-muted-foreground text-sm">
+						<FileLock2 className="mt-0.5 size-4 shrink-0" />
+						This user is defined in the S3 config file. Edit that file to change it; SeaweedFS keeps it
+						read-only here.
+					</p>
+				)}
+			</Reveal>
 			<div className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
 				<div className="grid gap-4">
-					<Reveal>
+					<Reveal delay={0.05}>
 						<KeysPanel user={user} editable={editable} />
 					</Reveal>
-					<Reveal delay={0.05}>
+					<Reveal delay={0.08}>
 						<PermissionsPanel
 							key={JSON.stringify([user.email, user.actions, user.policies])}
 							user={user}
@@ -96,10 +125,10 @@ function UserPage() {
 					</Reveal>
 				</div>
 				<div className="grid gap-4">
-					<Reveal delay={0.08}>
+					<Reveal delay={0.1}>
 						<GroupsPanel user={user} editable={canWrite} />
 					</Reveal>
-					<Reveal delay={0.1}>
+					<Reveal delay={0.12}>
 						<ServiceAccountsPanel username={user.username} />
 					</Reveal>
 				</div>
@@ -111,10 +140,10 @@ function UserPage() {
 function UserSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading user">
-			<SkeletonBlock className="mt-2 mb-6 h-8 w-56" />
+			<SkeletonBlock className="mt-12 mb-10 h-64 rounded-2xl" />
 			<div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-				<SkeletonBlock className="h-64 rounded-xl" />
-				<SkeletonBlock className="h-40 rounded-xl" />
+				<SkeletonBlock className="h-64 rounded-lg" />
+				<SkeletonBlock className="h-40 rounded-lg" />
 			</div>
 		</div>
 	);
@@ -142,9 +171,10 @@ function KeyRow({
 			initial={{ opacity: 0, y: 4 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, x: -8 }}
-			className="flex flex-wrap items-center gap-3 py-3"
+			className="flex flex-wrap items-center gap-3 rounded-md bg-raised py-2.5 pr-2.5 pl-4"
 		>
-			<div className="flex min-w-0 flex-1 items-center gap-1">
+			<div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
+				<KeyRound className="size-4 shrink-0 text-area" />
 				<span className="truncate font-mono text-sm">{accessKey.accessKey}</span>
 				<CopyButton value={accessKey.accessKey} label="Copy access key" />
 			</div>
@@ -194,7 +224,7 @@ function KeysPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 					description="This user cannot sign S3 requests yet."
 				/>
 			) : (
-				<ul className="-my-3 divide-y">
+				<ul className="grid gap-2">
 					<AnimatePresence initial={false}>
 						{user.accessKeys.map((key) => (
 							<KeyRow key={key.accessKey} username={user.username} accessKey={key} editable={editable} />
@@ -276,7 +306,7 @@ function PermissionsPanel({ user, editable }: { user: IamUser; editable: boolean
 							initial={{ opacity: 0, y: 6 }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: 6 }}
-							className="flex items-center justify-end gap-2 border-t pt-4"
+							className="hairline-t flex items-center justify-end gap-2 pt-4"
 						>
 							<Button type="button" variant="ghost" onClick={reset}>
 								Discard
@@ -316,8 +346,11 @@ function GroupsPanel({ user, editable }: { user: IamUser; editable: boolean }) {
 				) : (
 					<ul className="flex flex-wrap gap-2">
 						{user.groups.map((group) => (
-							<li key={group} className="flex items-center gap-1 rounded-lg border py-1 pr-1 pl-2.5 text-sm">
-								<UsersRound className="size-3.5 text-muted-foreground" />
+							<li
+								key={group}
+								className="flex h-8 items-center gap-1.5 rounded-full bg-secondary pr-1 pl-3 text-[13px]"
+							>
+								<UsersRound className="size-3.5 text-area" />
 								<Link to="/access/groups/$name" params={{ name: group }} className="hover:underline">
 									{group}
 								</Link>
@@ -367,8 +400,11 @@ function ServiceAccountsPanel({ username }: { username: string }) {
 			) : (
 				<ul className="grid gap-2">
 					{data.map((account) => (
-						<li key={account.id} className="flex items-center gap-2 text-sm">
-							<Bot className="size-3.5 text-muted-foreground" />
+						<li
+							key={account.id}
+							className="flex items-center gap-2.5 rounded-md bg-raised px-3.5 py-2.5 text-sm"
+						>
+							<Bot className="size-4 text-area" />
 							<Link
 								to="/access/service-accounts"
 								search={{ account: account.id }}
