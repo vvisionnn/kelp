@@ -142,19 +142,20 @@ describe("mapInventory", () => {
 				{
 					rack: "r2",
 					node: node("b:8080", [
-						{ disk_type: "", disk_id: 0, ec_shards: [shardSet(9, [6, 7, 8, 9, 10, 11])] },
+						{ disk_type: "", disk_id: 0, ec_shards: [shardSet(9, [6, 7, 8, 9, 10, 11]), shardSet(2, [0])] },
 					]),
 				},
 			]),
 		);
-		const [ec] = inventory.ecVolumes;
+		expect(inventory.ecVolumes.map((v) => v.id)).toEqual([2, 9]);
+		const ec = inventory.ecVolumes[1];
 		expect(ec?.missingShards).toEqual([12, 13]);
 		expect(ec?.duplicateShards).toEqual([6]);
 		expect(ec?.presentShards).toHaveLength(12);
 		expect(ec?.size).toBe(130);
 		expect(ec?.expiresAt).toBe("2026-11-04T13:18:11.000Z");
 		expect(ec?.placements.map((p) => p.server)).toEqual(["a:8080", "b:8080"]);
-		expect(inventory.collections[0]).toMatchObject({ name: "", ecVolumeCount: 1, volumeCount: 0 });
+		expect(inventory.collections[0]).toMatchObject({ name: "", ecVolumeCount: 2, volumeCount: 0 });
 	});
 
 	test("custom encodings wider than 10+4 are reported as is", () => {
