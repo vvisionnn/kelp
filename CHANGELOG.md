@@ -2,6 +2,25 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.3.0](https://github.com/vvisionnn/kelp/compare/v0.2.0...v0.3.0) - 2026-11-04
+
+### 🚀 Features
+
+- **design:** Apple-grade dashboard foundation ([`f2a17d9`](https://github.com/vvisionnn/kelp/commit/f2a17d91eaead3f9d36b219c8ad7e29f72611904))
+- **shell:** Identity tiles in search, lighter overlays, two-column widgets on phones ([`c061ce3`](https://github.com/vvisionnn/kelp/commit/c061ce38aba704364a5891b5b467cd8c2317ce75))
+- **access:** Access pages as a dense dashboard ([`e4bd551`](https://github.com/vvisionnn/kelp/commit/e4bd551b49dc5ce7452531fc3a0609b8771e91d7))
+- **storage:** Storage and Nodes pages as a dense dashboard ([`ef18329`](https://github.com/vvisionnn/kelp/commit/ef183299fa62c6866d4ed42e565f09f7dfb50f86))
+- **objects:** Dashboard layout for buckets, files and tables ([`978e713`](https://github.com/vvisionnn/kelp/commit/978e7135439e59f5a1e098adc08fe7bed5919d18))
+- **operations:** Dashboard layouts for maintenance, messaging and settings ([`7f762b0`](https://github.com/vvisionnn/kelp/commit/7f762b04c345953041e724fbc47a87622a672411))
+
+### 🐛 Bug Fixes
+
+- **controls:** Segmented control sizes to labels and scrolls; table toolbar can shrink; shared pickSegment test helper ([`cd402eb`](https://github.com/vvisionnn/kelp/commit/cd402ebd3999edeef7902409a764eb92113365e8))
+- Name sections as regions, Automatic theme label, e2e for segmented controls ([`3cdaf41`](https://github.com/vvisionnn/kelp/commit/3cdaf41f64a0cfc6ba0507d36bdc6a553d597bf4))
+
+### 📚 Documentation
+
+- Dashboard screenshots ([`dd0f64f`](https://github.com/vvisionnn/kelp/commit/dd0f64f07df7d245713ffa5c3a0eaa3b67370cf1))
 ## [0.2.0](https://github.com/vvisionnn/kelp/compare/v0.1.0...v0.2.0) - 2026-11-04
 
 ### 🚀 Features
