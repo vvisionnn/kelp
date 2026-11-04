@@ -264,7 +264,7 @@ export function AppShell() {
 	const section = sectionFor(useLeaf()?.staticData?.section);
 	const readOnly = useSession().role !== "admin";
 	return (
-		<div data-area={section.area} className="relative isolate flex min-h-svh flex-col">
+		<div data-area={section.area} className="relative isolate flex min-h-svh flex-col overflow-x-clip">
 			<div className="area-glow" aria-hidden="true" />
 			<header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
 				<div className={cn(CONTAINER, "flex h-16 items-center gap-3")}>
