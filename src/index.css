@@ -1,0 +1,205 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/instrument-sans/standard.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+	--font-heading: var(--font-sans);
+	--font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--color-foreground: var(--foreground);
+	--color-background: var(--background);
+	--radius-sm: calc(var(--radius) * 0.6);
+	--radius-md: calc(var(--radius) * 0.8);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.4);
+	--radius-2xl: calc(var(--radius) * 1.8);
+	--radius-3xl: calc(var(--radius) * 2.2);
+	--radius-4xl: calc(var(--radius) * 2.6);
+	--color-invert-foreground: var(--invert-foreground);
+	--color-invert: var(--invert);
+	--color-warning-foreground: var(--warning-foreground);
+	--color-warning: var(--warning);
+	--color-info-foreground: var(--info-foreground);
+	--color-info: var(--info);
+	--color-success-foreground: var(--success-foreground);
+	--color-success: var(--success);
+	--color-destructive-foreground: var(--destructive-foreground);
+}
+
+/*
+ * Kelp palette. Light is "tidepool": cool sea-mist surfaces. Dark is "abyss": deep green-black
+ * with a bioluminescent sea-glass accent. Chart slots are validated for CVD separation and
+ * contrast against their own surface (dataviz validate_palette.js).
+ */
+:root {
+	--background: #f2f6f5;
+	--foreground: #0f1f1c;
+	--card: #ffffff;
+	--card-foreground: #0f1f1c;
+	--popover: #ffffff;
+	--popover-foreground: #0f1f1c;
+	--primary: #0e7a6d;
+	--primary-foreground: #f4fbf9;
+	--secondary: #e6eeec;
+	--secondary-foreground: #10302a;
+	--muted: #e9f0ee;
+	--muted-foreground: #566b66;
+	--accent: #dcebe6;
+	--accent-foreground: #0f3a33;
+	--destructive: #c93a3a;
+	--destructive-foreground: #8f1f1f;
+	--border: #dae4e1;
+	--input: #cfdcd8;
+	--ring: #0e8f80;
+	--chart-1: #0e8f80;
+	--chart-2: #b7871c;
+	--chart-3: #2f6bd8;
+	--chart-4: #d9573f;
+	--chart-5: #8a5cd0;
+	--radius: 0.7rem;
+	--sidebar: #eaf1ef;
+	--sidebar-foreground: #10201d;
+	--sidebar-primary: #0e7a6d;
+	--sidebar-primary-foreground: #f4fbf9;
+	--sidebar-accent: #dbe8e4;
+	--sidebar-accent-foreground: #0f2e28;
+	--sidebar-border: #d3dfdb;
+	--sidebar-ring: #0e8f80;
+	--success: #1e8e5a;
+	--success-foreground: #0f5133;
+	--info: #2f6bd8;
+	--info-foreground: #1d4590;
+	--warning: #c98a12;
+	--warning-foreground: #7a520a;
+	--invert: #10201d;
+	--invert-foreground: #eef6f4;
+	--glow: rgb(14 143 128 / 0.18);
+}
+
+.dark {
+	--background: #081210;
+	--foreground: #e4efec;
+	--card: #0f1c19;
+	--card-foreground: #e4efec;
+	--popover: #0f1c19;
+	--popover-foreground: #e4efec;
+	--primary: #3dd6bc;
+	--primary-foreground: #052520;
+	--secondary: #152622;
+	--secondary-foreground: #dcebe7;
+	--muted: #13221e;
+	--muted-foreground: #8da39d;
+	--accent: #17302a;
+	--accent-foreground: #d7f2eb;
+	--destructive: #f06464;
+	--destructive-foreground: #ff9a9a;
+	--border: #1d302b;
+	--input: #243a34;
+	--ring: #2fb8a2;
+	--chart-1: #1fa591;
+	--chart-2: #b98b2a;
+	--chart-3: #5486e8;
+	--chart-4: #e26c52;
+	--chart-5: #9d74e0;
+	--sidebar: #0b1714;
+	--sidebar-foreground: #d7e6e2;
+	--sidebar-primary: #3dd6bc;
+	--sidebar-primary-foreground: #052520;
+	--sidebar-accent: #132520;
+	--sidebar-accent-foreground: #e4efec;
+	--sidebar-border: #172924;
+	--sidebar-ring: #2fb8a2;
+	--success: #3cc282;
+	--success-foreground: #8fe6bd;
+	--info: #6f9bf5;
+	--info-foreground: #a9c4ff;
+	--warning: #e2b24a;
+	--warning-foreground: #f3d38f;
+	--invert: #dcebe7;
+	--invert-foreground: #0b1714;
+	--glow: rgb(61 214 188 / 0.16);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+	html {
+		@apply font-sans antialiased;
+		font-feature-settings: "ss01", "cv11";
+	}
+	::selection {
+		background: color-mix(in oklab, var(--primary) 28%, transparent);
+	}
+}
+
+/* Tide shimmer used by skeletons: a soft band of light sweeping across, like light through water. */
+@keyframes kelp-tide {
+	from {
+		background-position: 150% 0;
+	}
+	to {
+		background-position: -50% 0;
+	}
+}
+
+@utility tide {
+	background-image: linear-gradient(
+		100deg,
+		transparent 30%,
+		color-mix(in oklab, var(--foreground) 7%, transparent) 50%,
+		transparent 70%
+	);
+	background-size: 200% 100%;
+	animation: kelp-tide 1.6s ease-in-out infinite;
+}
+
+@utility tabular {
+	font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
