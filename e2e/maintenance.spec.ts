@@ -86,9 +86,9 @@ test("vacuum end to end: tune, detect, run, inspect the job", async ({ page }) =
 test("jobs page filters through the URL", async ({ page }) => {
 	await page.goto("/maintenance/jobs");
 	await expect(page.getByRole("heading", { name: "Maintenance jobs" })).toBeVisible();
-	await page.getByRole("button", { name: "Failed" }).click();
+	await page.getByRole("radio", { name: /^Failed/ }).click();
 	await expect(page).toHaveURL(/state=failed/);
-	await page.getByRole("button", { name: "All" }).click();
+	await page.getByRole("radio", { name: /^All/ }).click();
 	await expect(page).not.toHaveURL(/state=/);
 });
 

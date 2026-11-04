@@ -1,8 +1,7 @@
 import type { JobTypeSummary, MaintenanceOverview, MaintenanceWorker } from "@shared/maintenance.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, Bot, ListChecks, Search, Timer } from "lucide-react";
-import { motion } from "motion/react";
+import { Bot, ChevronRight, ListChecks } from "lucide-react";
 import {
 	ACTIVE_STATES,
 	ActivityFeed,
@@ -13,15 +12,13 @@ import {
 	OutcomeBadge,
 	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
-import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import {
-	AuroraCard,
 	CapacityBar,
 	EmptyState,
 	ErrorState,
 	PageHeader,
-	Panel,
 	Reveal,
+	Section,
 	SkeletonBlock,
 	StatBand,
 	StatusDot,
@@ -84,26 +81,19 @@ function MaintenancePage() {
 		<>
 			<PageHeader
 				title="Maintenance"
-				description={
-					<>
-						<span className="inline-flex h-8 items-center rounded-full bg-secondary px-3.5 text-[13px] text-foreground">
-							<StatusDot tone={summary.tone} label={summary.text} />
-						</span>
-						<span className="mt-4 block">
-							SeaweedFS checks for work on a schedule and hands it to workers: vacuuming, erasure coding,
-							balancing and lifecycle.
-						</span>
-					</>
-				}
+				description={<StatusDot tone={summary.tone} label={summary.text} />}
 				actions={
-					<Button variant="outline" render={<Link to="/maintenance/jobs" />}>
-						<ListChecks />
-						All jobs
-					</Button>
+					<>
+						<SchedulerLine overview={data} />
+						<Button variant="outline" render={<Link to="/maintenance/jobs" />}>
+							<ListChecks />
+							All jobs
+						</Button>
+					</>
 				}
 			/>
 
-			<Reveal className="hairline-t hairline-b py-10">
+			<Reveal>
 				<StatBand
 					stats={[
 						{ label: "Workers", value: data.workerCount, hint: "Connected to the admin server" },
@@ -118,16 +108,10 @@ function MaintenancePage() {
 				/>
 			</Reveal>
 
-			<Reveal delay={0.05} className="pt-16">
-				<div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-					<div>
-						<h2 className="font-[450] text-3xl tracking-[-0.025em]">Job types</h2>
-						<p className="mt-2 text-muted-foreground">
-							Open one to change its schedule and settings, or to run it now.
-						</p>
-					</div>
-					<SchedulerLine overview={data} />
-				</div>
+			<Section
+				title="Job types"
+				description="SeaweedFS checks for work on a schedule and hands it to workers. Open a job type to change its schedule or run it now."
+			>
 				{data.jobTypes.length === 0 ? (
 					<EmptyState
 						icon={<Bot />}
@@ -137,80 +121,71 @@ function MaintenancePage() {
 				) : (
 					<JobTypeList jobTypes={data.jobTypes} />
 				)}
-			</Reveal>
+			</Section>
 
-			<Reveal delay={0.1} className="mt-16 grid items-start gap-4 lg:grid-cols-[1.35fr_1fr]">
-				<AuroraCard className="p-6 sm:p-7">
-					<div className="flex items-start justify-between gap-3">
-						<div>
-							<h2 className="flex items-center gap-2.5 font-medium text-[15px]">
-								<span className="relative flex size-2">
-									<span className="absolute inset-0 animate-ping rounded-full bg-success opacity-50" />
-									<span className="relative size-2 rounded-full bg-success" />
-								</span>
-								Activity
-							</h2>
-							<p className="mt-1 text-[13px] text-foreground/70">
-								Detections, dispatches and results as they happen
-							</p>
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section
+					title="Activity"
+					description="Detections, dispatches and results as they happen"
+					className="mt-0 lg:col-span-7"
+				>
+					{activities.isPending ? (
+						<div className="group-sheet space-y-2 p-4">
+							{[0, 1, 2, 3, 4].map((i) => (
+								<SkeletonBlock key={i} className="h-9" />
+							))}
 						</div>
-					</div>
-					<div className="mt-5">
-						{activities.isPending ? (
-							<div className="space-y-2">
-								{[0, 1, 2, 3, 4].map((i) => (
-									<SkeletonBlock key={i} className="h-11 bg-foreground/[0.06]" />
-								))}
-							</div>
-						) : activities.error ? (
-							<ErrorState error={activities.error} onRetry={() => activities.refetch()} />
-						) : (
-							<ActivityFeed
-								activities={condenseActivities(activities.data)}
-								names={names}
-								className="-mx-2.5 max-h-[34rem] overflow-y-auto"
-							/>
-						)}
-					</div>
-				</AuroraCard>
-				<div className="space-y-4">
-					<Panel title="Workers" description="Processes that detect and run maintenance jobs">
+					) : activities.error ? (
+						<ErrorState error={activities.error} onRetry={() => activities.refetch()} />
+					) : (
+						<div className="group-sheet max-h-[34rem] overflow-y-auto">
+							<ActivityFeed activities={condenseActivities(activities.data)} names={names} />
+						</div>
+					)}
+				</Section>
+				<div className="space-y-8 lg:col-span-5">
+					<Section
+						title="Workers"
+						description="Processes that detect and run maintenance jobs"
+						className="mt-0"
+					>
 						{data.workers.length === 0 ? (
-							<p className="text-muted-foreground text-sm">
+							<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
 								No workers are connected. Start one with{" "}
 								<span className="font-mono">weed worker -admin=&lt;admin address&gt;</span>.
 							</p>
 						) : (
-							<ul className="divide-y divide-hairline">
+							<ul className="group-sheet divide-y divide-border">
 								{data.workers.map((worker) => (
 									<WorkerRow key={worker.id} worker={worker} names={names} />
 								))}
 							</ul>
 						)}
-					</Panel>
-					<Panel title="Lanes" description="Job types in a lane take turns; lanes run side by side">
-						<ul className="divide-y divide-hairline">
+					</Section>
+					<Section
+						title="Lanes"
+						description="Job types in a lane take turns; lanes run side by side"
+						className="mt-0"
+					>
+						<ul className="group-sheet divide-y divide-border">
 							{data.lanes.map((lane) => (
-								<li
-									key={lane.name}
-									className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
-								>
+								<li key={lane.name} className="flex items-start justify-between gap-3 px-4 py-2.5">
 									<div className="min-w-0">
-										<p className="font-medium text-sm">{lane.name}</p>
-										<p className="mt-0.5 text-muted-foreground text-xs">
+										<p className="font-medium text-[13px]">{lane.name}</p>
+										<p className="text-[12px] text-muted-foreground">
 											{lane.jobTypes.map((t) => names[t] ?? humanize(t)).join(", ")}
 										</p>
 									</div>
-									<div className="shrink-0 text-right text-xs">
+									<div className="shrink-0 text-right text-[12px]">
 										<p className="capitalize">{lane.phase || "idle"}</p>
 										<p className="text-muted-foreground">next {formatRelative(lane.nextDetectionAt)}</p>
 									</div>
 								</li>
 							))}
 						</ul>
-					</Panel>
+					</Section>
 				</div>
-			</Reveal>
+			</div>
 		</>
 	);
 }
@@ -219,10 +194,10 @@ function SchedulerLine({ overview }: { overview: MaintenanceOverview }) {
 	const { scheduler } = overview;
 	const busy = scheduler.phase && scheduler.phase !== "sleeping" && scheduler.phase !== "idle";
 	return (
-		<p className="inline-flex h-8 items-center rounded-full bg-secondary px-3.5 text-[13px] text-muted-foreground">
+		<p className="inline-flex h-8 items-center rounded-md px-1 text-[13px] text-muted-foreground">
 			{busy ? (
 				<span className="inline-flex items-center gap-2 text-foreground">
-					<span className="size-1.5 animate-pulse rounded-full bg-info" />
+					<span className="size-1.5 rounded-full bg-primary" />
 					Scheduler is {scheduler.phase.replace(/_/g, " ")}
 					{scheduler.currentJobType && ` ${scheduler.currentJobType.replace(/_/g, " ")}`}
 				</span>
@@ -235,61 +210,49 @@ function SchedulerLine({ overview }: { overview: MaintenanceOverview }) {
 
 /** Every job type as a row: what it does, when it next looks for work, and how the last run went. */
 function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
-	const reduced = usePrefersReducedMotion();
 	return (
-		<ul className="overflow-hidden rounded-lg bg-card">
-			{jobTypes.map((type, index) => {
+		<ul className="group-sheet divide-y divide-border overflow-hidden">
+			{jobTypes.map((type) => {
 				const problem =
 					type.lastDetectionError ||
 					type.policyError ||
 					(!type.detectorAvailable ? "No connected worker can detect this job type." : "");
 				return (
-					<motion.li
-						key={type.jobType}
-						className="hairline-t first:border-t-0"
-						initial={reduced ? false : { opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.3, delay: index * 0.03, ease: [0.22, 1, 0.36, 1] }}
-					>
+					<li key={type.jobType}>
 						<Link
 							to="/maintenance/$jobType"
 							params={{ jobType: type.jobType }}
-							className="group grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-3 px-5 py-5 transition-colors hover:bg-foreground/[0.03] focus-visible:bg-foreground/[0.04] sm:px-6 md:grid-cols-[auto_minmax(0,1fr)_11rem_11rem_auto]"
+							className="group grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-raised/70 focus-visible:bg-raised md:grid-cols-[auto_minmax(0,1fr)_10rem_11rem_auto]"
 						>
-							<span className="flex size-10 items-center justify-center rounded-full bg-area/15 text-area transition-transform group-hover:scale-105">
-								<JobTypeIcon jobType={type.jobType} className="size-[18px]" />
+							<span className="tile size-7 rounded-[7px] [--tile:#636366] [&_svg]:size-4">
+								<JobTypeIcon jobType={type.jobType} />
 							</span>
 							<div className="min-w-0">
 								<p className="flex flex-wrap items-center gap-2">
-									<span className="font-medium">{type.displayName}</span>
-									{type.enabled ? (
+									<span className="font-semibold text-[13px]">{type.displayName}</span>
+									{!type.enabled && (
 										<Pill tone="neutral" dot={false}>
-											Scheduled
-										</Pill>
-									) : (
-										<Pill tone="neutral" dot={false} className="bg-transparent ring-1 ring-hairline">
 											Manual only
 										</Pill>
 									)}
 								</p>
-								<p className="mt-0.5 line-clamp-2 text-muted-foreground text-sm">{type.description}</p>
-								{problem && <p className="mt-1.5 text-destructive-foreground text-xs">{problem}</p>}
+								<p className="truncate text-[12px] text-muted-foreground">{type.description}</p>
+								{problem && <p className="mt-0.5 text-[12px] text-destructive">{problem}</p>}
 								{!type.lastDetectionError && type.lastDetectionSkipped && (
-									<p className="mt-1.5 text-muted-foreground text-xs">
+									<p className="mt-0.5 text-[12px] text-muted-foreground">
 										Skipped last check: {type.lastDetectionSkipped}
 									</p>
 								)}
 							</div>
-							<ArrowUpRight className="size-4 text-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground md:order-last" />
-							<dl className="col-span-3 grid grid-cols-2 gap-4 pl-14 text-xs md:col-span-2 md:pl-0">
+							<ChevronRight className="size-4 text-tertiary md:order-last" />
+							<dl className="col-span-3 grid grid-cols-2 gap-4 pl-10 text-[12px] md:col-span-2 md:pl-0">
 								<div>
-									<dt className="flex items-center gap-1 text-muted-foreground">
-										<Timer className="size-3" />
+									<dt className="text-muted-foreground">
 										{type.detectionInFlight ? "Checking" : "Next check"}
 									</dt>
-									<dd className="mt-1 text-[13px]">
+									<dd className="text-[13px]">
 										{type.detectionInFlight ? (
-											<span className="text-info-foreground">now</span>
+											<span className="text-primary">now</span>
 										) : type.enabled ? (
 											formatRelative(type.nextDetectionAt)
 										) : (
@@ -303,11 +266,8 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 									</dd>
 								</div>
 								<div>
-									<dt className="flex items-center gap-1 text-muted-foreground">
-										<Search className="size-3" />
-										Last run
-									</dt>
-									<dd className="mt-1 flex flex-wrap items-center gap-1.5">
+									<dt className="text-muted-foreground">Last run</dt>
+									<dd className="flex flex-wrap items-center gap-1.5">
 										{type.lastRunStatus ? (
 											<>
 												<OutcomeBadge outcome={type.lastRunStatus} />
@@ -322,7 +282,7 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 								</div>
 							</dl>
 						</Link>
-					</motion.li>
+					</li>
 				);
 			})}
 		</ul>
@@ -332,20 +292,20 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 export function WorkerRow({ worker, names }: { worker: MaintenanceWorker; names: Record<string, string> }) {
 	const queued = Object.values(worker.queuedByType).reduce((sum, n) => sum + n, 0);
 	return (
-		<li className="py-4 first:pt-0 last:pb-0">
+		<li className="px-4 py-3">
 			<div className="flex items-start justify-between gap-3">
 				<div className="min-w-0">
-					<p className="truncate font-medium font-mono text-sm">{worker.address || worker.id}</p>
-					<p className="text-muted-foreground text-xs">
+					<p className="truncate font-mono text-[13px]">{worker.address || worker.id}</p>
+					<p className="text-[12px] text-muted-foreground">
 						SeaweedFS {worker.version.split(" ")[0] || "unknown"}, connected{" "}
 						{formatRelative(worker.connectedAt)}
 					</p>
 				</div>
-				<span className="shrink-0 text-xs">
+				<span className="shrink-0 text-[12px]">
 					<StatusDot tone="good" label={`Seen ${formatRelative(worker.lastSeenAt)}`} />
 				</span>
 			</div>
-			<div className="mt-4 grid grid-cols-2 gap-4 text-xs">
+			<div className="mt-3 grid grid-cols-2 gap-4 text-[12px]">
 				<div>
 					<p className="mb-1.5 flex justify-between text-muted-foreground">
 						<span>Detection slots</span>
@@ -366,7 +326,7 @@ export function WorkerRow({ worker, names }: { worker: MaintenanceWorker; names:
 				</div>
 			</div>
 			{(worker.running.length > 0 || queued > 0) && (
-				<ul className="mt-3 space-y-1 text-xs">
+				<ul className="mt-3 space-y-1 text-[12px]">
 					{worker.running.map((work) => (
 						<li key={work.id} className="flex items-center justify-between gap-2">
 							<span className="truncate">
@@ -378,13 +338,13 @@ export function WorkerRow({ worker, names }: { worker: MaintenanceWorker; names:
 					{queued > 0 && <li className="text-muted-foreground">{queued} queued on this worker</li>}
 				</ul>
 			)}
-			<div className="mt-4 flex flex-wrap gap-1.5">
+			<div className="mt-3 flex flex-wrap gap-1">
 				{worker.capabilities.map((cap) => (
 					<span
 						key={cap.jobType}
-						className="inline-flex h-6 items-center gap-1.5 rounded-full bg-foreground/[0.06] px-2.5 text-foreground/80 text-xs"
+						className="inline-flex h-5 items-center gap-1 rounded-sm bg-secondary px-1.5 text-[12px] text-muted-foreground"
 					>
-						<JobTypeIcon jobType={cap.jobType} className="size-3 text-area" />
+						<JobTypeIcon jobType={cap.jobType} className="size-3" />
 						{cap.displayName}
 					</span>
 				))}
@@ -396,20 +356,20 @@ export function WorkerRow({ worker, names }: { worker: MaintenanceWorker; names:
 function MaintenanceSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading maintenance">
-			<div className="pt-12 pb-10">
-				<SkeletonBlock className="h-12 w-72" />
-				<SkeletonBlock className="mt-5 h-8 w-96 max-w-full rounded-full" />
+			<div className="flex items-center gap-3 pt-2 pb-6">
+				<SkeletonBlock className="size-9 rounded-[9px]" />
+				<div className="space-y-1.5">
+					<SkeletonBlock className="h-7 w-48" />
+					<SkeletonBlock className="h-4 w-80 max-w-full" />
+				</div>
 			</div>
-			<div className="grid grid-cols-2 gap-8 py-10 sm:grid-cols-4">
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-16" />
+					<SkeletonBlock key={i} className="h-[92px] rounded-xl" />
 				))}
 			</div>
-			<div className="mt-16 space-y-px overflow-hidden rounded-lg">
-				{[0, 1, 2, 3, 4].map((i) => (
-					<SkeletonBlock key={i} className="h-24 rounded-none" />
-				))}
-			</div>
+			<SkeletonBlock className="mt-8 h-6 w-32" />
+			<SkeletonBlock className="mt-3 h-80 rounded-xl" />
 		</div>
 	);
 }

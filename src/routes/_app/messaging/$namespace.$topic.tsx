@@ -7,8 +7,8 @@ import type {
 	TopicSubscriber,
 } from "@shared/messaging.ts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Inbox } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { PartitionRing } from "@/components/kelp/messaging/partition-ring.tsx";
@@ -20,13 +20,12 @@ import {
 	retentionFrom,
 } from "@/components/kelp/messaging/retention.tsx";
 import {
-	AuroraCard,
 	EmptyState,
 	ErrorState,
-	Metric,
+	InfoList,
 	PageHeader,
-	Panel,
 	Reveal,
+	Section,
 	SkeletonBlock,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
@@ -56,19 +55,14 @@ export const Route = createFileRoute("/_app/messaging/$namespace/$topic")({
 function TopicPage() {
 	const { namespace, topic } = Route.useParams();
 	const { data, isPending, error, refetch } = useQuery(streamsQueries.topic(namespace, topic));
-
 	return (
 		<>
 			<PageHeader
 				title={`${namespace}.${topic}`}
 				description={
-					<Link
-						to="/messaging"
-						className="inline-flex h-8 items-center gap-1.5 rounded-full bg-secondary px-3.5 text-[13px] text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<ArrowLeft className="size-3.5" />
-						All topics
-					</Link>
+					data
+						? `${data.partitions.length} ${data.partitions.length === 1 ? "partition" : "partitions"}, ${data.retention.enabled && data.retention.seconds > 0 ? `keeps messages for ${formatRetention(data.retention)}` : "keeps messages forever"}`
+						: "A topic on SeaweedFS's message queue"
 				}
 			/>
 			{isPending ? (
@@ -83,27 +77,29 @@ function TopicPage() {
 }
 
 function TopicBody({ topic }: { topic: TopicDetail }) {
+	const leaders = new Set(topic.partitions.map((p) => p.leader).filter(Boolean)).size;
 	return (
-		<Reveal className="space-y-4">
-			<AuroraCard className="grid gap-10 p-7 sm:p-8 lg:grid-cols-[auto_1fr] lg:items-center">
-				<div>
-					<p className="mb-5 text-[13px] text-foreground/70">
+		<Reveal>
+			<div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<section aria-label="Key ring" className="group-sheet p-4 lg:col-span-7">
+					<p className="mb-3 text-[12px] text-muted-foreground">
 						Each partition owns a slice of the 2,520-slot key ring.
 					</p>
 					<PartitionRing partitions={topic.partitions} />
-				</div>
-				<dl className="grid grid-cols-2 gap-x-8 gap-y-8 lg:justify-self-end lg:pl-8">
-					<TopicFact label="Messages" value={topic.messageCount} />
-					<TopicFact label="Stored" value={topic.totalSize} format={formatBytes} />
-					<TopicFact label="Publishers" value={topic.publishers.length} />
-					<TopicFact label="Subscribers" value={topic.subscribers.length} />
-				</dl>
-			</AuroraCard>
-			<div className="grid items-start gap-4 lg:grid-cols-2">
-				<RetentionPanel topic={topic} />
-				<SchemaPanel keys={topic.keySchema} values={topic.valueSchema} />
+				</section>
+				<InfoList
+					className="lg:col-span-5"
+					items={[
+						{ label: "Messages", value: <span className="tabular">{formatCount(topic.messageCount)}</span> },
+						{ label: "Stored", value: <span className="tabular">{formatBytes(topic.totalSize)}</span> },
+						{ label: "Partitions", value: <span className="tabular">{topic.partitions.length}</span> },
+						{ label: "Leading brokers", value: <span className="tabular">{leaders}</span> },
+						{ label: "Publishers", value: <span className="tabular">{topic.publishers.length}</span> },
+						{ label: "Subscribers", value: <span className="tabular">{topic.subscribers.length}</span> },
+					]}
+				/>
 			</div>
-			<Panel title="Partition details">
+			<Section title="Partition details">
 				<DataTable
 					data={topic.partitions}
 					columns={partitionColumns}
@@ -116,28 +112,13 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 						/>
 					}
 				/>
-			</Panel>
+			</Section>
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-2">
+				<RetentionPanel topic={topic} />
+				<SchemaPanel keys={topic.keySchema} values={topic.valueSchema} />
+			</div>
 			<ClientsPanel topic={topic} />
 		</Reveal>
-	);
-}
-
-function TopicFact({
-	label,
-	value,
-	format,
-}: {
-	label: string;
-	value: number;
-	format?: (n: number) => string;
-}) {
-	return (
-		<div className="flex flex-col-reverse gap-2">
-			<dt className="text-[13px] text-foreground/70">{label}</dt>
-			<dd className="font-[450] text-4xl leading-none tracking-[-0.035em] sm:text-5xl">
-				<Metric value={value} {...(format ? { format } : {})} />
-			</dd>
-		</div>
 	);
 }
 
@@ -162,10 +143,14 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 	});
 
 	return (
-		<Panel title="Retention" description={`Currently: ${formatRetention(topic.retention)}.`}>
+		<Section
+			title="Retention"
+			description={`Currently: ${formatRetention(topic.retention)}.`}
+			className="mt-0"
+		>
 			{canWrite ? (
 				<form
-					className="grid gap-4"
+					className="group-sheet grid gap-4 p-4"
 					onSubmit={(event) => {
 						event.preventDefault();
 						save.mutate();
@@ -174,7 +159,7 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 					<RetentionFields draft={draft} onChange={setDraft} disabled={save.isPending} />
 					<div className="flex justify-end gap-2">
 						{dirty && (
-							<Button type="button" variant="ghost" onClick={() => setDraft(saved)}>
+							<Button type="button" variant="secondary" onClick={() => setDraft(saved)}>
 								Discard
 							</Button>
 						)}
@@ -185,20 +170,22 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 					</div>
 				</form>
 			) : (
-				<p className="text-muted-foreground text-sm">Only administrators can change retention.</p>
+				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
+					Only administrators can change retention.
+				</p>
 			)}
-		</Panel>
+		</Section>
 	);
 }
 
 function SchemaFields({ fields }: { fields: TopicSchemaField[] }) {
 	return (
-		<ul className="divide-y divide-hairline text-sm">
+		<ul className="divide-y divide-border text-[13px]">
 			{fields.map((field) => (
-				<li key={field.name} className="flex items-center justify-between gap-3 py-2">
+				<li key={field.name} className="flex h-10 items-center justify-between gap-3 px-4">
 					<span className="font-mono">{field.name}</span>
-					<span className="flex items-center gap-2">
-						<Badge variant="area" className="font-mono">
+					<span className="flex items-center gap-1.5">
+						<Badge variant="secondary" className="font-mono">
 							{field.type.toLowerCase()}
 						</Badge>
 						{field.required && <Badge variant="secondary">required</Badge>}
@@ -211,45 +198,47 @@ function SchemaFields({ fields }: { fields: TopicSchemaField[] }) {
 
 function SchemaPanel({ keys, values }: { keys: TopicSchemaField[]; values: TopicSchemaField[] }) {
 	return (
-		<Panel title="Schema" description="Record types registered for keys and values.">
+		<Section title="Schema" description="Record types registered for keys and values." className="mt-0">
 			{keys.length || values.length ? (
-				<div className="grid gap-4">
+				<div className="group-sheet divide-y divide-border">
 					<div>
-						<h3 className="mb-1 text-muted-foreground text-xs">Key</h3>
+						<h3 className="px-4 pt-2.5 text-[12px] text-muted-foreground">Key</h3>
 						{keys.length ? (
 							<SchemaFields fields={keys} />
 						) : (
-							<p className="text-muted-foreground text-sm">Raw bytes</p>
+							<p className="px-4 pb-2.5 text-[13px] text-muted-foreground">Raw bytes</p>
 						)}
 					</div>
 					<div>
-						<h3 className="mb-1 text-muted-foreground text-xs">Value</h3>
+						<h3 className="px-4 pt-2.5 text-[12px] text-muted-foreground">Value</h3>
 						{values.length ? (
 							<SchemaFields fields={values} />
 						) : (
-							<p className="text-muted-foreground text-sm">Raw bytes</p>
+							<p className="px-4 pb-2.5 text-[13px] text-muted-foreground">Raw bytes</p>
 						)}
 					</div>
 				</div>
 			) : (
-				<p className="text-muted-foreground text-sm">
+				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
 					No schema registered. Messages are stored as raw bytes.
 				</p>
 			)}
-		</Panel>
+		</Section>
 	);
 }
 
-const quiet = (text: string) => <p className="py-6 text-center text-muted-foreground text-sm">{text}</p>;
+const quiet = (text: string) => (
+	<p className="group-sheet px-4 py-6 text-center text-[13px] text-muted-foreground">{text}</p>
+);
 
 function ClientsPanel({ topic }: { topic: TopicDetail }) {
 	return (
-		<Panel
+		<Section
 			title="Clients"
 			description="Who is reading and writing right now, and where consumer groups will resume."
 		>
 			<Tabs defaultValue="publishers">
-				<TabsList variant="line" className="mb-3">
+				<TabsList className="mb-3">
 					<TabsTrigger value="publishers">Publishers {topic.publishers.length}</TabsTrigger>
 					<TabsTrigger value="subscribers">Subscribers {topic.subscribers.length}</TabsTrigger>
 					<TabsTrigger value="offsets">Offsets {topic.consumerGroupOffsets.length}</TabsTrigger>
@@ -279,7 +268,7 @@ function ClientsPanel({ topic }: { topic: TopicDetail }) {
 					/>
 				</TabsContent>
 			</Tabs>
-		</Panel>
+		</Section>
 	);
 }
 
@@ -288,7 +277,7 @@ const partitionColumns: Array<Column<TopicPartition>> = [
 		accessorKey: "rangeStart",
 		header: "Slots",
 		cell: ({ row }) => (
-			<span className="font-mono text-xs">
+			<span className="font-mono text-[12px]">
 				{row.original.rangeStart}–{row.original.rangeStop - 1}
 			</span>
 		),
@@ -296,12 +285,12 @@ const partitionColumns: Array<Column<TopicPartition>> = [
 	{
 		accessorKey: "leader",
 		header: "Leader",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.leader || "—"}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.leader || "—"}</span>,
 	},
 	{
 		accessorKey: "follower",
 		header: "Follower",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.follower || "—"}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.follower || "—"}</span>,
 	},
 	{
 		accessorKey: "messageCount",
@@ -318,9 +307,9 @@ const partitionColumns: Array<Column<TopicPartition>> = [
 		header: "Last write",
 		cell: ({ row }) =>
 			row.original.lastDataAt ? (
-				<span className="text-muted-foreground text-xs">{formatRelative(row.original.lastDataAt)}</span>
+				<span className="text-muted-foreground">{formatRelative(row.original.lastDataAt)}</span>
 			) : (
-				<span className="text-muted-foreground text-xs">Never</span>
+				<span className="text-muted-foreground">Never</span>
 			),
 	},
 ];
@@ -334,7 +323,7 @@ const publisherColumns: Array<Column<TopicPublisher>> = [
 		accessorKey: "name",
 		header: "Publisher",
 		cell: ({ row }) => (
-			<span className="font-mono text-xs">{row.original.name || row.original.clientId}</span>
+			<span className="font-mono text-[12px]">{row.original.name || row.original.clientId}</span>
 		),
 	},
 	{
@@ -345,7 +334,7 @@ const publisherColumns: Array<Column<TopicPublisher>> = [
 	{
 		accessorKey: "broker",
 		header: "Broker",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.broker}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.broker}</span>,
 	},
 	{ accessorKey: "active", header: "State", cell: ({ row }) => activity(row.original.active) },
 	{
@@ -361,7 +350,7 @@ const publisherColumns: Array<Column<TopicPublisher>> = [
 		accessorKey: "lastSeenAt",
 		header: "Seen",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.lastSeenAt)}</span>
+			<span className="text-muted-foreground">{formatRelative(row.original.lastSeenAt)}</span>
 		),
 	},
 ];
@@ -370,13 +359,13 @@ const subscriberColumns: Array<Column<TopicSubscriber>> = [
 	{
 		accessorKey: "consumerGroup",
 		header: "Group",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.consumerGroup}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.consumerGroup}</span>,
 	},
 	{
 		accessorKey: "consumerId",
 		header: "Consumer",
 		cell: ({ row }) => (
-			<span className="font-mono text-xs">{row.original.consumerId || row.original.clientId}</span>
+			<span className="font-mono text-[12px]">{row.original.consumerId || row.original.clientId}</span>
 		),
 	},
 	{
@@ -398,7 +387,7 @@ const subscriberColumns: Array<Column<TopicSubscriber>> = [
 		accessorKey: "lastSeenAt",
 		header: "Seen",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.lastSeenAt)}</span>
+			<span className="text-muted-foreground">{formatRelative(row.original.lastSeenAt)}</span>
 		),
 	},
 ];
@@ -407,7 +396,7 @@ const offsetColumns: Array<Column<ConsumerGroupOffset>> = [
 	{
 		accessorKey: "consumerGroup",
 		header: "Group",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.consumerGroup}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.consumerGroup}</span>,
 	},
 	{
 		accessorKey: "partition",
@@ -423,19 +412,19 @@ const offsetColumns: Array<Column<ConsumerGroupOffset>> = [
 		accessorKey: "updatedAt",
 		header: "Committed",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.updatedAt)}</span>
+			<span className="text-muted-foreground">{formatRelative(row.original.updatedAt)}</span>
 		),
 	},
 ];
 
 function TopicSkeleton() {
 	return (
-		<div className="space-y-4" role="status" aria-label="Loading topic">
-			<SkeletonBlock className="h-80 rounded-2xl" />
-			<div className="grid gap-4 lg:grid-cols-2">
-				<SkeletonBlock className="h-56 rounded-lg" />
-				<SkeletonBlock className="h-56 rounded-lg" />
+		<div role="status" aria-label="Loading topic">
+			<div className="grid gap-6 lg:grid-cols-12">
+				<SkeletonBlock className="h-60 rounded-xl lg:col-span-7" />
+				<SkeletonBlock className="h-60 rounded-xl lg:col-span-5" />
 			</div>
+			<SkeletonBlock className="mt-8 h-48 rounded-xl" />
 		</div>
 	);
 }

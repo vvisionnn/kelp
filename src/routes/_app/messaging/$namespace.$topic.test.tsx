@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { setMedia } from "../../../../test/media.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { messagingApi } from "../../../../test/streams-fixtures.ts";
@@ -103,7 +103,9 @@ describe("topic page", () => {
 		expect(await screen.findByText("Topic nope.none does not exist")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 		expect(await screen.findByText("Topic nope.none does not exist")).toBeTruthy();
-		const back = screen.getByRole("link", { name: "All topics" });
+		// The toolbar's back button leads to the list.
+		const toolbar = document.querySelector("header[data-toolbar]") as HTMLElement;
+		const back = within(toolbar).getByRole("link", { name: "Messaging" });
 		fireEvent.click(back);
 		await waitFor(() => expect(app.router.state.location.pathname).toBe("/messaging"));
 	});

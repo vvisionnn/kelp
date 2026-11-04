@@ -16,7 +16,7 @@ import {
 	sourceLabel,
 	stateLabel,
 } from "@/components/kelp/maintenance/parts.tsx";
-import { AuroraCard, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { ErrorState, InfoList, PageHeader, Reveal, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
 import {
 	Timeline,
 	TimelineContent,
@@ -97,14 +97,14 @@ function JobPage() {
 			<PageHeader
 				title={job.summary || humanize(job.jobType)}
 				description={
-					<span className="flex flex-wrap items-center gap-2">
+					<span className="mt-1 flex flex-wrap items-center gap-3">
 						<JobStateBadge state={job.state} progress={job.progress} />
 						<Link
 							to="/maintenance/$jobType"
 							params={{ jobType: job.jobType }}
-							className="inline-flex h-6 items-center gap-1.5 rounded-full bg-foreground/[0.06] px-2.5 text-foreground/80 text-xs transition-colors hover:bg-foreground/10 hover:text-foreground"
+							className="inline-flex h-5 items-center gap-1 rounded-sm bg-secondary px-1.5 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
 						>
-							<JobTypeIcon jobType={job.jobType} className="size-3.5 text-area" />
+							<JobTypeIcon jobType={job.jobType} className="size-3" />
 							{humanize(job.jobType)}
 						</Link>
 					</span>
@@ -129,137 +129,134 @@ function JobPage() {
 				}
 			/>
 
-			<Reveal>
-				<AuroraCard className="mb-4 grid gap-10 p-7 sm:p-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
-					<div className="min-w-0">
+			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<div className="space-y-8 lg:col-span-8">
+					<section className="group-sheet p-4">
 						{active ? (
 							<>
-								<p className="text-[13px] text-foreground/70">
+								<p className="text-[13px] text-muted-foreground">
 									{job.stage ? humanize(job.stage) : "Working"}
 									{job.message && `, ${job.message}`}
 								</p>
-								<p className="mt-3 font-[450] text-6xl leading-none tracking-[-0.04em] tabular">
-									{Math.round(job.progress)}%
-								</p>
-								<Progress
-									value={job.progress}
-									aria-label="Job progress"
-									className="mt-6 [&_[data-slot=progress-indicator]]:bg-area [&_[data-slot=progress-track]]:h-2 [&_[data-slot=progress-track]]:bg-foreground/10"
-								/>
-								{outcome.text && (
-									<p className="mt-4 flex flex-wrap gap-x-2 text-[15px]">
-										<span className="text-foreground/70">{outcome.label}</span>
-										<span
-											className={cn(
-												"[overflow-wrap:anywhere]",
-												job.errorMessage ? "text-destructive-foreground" : "text-foreground/80",
-											)}
-										>
-											{outcome.text}
-										</span>
-									</p>
-								)}
+								<div className="mt-1 flex items-center gap-4">
+									<p className="metric font-semibold text-[28px] leading-8">{Math.round(job.progress)}%</p>
+									<Progress
+										value={job.progress}
+										aria-label="Job progress"
+										className="flex-1 [&_[data-slot=progress-indicator]]:bg-primary [&_[data-slot=progress-track]]:h-1.5 [&_[data-slot=progress-track]]:bg-accent"
+									/>
+								</div>
 							</>
 						) : (
 							<>
-								<p className="text-[13px] text-foreground/70">{outcome.label}</p>
-								<p className="mt-3 font-[450] text-4xl leading-[1.05] tracking-[-0.03em] sm:text-5xl">
+								<p className="text-[13px] text-muted-foreground">{outcome.label}</p>
+								<p className="mt-0.5 font-semibold text-[17px] leading-[22px] tracking-[-0.012em]">
 									{job.state === "succeeded" ? `Done in ${duration}` : stateLabel(job.state)}
 								</p>
-								{outcome.text && (
-									<p
-										className={cn(
-											"mt-4 max-w-[60ch] text-[15px] [overflow-wrap:anywhere]",
-											job.errorMessage ? "text-destructive-foreground" : "text-foreground/80",
-										)}
-									>
-										{outcome.text}
-									</p>
-								)}
 							</>
 						)}
-						{job.detail && <p className="mt-2 text-[13px] text-foreground/70">{job.detail}</p>}
-					</div>
-					<dl className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
-						<Fact label="Created" value={formatDateTime(job.createdAt)} />
-						<Fact label="Finished" value={job.completedAt ? formatDateTime(job.completedAt) : "Not yet"} />
-						<Fact label="Duration" value={duration} />
-						<Fact label="Attempt" value={String(job.attempt || 1)} />
-					</dl>
-				</AuroraCard>
-			</Reveal>
+						{outcome.text && (
+							<p
+								className={cn(
+									"mt-2 max-w-[75ch] text-[13px] [overflow-wrap:anywhere]",
+									job.errorMessage ? "text-destructive" : "text-foreground/80",
+								)}
+							>
+								{active && <span className="mr-2 text-muted-foreground">{outcome.label}</span>}
+								{outcome.text}
+							</p>
+						)}
+						{job.detail && <p className="mt-1 text-[12px] text-muted-foreground">{job.detail}</p>}
+					</section>
 
-			<Reveal delay={0.05} className="grid items-start gap-4 lg:grid-cols-[1fr_24rem]">
-				<Panel title="Timeline" description="What happened, oldest first">
-					{steps.length === 0 ? (
-						<p className="text-muted-foreground text-sm">No events recorded for this job.</p>
-					) : (
-						<Timeline value={steps.length}>
-							{steps.map((step, index) => (
-								<TimelineItem key={`${step.occurredAt}-${step.stage}-${step.message}`} step={index + 1}>
-									<TimelineHeader>
-										<TimelineSeparator />
-										<TimelineDate title={formatDateTime(step.occurredAt)}>
-											{step.occurredAt ? new Date(step.occurredAt).toLocaleTimeString() : ""}
-										</TimelineDate>
-										<TimelineTitle className="[overflow-wrap:anywhere]">
-											{capitalize(step.message)}
-										</TimelineTitle>
-										<TimelineIndicator
-											className={cn(index === steps.length - 1 && "border-area bg-area/25")}
-										/>
-									</TimelineHeader>
-									<TimelineContent>{sourceLabel(step.source)}</TimelineContent>
-								</TimelineItem>
-							))}
-						</Timeline>
-					)}
-				</Panel>
+					<Section title="Timeline" description="What happened, oldest first" className="mt-0">
+						<div className="group-sheet p-4">
+							{steps.length === 0 ? (
+								<p className="text-[13px] text-muted-foreground">No events recorded for this job.</p>
+							) : (
+								<Timeline value={steps.length}>
+									{steps.map((step, index) => (
+										<TimelineItem key={`${step.occurredAt}-${step.stage}-${step.message}`} step={index + 1}>
+											<TimelineHeader>
+												<TimelineSeparator />
+												<TimelineDate title={formatDateTime(step.occurredAt)}>
+													{step.occurredAt ? new Date(step.occurredAt).toLocaleTimeString() : ""}
+												</TimelineDate>
+												<TimelineTitle className="text-[13px] [overflow-wrap:anywhere]">
+													{capitalize(step.message)}
+												</TimelineTitle>
+												<TimelineIndicator
+													className={cn(index === steps.length - 1 && "border-primary bg-primary/25")}
+												/>
+											</TimelineHeader>
+											<TimelineContent className="text-[12px]">{sourceLabel(step.source)}</TimelineContent>
+										</TimelineItem>
+									))}
+								</Timeline>
+							)}
+						</div>
+					</Section>
 
-				<div className="space-y-4">
-					<Panel title="Outputs" description="What the worker reported back">
-						<KeyValues values={job.outputs} empty="This job reported no outputs." />
-					</Panel>
-					<Panel title="Parameters" description="What the job was asked to do">
-						<KeyValues values={job.parameters} empty="This job had no parameters." />
-					</Panel>
-					<Panel title="Where it ran">
-						<dl className="grid gap-4 text-sm">
-							<Fact label="Worker" value={job.workerId || "Not assigned"} mono={Boolean(job.workerId)} />
-							<div>
-								<dt className="text-muted-foreground text-xs">Job id</dt>
-								<dd className="mt-0.5 flex items-center gap-1">
-									<span className="min-w-0 break-all font-mono text-xs">{job.id}</span>
-									<CopyButton value={job.id} label="Copy job id" />
-								</dd>
-							</div>
-						</dl>
-					</Panel>
+					<Section title="Outputs" description="What the worker reported back" className="mt-0">
+						<div className="group-sheet p-4">
+							<KeyValues values={job.outputs} empty="This job reported no outputs." />
+						</div>
+					</Section>
+					<Section title="Parameters" description="What the job was asked to do" className="mt-0">
+						<div className="group-sheet p-4">
+							<KeyValues values={job.parameters} empty="This job had no parameters." />
+						</div>
+					</Section>
+				</div>
+
+				<div className="space-y-8 lg:col-span-4">
+					<InfoList
+						items={[
+							{ label: "Created", value: formatDateTime(job.createdAt) },
+							{ label: "Finished", value: job.completedAt ? formatDateTime(job.completedAt) : "Not yet" },
+							{ label: "Duration", value: duration },
+							{ label: "Attempt", value: String(job.attempt || 1) },
+							{
+								label: "Worker",
+								value: job.workerId ? (
+									<span className="font-mono text-[12px]">{job.workerId}</span>
+								) : (
+									"Not assigned"
+								),
+							},
+							{
+								label: "Job id",
+								value: (
+									<span className="flex items-center justify-end gap-1">
+										<span className="truncate font-mono text-[12px]">{job.id}</span>
+										<CopyButton value={job.id} label="Copy job id" />
+									</span>
+								),
+							},
+						]}
+					/>
 					{related.length > 0 && (
-						<Panel title="Related jobs">
-							<ul className="divide-y divide-hairline text-sm">
+						<Section title="Related jobs" className="mt-0">
+							<ul className="group-sheet divide-y divide-border text-[13px]">
 								{[...related]
 									.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""))
 									.slice(0, 8)
 									.map((other) => (
-										<li
-											key={other.id}
-											className="flex items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
-										>
+										<li key={other.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
 											<Link
 												to="/maintenance/jobs/$jobId"
 												params={{ jobId: other.id }}
-												className="truncate hover:underline"
+												className="truncate hover:text-primary"
 											>
 												{other.summary || other.id}
 											</Link>
-											<span className="shrink-0 text-muted-foreground text-xs">
+											<span className="shrink-0 text-[12px] text-muted-foreground">
 												{formatRelative(other.createdAt)}
 											</span>
 										</li>
 									))}
 							</ul>
-						</Panel>
+						</Section>
 					)}
 				</div>
 			</Reveal>
@@ -267,26 +264,19 @@ function JobPage() {
 	);
 }
 
-function Fact({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-	return (
-		<div>
-			<dt className="text-[13px] text-muted-foreground">{label}</dt>
-			<dd className={cn("mt-0.5", mono && "break-all font-mono text-xs")}>{value}</dd>
-		</div>
-	);
-}
-
 function JobSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading job">
-			<div className="pt-12 pb-10">
-				<SkeletonBlock className="h-12 w-96 max-w-full" />
-				<SkeletonBlock className="mt-5 h-6 w-48 rounded-full" />
+			<div className="flex items-center gap-3 pt-2 pb-6">
+				<SkeletonBlock className="size-9 rounded-[9px]" />
+				<div className="space-y-1.5">
+					<SkeletonBlock className="h-7 w-80 max-w-full" />
+					<SkeletonBlock className="h-4 w-48" />
+				</div>
 			</div>
-			<SkeletonBlock className="mb-4 h-48 rounded-2xl" />
-			<div className="grid gap-4 lg:grid-cols-[1fr_24rem]">
-				<SkeletonBlock className="h-96 rounded-lg" />
-				<SkeletonBlock className="h-72 rounded-lg" />
+			<div className="grid gap-6 lg:grid-cols-12">
+				<SkeletonBlock className="h-80 rounded-xl lg:col-span-8" />
+				<SkeletonBlock className="h-64 rounded-xl lg:col-span-4" />
 			</div>
 		</div>
 	);

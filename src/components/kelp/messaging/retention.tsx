@@ -68,10 +68,10 @@ export function RetentionFields({
 	const id = useId();
 	return (
 		<div className="grid gap-3">
-			<div className="flex items-center justify-between gap-4 text-sm">
+			<div className="flex items-center justify-between gap-4 text-[13px]">
 				<label htmlFor={id}>
-					<span className="font-medium">Expire old messages</span>
-					<span className="block text-muted-foreground text-xs">
+					<span>Expire old messages</span>
+					<span className="block text-[12px] text-muted-foreground">
 						{draft.enabled
 							? "SeaweedFS deletes data older than the window."
 							: "Messages are kept until you delete the topic."}
@@ -113,7 +113,7 @@ export function RetentionFields({
 							<ToggleGroupItem
 								key={u.unit}
 								value={u.unit}
-								className="capitalize aria-pressed:bg-area/20 aria-pressed:text-foreground"
+								className="capitalize aria-pressed:bg-primary/12 aria-pressed:text-primary"
 							>
 								{u.unit}
 							</ToggleGroupItem>
