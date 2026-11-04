@@ -13,6 +13,11 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppMessagingIndexRouteImport } from './routes/_app/messaging/index'
+import { Route as AppTablesIndexRouteImport } from './routes/_app/tables/index'
+import { Route as AppMessagingNamespaceTopicRouteImport } from './routes/_app/messaging/$namespace.$topic'
+import { Route as AppTablesBucketIndexRouteImport } from './routes/_app/tables/$bucket/index'
+import { Route as AppTablesBucketNamespaceTableRouteImport } from './routes/_app/tables/$bucket/$namespace.$table'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,16 +38,53 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMessagingIndexRoute = AppMessagingIndexRouteImport.update({
+  id: '/messaging/',
+  path: '/messaging/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTablesIndexRoute = AppTablesIndexRouteImport.update({
+  id: '/tables/',
+  path: '/tables/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMessagingNamespaceTopicRoute =
+  AppMessagingNamespaceTopicRouteImport.update({
+    id: '/messaging/$namespace/$topic',
+    path: '/messaging/$namespace/$topic',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppTablesBucketIndexRoute = AppTablesBucketIndexRouteImport.update({
+  id: '/tables/$bucket/',
+  path: '/tables/$bucket/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTablesBucketNamespaceTableRoute =
+  AppTablesBucketNamespaceTableRouteImport.update({
+    id: '/tables/$bucket/$namespace/$table',
+    path: '/tables/$bucket/$namespace/$table',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/messaging/': typeof AppMessagingIndexRoute
+  '/tables/': typeof AppTablesIndexRoute
+  '/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
+  '/tables/$bucket/': typeof AppTablesBucketIndexRoute
+  '/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
   '/': typeof AppIndexRoute
+  '/messaging': typeof AppMessagingIndexRoute
+  '/tables': typeof AppTablesIndexRoute
+  '/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
+  '/tables/$bucket': typeof AppTablesBucketIndexRoute
+  '/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +92,44 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/messaging/': typeof AppMessagingIndexRoute
+  '/_app/tables/': typeof AppTablesIndexRoute
+  '/_app/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
+  '/_app/tables/$bucket/': typeof AppTablesBucketIndexRoute
+  '/_app/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/cluster'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/cluster'
+    | '/messaging/'
+    | '/tables/'
+    | '/messaging/$namespace/$topic'
+    | '/tables/$bucket/'
+    | '/tables/$bucket/$namespace/$table'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/cluster' | '/'
-  id: '__root__' | '/_app' | '/login' | '/_app/cluster' | '/_app/'
+  to:
+    | '/login'
+    | '/cluster'
+    | '/'
+    | '/messaging'
+    | '/tables'
+    | '/messaging/$namespace/$topic'
+    | '/tables/$bucket'
+    | '/tables/$bucket/$namespace/$table'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/cluster'
+    | '/_app/'
+    | '/_app/messaging/'
+    | '/_app/tables/'
+    | '/_app/messaging/$namespace/$topic'
+    | '/_app/tables/$bucket/'
+    | '/_app/tables/$bucket/$namespace/$table'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,17 +167,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClusterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/messaging/': {
+      id: '/_app/messaging/'
+      path: '/messaging'
+      fullPath: '/messaging/'
+      preLoaderRoute: typeof AppMessagingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/': {
+      id: '/_app/tables/'
+      path: '/tables'
+      fullPath: '/tables/'
+      preLoaderRoute: typeof AppTablesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/messaging/$namespace/$topic': {
+      id: '/_app/messaging/$namespace/$topic'
+      path: '/messaging/$namespace/$topic'
+      fullPath: '/messaging/$namespace/$topic'
+      preLoaderRoute: typeof AppMessagingNamespaceTopicRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/$bucket/': {
+      id: '/_app/tables/$bucket/'
+      path: '/tables/$bucket'
+      fullPath: '/tables/$bucket/'
+      preLoaderRoute: typeof AppTablesBucketIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/$bucket/$namespace/$table': {
+      id: '/_app/tables/$bucket/$namespace/$table'
+      path: '/tables/$bucket/$namespace/$table'
+      fullPath: '/tables/$bucket/$namespace/$table'
+      preLoaderRoute: typeof AppTablesBucketNamespaceTableRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppMessagingIndexRoute: typeof AppMessagingIndexRoute
+  AppTablesIndexRoute: typeof AppTablesIndexRoute
+  AppMessagingNamespaceTopicRoute: typeof AppMessagingNamespaceTopicRoute
+  AppTablesBucketIndexRoute: typeof AppTablesBucketIndexRoute
+  AppTablesBucketNamespaceTableRoute: typeof AppTablesBucketNamespaceTableRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
   AppIndexRoute: AppIndexRoute,
+  AppMessagingIndexRoute: AppMessagingIndexRoute,
+  AppTablesIndexRoute: AppTablesIndexRoute,
+  AppMessagingNamespaceTopicRoute: AppMessagingNamespaceTopicRoute,
+  AppTablesBucketIndexRoute: AppTablesBucketIndexRoute,
+  AppTablesBucketNamespaceTableRoute: AppTablesBucketNamespaceTableRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
