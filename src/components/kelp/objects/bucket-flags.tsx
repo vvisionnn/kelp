@@ -10,8 +10,8 @@ function Flag({ icon, label, hint, tone }: { icon: ReactNode; label: string; hin
 			<TooltipTrigger
 				render={
 					<Badge
-						variant="outline"
-						className={tone === "warn" ? "border-warning/40 text-warning" : "text-muted-foreground"}
+						variant="secondary"
+						className={tone === "warn" ? "bg-warning/12 text-warning-foreground" : "text-foreground/75"}
 					/>
 				}
 			>
@@ -26,7 +26,7 @@ function Flag({ icon, label, hint, tone }: { icon: ReactNode; label: string; hin
 /** Compact badges for the settings that change how a bucket behaves. */
 export function BucketFlags({ bucket }: { bucket: Bucket }) {
 	return (
-		<span className="flex flex-wrap items-center gap-1">
+		<span className="flex flex-wrap items-center gap-1.5">
 			{bucket.readOnly && (
 				<Flag
 					icon={<TriangleAlert />}

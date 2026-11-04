@@ -131,7 +131,7 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 		invalidate: [objectKeys.bucket(bucket), objectKeys.buckets],
 	});
 
-	if (isPending) return <SkeletonBlock className="h-72 rounded-xl" />;
+	if (isPending) return <SkeletonBlock className="h-72 rounded-lg" />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
 
 	const hasPolicy = Boolean(data.policy || data.invalidText);
@@ -172,13 +172,13 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 			</div>
 
 			{data.invalidText && (
-				<p role="alert" className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm">
+				<p role="alert" className="rounded-md bg-warning/10 px-4 py-3 text-sm">
 					SeaweedFS stored a policy it cannot read. Fix it below and save, or remove it.
 				</p>
 			)}
 
-			<div className="overflow-hidden rounded-xl border bg-card">
-				<div className="flex items-center gap-2 border-b bg-muted/40 px-3 py-2 text-muted-foreground text-xs">
+			<div className="overflow-hidden rounded-lg bg-card">
+				<div className="flex items-center gap-2 px-5 pt-4 pb-3 text-[13px] text-muted-foreground hairline-b">
 					<FileJson className="size-3.5" />
 					<span className="font-mono">policy.json</span>
 				</div>
@@ -188,11 +188,11 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 					readOnly={!canWrite}
 					spellCheck={false}
 					placeholder={canWrite ? "Paste a policy, or start from a template." : ""}
-					className="min-h-80 resize-y rounded-none border-0 bg-transparent font-mono text-xs leading-relaxed shadow-none [font-variant-ligatures:none] focus-visible:ring-0 md:text-xs"
+					className="min-h-80 resize-y rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed shadow-none [font-variant-ligatures:none] focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
 					onChange={(e) => setText(e.target.value)}
 				/>
 				{problem && (
-					<p role="alert" className="border-t px-3 py-2 text-destructive text-xs">
+					<p role="alert" className="px-5 py-3 text-destructive text-xs hairline-t">
 						{problem}
 					</p>
 				)}

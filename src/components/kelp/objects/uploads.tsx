@@ -90,9 +90,10 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 					animate={{ opacity: 1, y: 0, scale: 1 }}
 					exit={{ opacity: 0, y: 16, scale: 0.98 }}
 					transition={{ type: "spring", stiffness: 380, damping: 32 }}
-					className="fixed right-4 bottom-4 z-40 w-80 overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-lg"
+					data-area="objects"
+					className="fixed right-4 bottom-4 z-40 w-80 overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-(--float-shadow)"
 				>
-					<header className="flex items-center justify-between gap-2 border-b px-3 py-2">
+					<header className="flex items-center justify-between gap-2 px-4 py-3 hairline-b">
 						<p className="font-medium text-sm">
 							{busy
 								? `Uploading ${finished} of ${uploads.length}`
@@ -104,9 +105,9 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 							</Button>
 						)}
 					</header>
-					<ul className="max-h-64 divide-y overflow-auto">
+					<ul className="max-h-64 divide-y divide-hairline overflow-auto">
 						{uploads.map((upload) => (
-							<motion.li key={upload.id} layout className="grid gap-1.5 px-3 py-2 text-sm">
+							<motion.li key={upload.id} layout className="grid gap-1.5 px-4 py-2.5 text-sm">
 								<div className="flex items-center justify-between gap-2">
 									<span className="truncate">{upload.name}</span>
 									{upload.status === "done" ? (
@@ -123,7 +124,7 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 									<p className="text-destructive text-xs">{upload.error}</p>
 								) : (
 									<div
-										className="h-1 overflow-hidden rounded-full bg-muted"
+										className="h-1 overflow-hidden rounded-full bg-foreground/[0.08]"
 										role="progressbar"
 										aria-label={`${upload.name} progress`}
 										aria-valuenow={Math.round(upload.progress * 100)}
@@ -131,7 +132,11 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 										aria-valuemax={100}
 									>
 										<motion.div
-											className={upload.status === "done" ? "h-full bg-success" : "h-full bg-primary"}
+											className={
+												upload.status === "done"
+													? "h-full rounded-full bg-success"
+													: "h-full rounded-full bg-area"
+											}
 											animate={{ width: `${upload.progress * 100}%` }}
 											transition={{ ease: "easeOut", duration: 0.2 }}
 										/>

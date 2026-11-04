@@ -1,11 +1,20 @@
 import type { Bucket } from "@shared/objects.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Database, FileStack, HardDrive } from "lucide-react";
+import { Database } from "lucide-react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { BucketFlags } from "@/components/kelp/objects/bucket-flags.tsx";
 import { CreateBucketDialog } from "@/components/kelp/objects/create-bucket.tsx";
-import { CapacityBar, EmptyState, PageHeader, Reveal, StatTile } from "@/components/kelp/page.tsx";
+import { ShareBars, topShares } from "@/components/kelp/objects/showcase.tsx";
+import {
+	AuroraCard,
+	CapacityBar,
+	EmptyState,
+	Metric,
+	PageHeader,
+	Panel,
+	Reveal,
+} from "@/components/kelp/page.tsx";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -95,8 +104,6 @@ function BucketsPage() {
 	const { data, isPending, error, refetch } = useQuery(objectQueries.buckets());
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
-	const total = (data ?? []).reduce((sum, b) => sum + b.logicalSize, 0);
-	const files = (data ?? []).reduce((sum, b) => sum + (b.storedFiles ?? 0), 0);
 
 	return (
 		<>
@@ -105,18 +112,7 @@ function BucketsPage() {
 				description="S3 buckets, what they hold, and the rules they follow."
 				actions={canWrite && <CreateBucketDialog />}
 			/>
-			{data && data.length > 0 && (
-				<Reveal className="mb-6 grid gap-4 sm:grid-cols-3">
-					<StatTile label="Buckets" value={data.length} icon={<Database />} />
-					<StatTile label="Object data" value={total} format={formatBytes} icon={<HardDrive />} />
-					<StatTile
-						label="Stored files"
-						value={files}
-						icon={<FileStack />}
-						hint="Includes chunks of large objects"
-					/>
-				</Reveal>
-			)}
+			{data && data.length > 0 && <BucketsOverview buckets={data} />}
 			<DataTable
 				data={data}
 				isLoading={isPending}
@@ -142,5 +138,39 @@ function BucketsPage() {
 				}
 			/>
 		</>
+	);
+}
+
+/** The total in the aurora, and beside it where that data actually lives. */
+function BucketsOverview({ buckets }: { buckets: Bucket[] }) {
+	const total = buckets.reduce((sum, b) => sum + b.logicalSize, 0);
+	const files = buckets.reduce((sum, b) => sum + (b.storedFiles ?? 0), 0);
+	const limited = buckets.filter((b) => b.quota.enabled).length;
+	return (
+		<Reveal className="mb-14 grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+			<AuroraCard className="flex min-h-64 flex-col p-7 sm:p-8">
+				<span className="text-[13px] text-foreground/70">Object data</span>
+				<div className="mt-auto pt-12">
+					<p className="font-[450] text-5xl leading-none tracking-[-0.04em] sm:text-6xl">
+						<Metric value={total} format={formatBytes} />
+					</p>
+					<p className="mt-4 text-[15px] text-foreground/75">
+						In {formatCount(buckets.length)} {buckets.length === 1 ? "bucket" : "buckets"}, as{" "}
+						{formatCount(files)} stored files.{" "}
+						{limited > 0 ? `${limited} with a quota.` : "None has a quota."}
+					</p>
+				</div>
+			</AuroraCard>
+			<Panel title="Where it lives" description="Object data per bucket, largest first.">
+				<ShareBars
+					label="Object data per bucket"
+					items={topShares(
+						buckets.map((b) => ({ label: b.name, value: b.logicalSize })),
+						6,
+					)}
+					format={formatBytes}
+				/>
+			</Panel>
+		</Reveal>
 	);
 }
