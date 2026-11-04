@@ -2,6 +2,29 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.2.0](https://github.com/vvisionnn/kelp/compare/v0.1.0...v0.2.0) - 2026-11-04
+
+### 🚀 Features
+
+- **design:** Kelp design system and a new top-bar shell ([`a3d2cc5`](https://github.com/vvisionnn/kelp/commit/a3d2cc5081bf26ecffc5bbe1299031d6e29c24cb))
+- **access:** Fresh Access pages on the Kelp design system ([`ff3a834`](https://github.com/vvisionnn/kelp/commit/ff3a8344e531638a7131648026a448eb483fc6a0))
+- **storage:** Fresh compositions for volumes, collections, erasure coding and nodes ([`4d5dc66`](https://github.com/vvisionnn/kelp/commit/4d5dc66ddc0657d229f0827b50b557d3b798eb79))
+- **operations:** Redesign maintenance, messaging and settings ([`fbfbdbd`](https://github.com/vvisionnn/kelp/commit/fbfbdbdc668d3c3120cf430e090fb0f6337e39a6))
+- **objects:** Redesign buckets, files and tables ([`1f8c844`](https://github.com/vvisionnn/kelp/commit/1f8c844b7990f14e4debe3b5d8ecc14d28355deb))
+
+### 🐛 Bug Fixes
+
+- **shell:** Label viewers read-only in the top bar ([`33c3ffc`](https://github.com/vvisionnn/kelp/commit/33c3ffc75dd77e2e872278babf1e8370595094e5))
+- **page:** Align stat band rows on narrow screens ([`beb8fe0`](https://github.com/vvisionnn/kelp/commit/beb8fe0f0a87546ab8ee97b43df86df80e27f5a0))
+- **shell:** Stop the nav's measuring list from widening phones ([`ac3dfb7`](https://github.com/vvisionnn/kelp/commit/ac3dfb7b855c28433e7d72007cd782e0430e3949))
+
+### 📚 Documentation
+
+- New screenshots and a pointer to DESIGN.md ([`95f9552`](https://github.com/vvisionnn/kelp/commit/95f9552ae4bfa544f75de56a25af0252162ac17b))
+
+### 🧪 Tests
+
+- **compose:** Ask Docker whether the admin publishes a port instead of probing the host ([`ba6bf76`](https://github.com/vvisionnn/kelp/commit/ba6bf766710ce4806472709596774c5457125f0f))
 ## [0.1.0](https://github.com/vvisionnn/kelp/releases/tag/v0.1.0) - 2026-11-04
 
 ### 🚀 Features
