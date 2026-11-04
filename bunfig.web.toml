@@ -1,0 +1,8 @@
+# Client tests: happy-dom window, and coverage for src/ only (server code is measured by bunfig.toml).
+[test]
+preload = ["./test/dom.ts"]
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 0.95, functions = 0.95 }
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage/web"
+coveragePathIgnorePatterns = ["test/**", "server/**", "shared/**", "src/components/ui/**", "src/components/reui/**", "src/components/react-bits/**", "src/routeTree.gen.ts", "src/hooks/use-copy-to-clipboard.ts", "src/hooks/use-file-upload.ts", "src/hooks/use-mobile.ts", "node_modules/**"]
