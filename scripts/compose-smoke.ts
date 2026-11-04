@@ -80,11 +80,15 @@ try {
 	await s3.write("hello.txt", "hello from kelp");
 	check("S3 write and read", (await s3.file("hello.txt").text()) === "hello from kelp");
 
-	const admin = await fetch("http://127.0.0.1:12535/health").then(
-		() => true,
-		() => false,
+	// Ask Docker, not the network: another local process may legitimately use the same host port.
+	const ports = Bun.spawnSync(
+		["docker", "compose", "-p", project, "ps", "admin", "--format", "{{.Publishers}}"],
+		{
+			env: { ...process.env, ...env },
+		},
 	);
-	check("native admin is not published", !admin);
+	const published = ports.stdout.toString().match(/"PublishedPort":\s*[1-9]/);
+	check("native admin is not published", ports.exitCode === 0 && !published);
 } finally {
 	if (!values.keep) await compose("down", "-v");
 }
