@@ -97,8 +97,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/assets"
           sed "s|\${KELP_VERSION:-latest}|\${KELP_VERSION:-$VERSION}|" docker-compose.yml > "$RUNNER_TEMP/assets/docker-compose.yml"
           grep -q "kelp:\${KELP_VERSION:-$VERSION}" "$RUNNER_TEMP/assets/docker-compose.yml"
-          cp .env.example "$RUNNER_TEMP/assets/.env.example"
-          sed -i "s|^KELP_VERSION=latest|KELP_VERSION=$VERSION|" "$RUNNER_TEMP/assets/.env.example"
+          # GitHub renames assets that start with a dot, so the template ships as kelp.env.example.
+          cp .env.example "$RUNNER_TEMP/assets/kelp.env.example"
+          sed -i "s|^KELP_VERSION=latest|KELP_VERSION=$VERSION|" "$RUNNER_TEMP/assets/kelp.env.example"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -107,4 +108,4 @@ jobs:
         run: |
           flags=(--verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md")
           if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); else flags+=(--latest); fi
-          gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP/assets/docker-compose.yml" "$RUNNER_TEMP/assets/.env.example"
+          gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP/assets/docker-compose.yml" "$RUNNER_TEMP/assets/kelp.env.example"

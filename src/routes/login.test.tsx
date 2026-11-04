@@ -54,6 +54,26 @@ describe("login", () => {
 	});
 });
 
+describe("boot", () => {
+	test("a slow session check shows the loader, then the app", async () => {
+		const { routes } = await clusterApi();
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		renderApp("/", {
+			...routes,
+			"GET /auth/me": async () => {
+				await gate;
+				return { user: adminUser };
+			},
+		});
+		expect(await screen.findByText("Connecting to your cluster")).toBeTruthy();
+		release();
+		expect(await screen.findByText("Disk capacity", {}, { timeout: 3000 })).toBeTruthy();
+	});
+});
+
 describe("unknown addresses", () => {
 	test("show a designed not-found page with a way back", async () => {
 		renderApp("/no/such/page");

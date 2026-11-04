@@ -1,0 +1,15 @@
+# Third-party notices
+
+Kelp is released under the MIT license (see [LICENSE](LICENSE)). It includes or vendors the following work.
+
+| Component                                                                                                                 | Where                              | License                   |
+| ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ------------------------- |
+| [SeaweedFS](https://github.com/seaweedfs/seaweedfs) gRPC protocol definitions                                             | `proto/`                           | Apache License 2.0        |
+| [React Bits](https://reactbits.dev) components (Threads, CountUp, BlurText, DecryptedText, LatticeLoader)                 | `src/components/react-bits/`       | MIT with Commons Clause   |
+| [ReUI](https://reui.io) components (data grid, timeline, stepper, tree and others)                                        | `src/components/reui/`             | MIT                       |
+| [shadcn/ui](https://ui.shadcn.com) components on [Base UI](https://base-ui.com)                                           | `src/components/ui/`, `src/hooks/` | MIT                       |
+| [Instrument Sans](https://github.com/Instrument/instrument-sans) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | npm `@fontsource-variable/*`       | SIL Open Font License 1.1 |
+
+The Commons Clause on React Bits restricts selling the components themselves. Kelp uses them inside an open-source application and does not sell them.
+
+Kelp is not affiliated with or endorsed by the SeaweedFS project.

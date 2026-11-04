@@ -96,7 +96,18 @@ export function EcVolumeList({
 			{
 				accessorKey: "fileCount",
 				header: "Files",
-				cell: ({ row }) => <span className="tabular">{formatCount(row.original.fileCount)}</span>,
+				// SeaweedFS reports 0 when it does not track files for an encoded volume.
+				cell: ({ row }) =>
+					row.original.fileCount > 0 ? (
+						<span className="tabular">{formatCount(row.original.fileCount)}</span>
+					) : (
+						<span
+							className="text-muted-foreground"
+							title="SeaweedFS does not count files in this encoded volume"
+						>
+							—
+						</span>
+					),
 			},
 		];
 		return all.filter((c): c is Column<EcVolume> => Boolean(c));

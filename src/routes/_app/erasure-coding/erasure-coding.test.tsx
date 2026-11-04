@@ -53,6 +53,13 @@ describe("EC volume detail", () => {
 		).toBeTruthy();
 		expect(screen.getByText("0–13")).toBeTruthy();
 		expect(screen.queryByRole("alert")).toBeNull();
+		// The real export reports no file count for encoded volumes; Kelp says so instead of showing 0.
+		expect(screen.getByText("SeaweedFS does not count files in encoded volumes")).toBeTruthy();
+	});
+
+	test("encoded volumes that do report files show the count", async () => {
+		renderApp("/erasure-coding/21", { "GET /storage": busyInventory() });
+		expect(await screen.findByText(/deleted$/)).toBeTruthy();
 	});
 
 	test("missing shards that can still be rebuilt", async () => {

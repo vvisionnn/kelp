@@ -155,12 +155,22 @@ function EcVolumePage() {
 						icon={<ShieldCheck />}
 						hint={`of ${ec.totalShards}`}
 					/>
-					<StatTile
-						label="Files"
-						value={ec.fileCount}
-						icon={<FileStack />}
-						hint={`${formatCount(ec.deleteCount)} deleted`}
-					/>
+					{ec.fileCount > 0 || ec.deleteCount > 0 ? (
+						<StatTile
+							label="Files"
+							value={ec.fileCount}
+							icon={<FileStack />}
+							hint={`${formatCount(ec.deleteCount)} deleted`}
+						/>
+					) : (
+						<StatTile
+							label="Files"
+							value={0}
+							format={() => "—"}
+							icon={<FileStack />}
+							hint="SeaweedFS does not count files in encoded volumes"
+						/>
+					)}
 					<StatTile
 						label="Servers"
 						value={ec.placements.length}
