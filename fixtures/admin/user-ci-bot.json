@@ -1,0 +1,1 @@
+{"username":"ci-bot","email":"ci@example.com","actions":["Read:media","Write:media","List:media"],"policy_names":null,"access_keys":[{"access_key":"AKIAKELPEXAMPLE00001","secret_key":"example-secret-for-tests-not-a-real-key","status":"","created_at":"2026-10-04T21:18:25.444989+08:00"}],"groups":null}

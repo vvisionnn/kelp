@@ -1,0 +1,1 @@
+{"name":"readonly-media","document":{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::media","arn:aws:s3:::media/*"]}]},"document_json":"","created_at":"2026-11-04T21:18:25.496335+08:00","updated_at":"2026-11-04T21:18:25.496335+08:00"}

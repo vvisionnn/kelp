@@ -1,0 +1,1 @@
+{"enabled":true,"lock":{"held":false,"hold_count":0,"acquiring":false},"scheduler":{"now":"2026-11-04T13:18:25.587486Z","scheduler_tick_seconds":5,"idle_sleep_seconds":61,"next_detection_at":"2026-11-04T13:18:59.868193Z","current_phase":"sleeping","last_iteration_done_at":"2026-11-04T13:17:58.868193Z"}}

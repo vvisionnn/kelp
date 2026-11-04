@@ -1,0 +1,1 @@
+{"config_info":{"cache_expiration":"10s","conf_dir_exists":false,"config_subdir":"conf","data_dir":"/tmp/kelp-sw/admin","data_dir_configured":true,"data_dir_exists":true,"filer_cache_expiration":"30s","maintenance_enabled":true,"maintenance_running":true,"master_address":"127.0.0.1:19333","s3_public_endpoint":""},"title":"Configuration Information"}

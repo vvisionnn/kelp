@@ -1,0 +1,1 @@
+{"volume_servers":[{"id":"127.0.0.1:18080","address":"127.0.0.1:18080","datacenter":"DefaultDataCenter","rack":"DefaultRack","public_url":"127.0.0.1:18080","version":"","volumes":14,"max_volumes":967,"disk_usage":177736458240,"disk_capacity":245107195904,"last_heartbeat":"2026-11-04T21:18:25.346625+08:00","ec_volumes":0,"ec_shards":0,"ec_shard_details":null,"remote_size":0}]}
