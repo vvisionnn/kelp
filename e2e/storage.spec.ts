@@ -84,7 +84,7 @@ test("vacuum cluster previews and runs", async ({ page }) => {
 	await page.goto("/volumes");
 	await page.getByRole("button", { name: "Vacuum cluster" }).click();
 	const dialog = page.getByRole("dialog");
-	await dialog.getByRole("button", { name: "1%", exact: true }).click();
+	await dialog.getByRole("radio", { name: "1%", exact: true }).click();
 	await dialog.getByRole("button", { name: "Vacuum cluster" }).click();
 	await expect(page.getByText("Cluster vacuumed")).toBeVisible();
 });

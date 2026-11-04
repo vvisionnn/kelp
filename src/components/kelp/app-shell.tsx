@@ -141,7 +141,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 const THEMES: Array<{ value: Theme; label: string; icon: ReactNode }> = [
-	{ value: "system", label: "System", icon: <Monitor /> },
+	{ value: "system", label: "Automatic", icon: <Monitor /> },
 	{ value: "light", label: "Light", icon: <Sun /> },
 	{ value: "dark", label: "Dark", icon: <Moon /> },
 ];

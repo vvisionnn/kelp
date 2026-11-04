@@ -1,6 +1,6 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { motion } from "motion/react";
-import { createContext, type ReactNode, useContext } from "react";
+import { createContext, type ReactNode, useContext, useId } from "react";
 import Counter from "@/components/react-bits/Counter.tsx";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -54,11 +54,14 @@ export function Section({
 	children: ReactNode;
 	className?: string;
 }) {
+	const titleId = useId();
 	return (
-		<section className={cn("mt-8 first:mt-0", className)}>
+		<section aria-labelledby={titleId} className={cn("mt-8 first:mt-0", className)}>
 			<header className="mb-3 flex flex-wrap items-end justify-between gap-3">
 				<div>
-					<h2 className="font-semibold text-[17px] leading-[22px] tracking-[-0.012em]">{title}</h2>
+					<h2 id={titleId} className="font-semibold text-[17px] leading-[22px] tracking-[-0.012em]">
+						{title}
+					</h2>
 					{description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
 				</div>
 				{actions && <div className="flex items-center gap-2">{actions}</div>}
@@ -104,12 +107,20 @@ export function Panel({
 	children: ReactNode;
 	className?: string;
 }) {
+	const titleId = useId();
 	return (
-		<section className={cn("group-sheet text-card-foreground", className)}>
+		<section
+			aria-labelledby={title ? titleId : undefined}
+			className={cn("group-sheet text-card-foreground", className)}
+		>
 			{(title || actions) && (
 				<header className="flex items-start justify-between gap-3 px-4 pt-3.5">
 					<div>
-						{title && <h2 className="font-semibold text-[13px] leading-[18px]">{title}</h2>}
+						{title && (
+							<h2 id={titleId} className="font-semibold text-[13px] leading-[18px]">
+								{title}
+							</h2>
+						)}
 						{description && <p className="text-[12px] text-muted-foreground leading-4">{description}</p>}
 					</div>
 					{actions}

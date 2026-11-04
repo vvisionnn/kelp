@@ -85,7 +85,7 @@ test("object lock is chosen at creation and shown afterwards", async ({ page }) 
 
 test("viewers can open buckets but not change them", async ({ viewerPage }) => {
 	await viewerPage.goto("/buckets");
-	await expect(viewerPage.getByRole("heading", { name: "Buckets" })).toBeVisible();
+	await expect(viewerPage.getByRole("heading", { level: 1, name: "Buckets" })).toBeVisible();
 	await expect(viewerPage.getByRole("button", { name: "Create bucket" })).toHaveCount(0);
 });
 

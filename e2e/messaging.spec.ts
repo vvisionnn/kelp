@@ -60,7 +60,7 @@ test("refuses to recreate an existing topic", async ({ page }) => {
 
 test("viewers browse topics without changing them", async ({ viewerPage }) => {
 	await viewerPage.goto("/messaging");
-	await expect(viewerPage.getByRole("heading", { name: "Messaging" })).toBeVisible();
+	await expect(viewerPage.getByRole("heading", { level: 1, name: "Messaging" })).toBeVisible();
 	await expect(viewerPage.getByRole("region", { name: "Brokers" })).toBeVisible();
 	await expect(viewerPage.getByRole("button", { name: "Create topic" })).toHaveCount(0);
 });
