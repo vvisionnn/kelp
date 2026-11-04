@@ -1449,7 +1449,7 @@ function DataGridTableHeadRowCell<TData extends object>({
         isLastStartPinned ? "start" : isFirstEndPinned ? "end" : undefined
       }
       className={cn(
-        "text-muted-foreground relative h-10 text-left align-middle text-[13px] font-normal rtl:text-right [&:has([role=checkbox])]:pe-0",
+        "text-muted-foreground relative h-9 text-left align-middle text-[12px] font-medium rtl:text-right [&:has([role=checkbox])]:pe-0",
         headerCellSpacing,
         isBanded && "align-bottom",
         props.tableLayout?.headerBackground && "bg-muted",
@@ -1974,7 +1974,7 @@ function DataGridTableBodyRowSkeleton({ children }: { children: ReactNode }) {
   return (
     <tr
       className={cn(
-        "hover:bg-muted/40 data-[state=selected]:bg-muted/50",
+        "text-[13px] hover:bg-raised/70 data-[state=selected]:bg-primary/8",
         props.onRowClick && "cursor-pointer",
         !props.tableLayout?.stripped &&
           props.tableLayout?.rowBorder &&
@@ -2109,7 +2109,7 @@ function DataGridTableBodyRow<TData extends object>({
         context.props.onRowClick?.(row.original)
       }}
       className={cn(
-        "hover:bg-muted/40 data-[state=selected]:bg-muted/50",
+        "text-[13px] hover:bg-raised/70 data-[state=selected]:bg-primary/8",
         /* With the pin affordance on, pinned cells hide scrolled content
            behind an OPAQUE background, which also hides the row's translucent
            hover and selected tints; they get the same tints premixed over the

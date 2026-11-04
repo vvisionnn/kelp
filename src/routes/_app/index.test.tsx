@@ -14,9 +14,10 @@ describe("overview page", () => {
 		expect(screen.getAllByText("127.0.0.1:18080").length).toBeGreaterThan(0);
 		expect(screen.getByText("Storage tiers")).toBeTruthy();
 		expect(screen.getByText(/Every node runs SeaweedFS/)).toBeTruthy();
-		expect(screen.getByText(new RegExp(`in ${overview.totalVolumes} volumes`))).toBeTruthy();
-		const tile = within(screen.getByRole("main")).getByText("Volumes", { selector: "dt" }).parentElement;
-		expect(tile?.textContent).toContain(String(overview.totalVolumes));
+		const widget = within(screen.getByRole("main")).getByRole("link", { name: "Volumes" }).closest("section");
+		expect(widget?.textContent).toContain(String(overview.totalVolumes));
+		expect(screen.getByText("Object data")).toBeTruthy();
+		expect(screen.getByText(/^of .+ used$/)).toBeTruthy();
 	});
 
 	test("lists versions when nodes disagree", async () => {

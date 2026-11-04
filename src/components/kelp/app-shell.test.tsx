@@ -6,33 +6,66 @@ import { maintenanceApi } from "../../../test/maintenance-fixtures.ts";
 import { renderApp, viewerUser } from "../../../test/render-app.tsx";
 import { isActivePath } from "./app-shell.tsx";
 
+/** The page toolbar (the sticky header above the content). */
+function toolbar(): HTMLElement {
+	return document.querySelector("header[data-toolbar]") as HTMLElement;
+}
+
 describe("app shell", () => {
-	test("the page wears its area's hue and the area's pages show as pills", async () => {
+	test("the sidebar marks the current page, including from its detail pages", async () => {
 		const { routes } = await clusterApi();
-		const { container } = renderApp("/volumes", routes);
-		const pages = await screen.findByRole("navigation", { name: "Storage" });
+		renderApp("/cluster", routes);
+		await screen.findByText("Leader");
+		const pages = screen.getByRole("navigation", { name: "Pages" });
 		const active = within(pages)
 			.getAllByRole("link")
 			.filter((l) => l.hasAttribute("data-active"));
-		expect(active.map((l) => l.textContent)).toEqual(["Volumes"]);
-		expect(container.querySelector("[data-area]")?.getAttribute("data-area")).toBe("storage");
-		expect(screen.queryByRole("navigation", { name: "breadcrumb" })).toBeNull();
+		expect(active.map((l) => l.textContent)).toEqual(["Nodes"]);
+		expect(within(pages).getByText("Storage")).toBeTruthy();
 	});
 
-	test("the overview has no page pills and uses the neutral spectrum", async () => {
-		const { routes } = await clusterApi();
-		const { container } = renderApp("/", routes);
-		await screen.findByText("Disk capacity");
-		expect(container.querySelector("[data-area]")?.getAttribute("data-area")).toBe("home");
-		expect(screen.queryByRole("navigation", { name: "Overview" })).toBeNull();
-	});
-
-	test("detail pages name the item in the breadcrumb, not the raw URL segment", async () => {
+	test("detail pages lead back to their list and name the item, not the raw URL segment", async () => {
 		const { routes, vacuumConfig } = await maintenanceApi();
 		renderApp("/maintenance/vacuum", routes);
-		const crumbs = await screen.findByRole("navigation", { name: "breadcrumb" });
-		expect(await within(crumbs).findByText(vacuumConfig.displayName)).toBeTruthy();
-		expect(within(crumbs).queryByText("vacuum")).toBeNull();
+		await screen.findAllByText(vacuumConfig.displayName);
+		const banner = toolbar();
+		const back = await within(banner).findByRole("link", { name: "Maintenance" });
+		expect(back.getAttribute("href")).toBe("/maintenance");
+		expect(await within(banner).findByText(vacuumConfig.displayName)).toBeTruthy();
+		expect(within(banner).queryByText("vacuum")).toBeNull();
+	});
+
+	test("the toolbar title appears once the page header scrolls away", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/", routes);
+		await screen.findByText("Disk capacity");
+		const title = within(toolbar()).getByText("Overview");
+		expect(title.getAttribute("aria-hidden")).toBe("true");
+		await act(async () => {
+			Object.defineProperty(window, "scrollY", { configurable: true, value: 200 });
+			window.dispatchEvent(new Event("scroll"));
+		});
+		expect(title.getAttribute("aria-hidden")).toBe("false");
+		Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+	});
+
+	test("on narrow screens the sidebar opens as a sheet and closes after navigating", async () => {
+		const { routes } = await clusterApi();
+		const app = renderApp("/", routes);
+		await screen.findByText("Disk capacity");
+		fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
+		const sheet = await screen.findByRole("dialog");
+		fireEvent.click(within(sheet).getByRole("link", { name: "Nodes" }));
+		await waitFor(() => expect(app.router.state.location.pathname).toBe("/cluster"));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+	});
+
+	test("the sidebar shows cluster health", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/cluster", routes);
+		const pages = await screen.findByRole("navigation", { name: "Pages" });
+		const sidebar = pages.parentElement as HTMLElement;
+		expect(await within(sidebar).findByText(/^Healthy, SeaweedFS/)).toBeTruthy();
 	});
 
 	test("theme switch flips between light and dark", async () => {
@@ -49,7 +82,6 @@ describe("app shell", () => {
 		renderApp("/", routes, viewerUser);
 		expect(await screen.findByText("Read-only")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
-		expect(within(await screen.findByRole("menu")).getByText("Read-only")).toBeTruthy();
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Dark" }));
 		expect(localStorage.getItem("kelp-theme")).toBe("dark");
 	});

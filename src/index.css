@@ -1,15 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
 	--font-heading: var(--font-sans);
-	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
+	--font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter Variable", system-ui, sans-serif;
+	--font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, "Inter Variable", sans-serif;
+	--font-mono: ui-monospace, "SF Mono", "Geist Mono Variable", Menlo, monospace;
 	--color-sidebar-ring: var(--ring);
 	--color-sidebar-border: var(--border);
 	--color-sidebar-accent-foreground: var(--foreground);
@@ -48,15 +49,17 @@
 	--color-raised: var(--raised);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
-	--color-area: var(--area-core);
-	--color-area-data: var(--area-data);
-	--radius-xs: 6px;
-	--radius-sm: 8px;
-	--radius-md: 12px;
-	--radius-lg: 16px;
-	--radius-xl: 20px;
-	--radius-2xl: 24px;
-	--radius-3xl: 28px;
+	--color-area: var(--primary);
+	--color-area-data: var(--data-1);
+	--color-tertiary: var(--tertiary);
+	--color-sheet: var(--card);
+	--radius-xs: 4px;
+	--radius-sm: 6px;
+	--radius-md: 8px;
+	--radius-lg: 12px;
+	--radius-xl: 16px;
+	--radius-2xl: 20px;
+	--radius-3xl: 24px;
 	--radius-4xl: 9999px;
 	--color-invert-foreground: var(--invert-foreground);
 	--color-invert: var(--invert);
@@ -70,38 +73,39 @@
 }
 
 /*
- * Kelp design system (see DESIGN.md). Chrome is monochrome: Foam/Shell in light, Abyss/Trench in
- * dark. Color comes from five area auroras, the validated data palette and reserved status colors.
+ * Kelp design system (see DESIGN.md): a calm instrument. Monochrome canvas and sheets, one
+ * interaction color (Tide), status colors only for state, identity tiles for pages.
  */
 :root {
-	--background: #ffffff;
-	--foreground: #0a0a0a;
-	--card: #f8f7f5;
-	--card-foreground: #0a0a0a;
+	--background: #f5f5f7;
+	--foreground: #1d1d1f;
+	--card: #ffffff;
+	--card-foreground: #1d1d1f;
 	--popover: #ffffff;
-	--popover-foreground: #0a0a0a;
-	--raised: #f2f3f7;
-	--primary: #0a0a0a;
+	--popover-foreground: #1d1d1f;
+	--raised: #f2f2f5;
+	--primary: #0a66e8;
 	--primary-foreground: #ffffff;
-	--secondary: #f2f3f7;
-	--secondary-foreground: #0a0a0a;
-	--muted: #f2f3f7;
-	--muted-foreground: #646a73;
-	--accent: #eceef3;
-	--accent-foreground: #0a0a0a;
-	--destructive: #d6394f;
-	--destructive-foreground: #b4233a;
-	--border: #e4e7ee;
-	--hairline: rgb(10 10 10 / 0.07);
-	--input: rgb(10 10 10 / 0.14);
-	--ring: rgb(10 10 10 / 0.55);
-	--success: #16a34a;
-	--success-foreground: #11793a;
-	--info: #2563c9;
-	--info-foreground: #1d4fa3;
-	--warning: #b45309;
-	--warning-foreground: #92400e;
-	--invert: #0a0a0a;
+	--secondary: rgb(120 120 128 / 0.12);
+	--secondary-foreground: #1d1d1f;
+	--muted: #f2f2f5;
+	--muted-foreground: #6e6e73;
+	--tertiary: rgb(60 60 67 / 0.36);
+	--accent: rgb(120 120 128 / 0.12);
+	--accent-foreground: #1d1d1f;
+	--destructive: #e5352b;
+	--destructive-foreground: #c41e15;
+	--border: rgb(0 0 0 / 0.08);
+	--hairline: rgb(0 0 0 / 0.08);
+	--input: rgb(0 0 0 / 0.1);
+	--ring: #0a66e8;
+	--success: #248a3d;
+	--success-foreground: #1d7a34;
+	--info: #0a66e8;
+	--info-foreground: #0a57c4;
+	--warning: #c93400;
+	--warning-foreground: #a82c00;
+	--invert: #1d1d1f;
 	--invert-foreground: #ffffff;
 	/* Data palette (light): blue, coral, teal, violet, amber, in this order. */
 	--data-1: #2563c9;
@@ -109,92 +113,60 @@
 	--data-3: #0e8a79;
 	--data-4: #7d55c7;
 	--data-5: #9a7012;
-	--spectrum: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316, #eab308);
-	--aurora-base: var(--card);
-	--aurora-strength: 0.6;
-	--grain-opacity: 0.05;
-	--float-shadow: 0 24px 48px -16px rgb(10 10 10 / 0.18), 0 0 0 1px rgb(10 10 10 / 0.06);
-	--sheen: rgb(255 255 255 / 0.55);
-	--radius: 1rem;
-	/* Area defaults to the neutral spectrum until a page declares its area. */
-	--area-deep: #3a3d44;
-	--area-core: #6366f1;
-	--area-glow: #ec4899;
-	--area-data: var(--data-1);
+	--glass: rgb(245 245 247 / 0.72);
+	--glass-edge: rgb(0 0 0 / 0.08);
+	--glass-highlight: rgb(255 255 255 / 0.7);
+	--glass-shadow: 0 8px 32px rgb(0 0 0 / 0.08);
+	--sheet-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.14), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+	--thumb: #ffffff;
+	--radius: 0.75rem;
 }
 
 .dark {
-	--background: #0a0a0a;
-	--foreground: #e7e9ee;
-	--card: #1a1a1a;
-	--card-foreground: #e7e9ee;
-	--popover: #1a1a1a;
-	--popover-foreground: #e7e9ee;
-	--raised: #212121;
-	--primary: #ffffff;
-	--primary-foreground: #0a0a0a;
-	--secondary: #212121;
-	--secondary-foreground: #ffffff;
-	--muted: #1f1f1f;
-	--muted-foreground: #8e939b;
-	--accent: #262626;
-	--accent-foreground: #ffffff;
-	--destructive: #f0607e;
-	--destructive-foreground: #ff9bb0;
-	--border: #1f2228;
+	--background: #0e0e10;
+	--foreground: #f5f5f7;
+	--card: #1c1c1e;
+	--card-foreground: #f5f5f7;
+	--popover: #2c2c2e;
+	--popover-foreground: #f5f5f7;
+	--raised: #2c2c2e;
+	--primary: #3d8bff;
+	--primary-foreground: #ffffff;
+	--secondary: rgb(120 120 128 / 0.24);
+	--secondary-foreground: #f5f5f7;
+	--muted: #2c2c2e;
+	--muted-foreground: #98989f;
+	--tertiary: rgb(235 235 245 / 0.32);
+	--accent: rgb(120 120 128 / 0.24);
+	--accent-foreground: #f5f5f7;
+	--destructive: #ff5a50;
+	--destructive-foreground: #ff7b73;
+	--border: rgb(255 255 255 / 0.08);
 	--hairline: rgb(255 255 255 / 0.08);
-	--input: rgb(255 255 255 / 0.12);
-	--ring: rgb(255 255 255 / 0.55);
-	--success: #4ade80;
-	--success-foreground: #86efac;
-	--info: #5b9cf0;
-	--info-foreground: #a3c6ff;
-	--warning: #facc15;
-	--warning-foreground: #fde68a;
-	--invert: #ffffff;
-	--invert-foreground: #0a0a0a;
+	--input: rgb(255 255 255 / 0.1);
+	--ring: #3d8bff;
+	--success: #30d158;
+	--success-foreground: #4cd96f;
+	--info: #3d8bff;
+	--info-foreground: #6aa6ff;
+	--warning: #ff9f0a;
+	--warning-foreground: #ffb340;
+	--invert: #f5f5f7;
+	--invert-foreground: #1d1d1f;
 	/* Data palette (dark): same hues stepped for the dark surfaces. */
 	--data-1: #2f86e0;
 	--data-2: #d9573f;
 	--data-3: #1fa591;
 	--data-4: #9d74e0;
 	--data-5: #b98b2a;
-	--aurora-strength: 1;
-	--grain-opacity: 0.08;
-	--float-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
-	--sheen: rgb(255 255 255 / 0.1);
-}
-
-/* Area hues. A page sets `data-area` on its wrapper; the aurora, badges and data series follow. */
-[data-area="storage"] {
-	--area-deep: #0b2a5c;
-	--area-core: #2f86e0;
-	--area-glow: #8fd0ff;
-	--area-data: var(--data-1);
-}
-[data-area="objects"] {
-	--area-deep: #5c0f2a;
-	--area-core: #f0607e;
-	--area-glow: #ffb199;
-	--area-data: var(--data-2);
-}
-[data-area="operations"] {
-	--area-deep: #062e33;
-	--area-core: #1fa591;
-	--area-glow: #a3f0e2;
-	--area-data: var(--data-3);
-}
-[data-area="cluster"] {
-	--area-deep: #241552;
-	--area-core: #8b6cf0;
-	--area-glow: #c9b6ff;
-	--area-data: var(--data-4);
-}
-[data-area="access"] {
-	--area-deep: #4a1d05;
-	--area-core: #f28a2e;
-	--area-glow: #ffd18a;
-	--area-data: var(--data-5);
+	--glass: rgb(28 28 30 / 0.64);
+	--glass-edge: rgb(255 255 255 / 0.1);
+	--glass-highlight: rgb(255 255 255 / 0.06);
+	--glass-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
+	--sheet-shadow: none;
+	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(255 255 255 / 0.1);
+	--thumb: #636366;
 }
 
 @layer base {
@@ -203,18 +175,20 @@
 	}
 	body {
 		@apply bg-background text-foreground;
-		font-size: 15px;
-		line-height: 1.6;
+		font-size: 14px;
+		line-height: 20px;
+		letter-spacing: -0.006em;
 	}
 	html {
 		@apply font-sans antialiased;
 		color-scheme: light;
+		font-feature-settings: "cv11", "ss01";
 	}
 	html.dark {
 		color-scheme: dark;
 	}
 	::selection {
-		background: color-mix(in oklab, var(--area-core) 35%, transparent);
+		background: color-mix(in oklab, var(--primary) 28%, transparent);
 	}
 	:focus-visible {
 		outline: 2px solid var(--ring);
@@ -222,63 +196,42 @@
 	}
 }
 
-/*
- * Aurora: the area's mesh gradient over the card surface, with film grain. It drifts slowly; the
- * reduced-motion rule below stops it.
- */
 @layer components {
+	/* Liquid-glass material for navigation and controls that float above content. */
+	.glass {
+		background: var(--glass);
+		-webkit-backdrop-filter: blur(24px) saturate(180%);
+		backdrop-filter: blur(24px) saturate(180%);
+		box-shadow:
+			var(--glass-shadow),
+			inset 0 0 0 0.5px var(--glass-edge),
+			inset 0 1px 0 var(--glass-highlight);
+	}
+	/* An inset grouped section: the sheet that holds rows, tables and widgets. */
+	.group-sheet {
+		background: var(--card);
+		border-radius: var(--radius-lg);
+		box-shadow:
+			var(--sheet-shadow),
+			0 0 0 0.5px var(--border);
+	}
+	/* Legacy alias while pages move off the v0.2 aurora cards: a plain sheet. */
 	.aurora {
 		position: relative;
-		isolation: isolate;
-		overflow: hidden;
-		background-color: var(--aurora-base);
-		/* The low corner: the deep stop at night, the glow stop by day (deep reads as grime on white). */
-		--aurora-low: var(--area-glow);
+		background: var(--card);
+		box-shadow:
+			var(--sheet-shadow),
+			0 0 0 0.5px var(--border);
 	}
-	.dark .aurora {
-		--aurora-low: var(--area-deep);
-	}
-	.aurora::before {
-		content: "";
-		position: absolute;
-		inset: -12%;
-		z-index: -1;
-		background:
-			radial-gradient(
-				at 0% 100%,
-				color-mix(in oklab, var(--aurora-low) calc(var(--aurora-strength) * 100%), transparent) 0,
-				transparent 58%
-			),
-			radial-gradient(
-				at 55% 45%,
-				color-mix(in oklab, var(--area-core) calc(var(--aurora-strength) * 55%), transparent) 0,
-				transparent 62%
-			),
-			radial-gradient(
-				at 100% 0%,
-				color-mix(in oklab, var(--area-glow) calc(var(--aurora-strength) * 45%), transparent) 0,
-				transparent 52%
-			);
-		animation: kelp-aurora-drift 40s ease-in-out infinite alternate;
-	}
-	.aurora::after {
-		content: "";
-		position: absolute;
-		inset: 0;
-		z-index: -1;
-		pointer-events: none;
-		opacity: var(--grain-opacity);
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-		mix-blend-mode: overlay;
-	}
-}
-
-@keyframes kelp-aurora-drift {
-	from {
-		transform: translate3d(-3%, 2%, 0) scale(1);
-	}
-	to {
-		transform: translate3d(3%, -2%, 0) scale(1.06);
+	/* An identity tile: the page's color with a soft top light, like an app icon. */
+	.tile {
+		display: inline-flex;
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+		color: #fff;
+		background: linear-gradient(180deg, rgb(255 255 255 / 0.22), transparent 60%), var(--tile, #8e8e93);
+		box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.12);
 	}
 }
 
@@ -296,7 +249,7 @@
 	background-image: linear-gradient(
 		100deg,
 		transparent 30%,
-		color-mix(in oklab, var(--foreground) 7%, transparent) 50%,
+		color-mix(in oklab, var(--foreground) 6%, transparent) 50%,
 		transparent 70%
 	);
 	background-size: 200% 100%;
@@ -307,9 +260,11 @@
 	font-variant-numeric: tabular-nums;
 }
 
-/* The Kelp spectrum as a fill (progress, underlines, hairline accents). */
-@utility spectrum {
-	background-image: var(--spectrum);
+/* Rounded tabular numerals for metrics, like Apple widgets. */
+@utility metric {
+	font-family: var(--font-rounded);
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.02em;
 }
 
 @utility hairline-b {
@@ -327,31 +282,5 @@
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
-	}
-}
-
-/*
- * The area's light at the top of every page: a wide, faint aurora behind the header and hero, so
- * each area has its own color without tinting any surface.
- */
-@layer components {
-	.area-glow {
-		position: absolute;
-		inset: 0 0 auto;
-		height: 560px;
-		z-index: -1;
-		pointer-events: none;
-		background:
-			radial-gradient(
-				60% 70% at 12% 0%,
-				color-mix(in oklab, var(--area-core) calc(var(--aurora-strength) * 22%), transparent),
-				transparent 70%
-			),
-			radial-gradient(
-				45% 55% at 88% 0%,
-				color-mix(in oklab, var(--area-glow) calc(var(--aurora-strength) * 14%), transparent),
-				transparent 70%
-			);
-		mask-image: linear-gradient(to bottom, black, transparent);
 	}
 }

@@ -67,7 +67,7 @@ describe("page primitives", () => {
 		);
 		const meters = screen.getAllByRole("meter");
 		expect(meters.map((m) => m.getAttribute("aria-valuenow"))).toEqual(["10", "85", "99", "0"]);
-		expect(meters[0]?.firstElementChild?.className).toContain("bg-area");
+		expect(meters[0]?.firstElementChild?.className).toContain("bg-primary");
 		expect(meters[1]?.firstElementChild?.className).toContain("bg-warning");
 		expect(meters[2]?.firstElementChild?.className).toContain("bg-destructive");
 	});
@@ -102,7 +102,10 @@ describe("page primitives", () => {
 		const { rerender } = render(<StatTile label="Files" value={1234} hint="hint" icon={<span />} />);
 		expect(screen.getByText("1,234")).toBeTruthy();
 		rerender(<StatTile label="Size" value={2048} format={(n) => `${n} B`} />);
-		expect(screen.getByText("2048 B")).toBeTruthy();
+		// The unit is set apart so it can sit lighter than the number.
+		expect(screen.getByText("B").parentElement?.textContent).toBe("2048B");
+		rerender(<StatTile label="State" value={1} format={() => "Ready"} />);
+		expect(screen.getByText("Ready")).toBeTruthy();
 		setMedia("(prefers-reduced-motion: reduce)", false);
 		rerender(<Metric value={5} />);
 		await act(async () => {});

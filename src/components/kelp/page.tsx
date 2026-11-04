@@ -1,13 +1,18 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { motion } from "motion/react";
-import type { ReactNode } from "react";
-import CountUp from "@/components/react-bits/CountUp.tsx";
+import { createContext, type ReactNode, useContext } from "react";
+import Counter from "@/components/react-bits/Counter.tsx";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api.ts";
 import { formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "./motion.ts";
+import type { NavItem } from "./nav.ts";
+import { Tile } from "./tile.tsx";
+
+/** The nav item for the page being shown, so headers can wear its identity tile. */
+export const PageItemContext = createContext<Pick<NavItem, "icon" | "tile"> | undefined>(undefined);
 
 export function PageHeader({
 	title,
@@ -18,20 +23,48 @@ export function PageHeader({
 	description?: ReactNode;
 	actions?: ReactNode;
 }) {
+	const item = useContext(PageItemContext);
 	return (
-		<div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 pt-8 pb-10 sm:pt-12">
-			<div className="min-w-0">
-				<h1 className="text-balance font-[450] text-4xl leading-[1.05] tracking-[-0.025em] sm:text-5xl">
-					{title}
-				</h1>
-				{description && (
-					<div className="mt-4 max-w-[62ch] text-[17px] text-muted-foreground leading-relaxed">
-						{description}
-					</div>
-				)}
+		<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2 pb-6">
+			<div className="flex min-w-0 items-center gap-3">
+				{item && <Tile item={item} size="lg" />}
+				<div className="min-w-0">
+					<h1 className="truncate font-bold text-[26px] leading-8 tracking-[-0.022em]">{title}</h1>
+					{description && (
+						<div className="text-[13px] text-muted-foreground leading-[18px]">{description}</div>
+					)}
+				</div>
 			</div>
 			{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
 		</div>
+	);
+}
+
+/** A titled block of a page: section title and optional actions above, content below. */
+export function Section({
+	title,
+	description,
+	actions,
+	children,
+	className,
+}: {
+	title: ReactNode;
+	description?: ReactNode;
+	actions?: ReactNode;
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<section className={cn("mt-8 first:mt-0", className)}>
+			<header className="mb-3 flex flex-wrap items-end justify-between gap-3">
+				<div>
+					<h2 className="font-semibold text-[17px] leading-[22px] tracking-[-0.012em]">{title}</h2>
+					{description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
+				</div>
+				{actions && <div className="flex items-center gap-2">{actions}</div>}
+			</header>
+			{children}
+		</section>
 	);
 }
 
@@ -72,22 +105,46 @@ export function Panel({
 	className?: string;
 }) {
 	return (
-		<section className={cn("rounded-lg bg-card text-card-foreground", className)}>
+		<section className={cn("group-sheet text-card-foreground", className)}>
 			{(title || actions) && (
-				<header className="flex items-start justify-between gap-3 px-6 pt-5">
+				<header className="flex items-start justify-between gap-3 px-4 pt-3.5">
 					<div>
-						{title && <h2 className="font-medium text-[15px]">{title}</h2>}
-						{description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
+						{title && <h2 className="font-semibold text-[13px] leading-[18px]">{title}</h2>}
+						{description && <p className="text-[12px] text-muted-foreground leading-4">{description}</p>}
 					</div>
 					{actions}
 				</header>
 			)}
-			<div className="p-6">{children}</div>
+			<div className="p-4">{children}</div>
 		</section>
 	);
 }
 
-/** A number that counts up on first load and then just updates. */
+/**
+ * Facts about one thing as label and value rows inside a sheet, like an inspector. Values
+ * align to the trailing edge; identifiers should be passed already in mono.
+ */
+export function InfoList({
+	items,
+	className,
+}: {
+	items: Array<{ label: ReactNode; value: ReactNode }>;
+	className?: string;
+}) {
+	return (
+		<dl className={cn("group-sheet divide-y divide-border text-[13px]", className)}>
+			{items.map((item, index) => (
+				// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional and never reorder.
+				<div key={index} className="flex min-h-10 items-center justify-between gap-4 px-4 py-2">
+					<dt className="shrink-0 text-muted-foreground">{item.label}</dt>
+					<dd className="min-w-0 truncate text-right">{item.value}</dd>
+				</div>
+			))}
+		</dl>
+	);
+}
+
+/** A metric value. Integers roll digit by digit; formatted values set their unit apart. */
 export function Metric({
 	value,
 	format,
@@ -98,13 +155,30 @@ export function Metric({
 	className?: string;
 }) {
 	const reduced = usePrefersReducedMotion();
-	if (format || reduced)
+	if (format) {
+		// "42.7 MiB": the unit sits lighter and smaller so columns of numbers scan cleanly.
+		const [, number, unit] = /^([-−\d.,]+)\s*(.*)$/.exec(format(value)) ?? [null, format(value), ""];
 		return (
 			<span className={cn("tabular", className)}>
-				{format ? format(value) : value.toLocaleString("en-US")}
+				{number}
+				{unit && <span className="ml-1 font-medium text-[0.6em] text-muted-foreground">{unit}</span>}
 			</span>
 		);
-	return <CountUp to={value} duration={0.9} separator="," className={cn("tabular", className)} />;
+	}
+	if (reduced) return <span className={cn("tabular", className)}>{value.toLocaleString("en-US")}</span>;
+	// Digits roll to their new value when data refreshes; unchanged digits stay still.
+	return (
+		<Counter
+			value={value}
+			locale="en-US"
+			fontSize="1em"
+			fontWeight="inherit"
+			textColor="currentColor"
+			tabular
+			motionBlur={false}
+			className={cn("tabular", className)}
+		/>
+	);
 }
 
 export function StatTile({
@@ -121,23 +195,20 @@ export function StatTile({
 	icon?: ReactNode;
 }) {
 	return (
-		<div className="rounded-lg bg-card px-6 py-5">
-			<div className="flex items-center justify-between text-[13px] text-muted-foreground">
-				<span>{label}</span>
-				<span className="text-area [&_svg]:size-4">{icon}</span>
+		<div className="group-sheet px-4 py-3.5">
+			<div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+				{icon && <span className="[&_svg]:size-3.5">{icon}</span>}
+				<span className="truncate">{label}</span>
 			</div>
-			<div className="mt-3 font-[450] text-[32px] leading-none tracking-[-0.03em]">
+			<div className="metric mt-1.5 font-semibold text-[28px] leading-8">
 				<Metric value={value} {...(format ? { format } : {})} />
 			</div>
-			{hint && <div className="mt-2 text-[13px] text-muted-foreground">{hint}</div>}
+			{hint && <div className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</div>}
 		</div>
 	);
 }
 
-/**
- * The x.ai stat row: big numbers side by side, split by hairlines, labels underneath. Sits on the
- * page, not in a card.
- */
+/** A row of metric widgets: the page's key numbers at a glance. */
 export function StatBand({
 	stats,
 	className,
@@ -146,20 +217,16 @@ export function StatBand({
 	className?: string;
 }) {
 	return (
-		<dl className={cn("grid grid-cols-2 gap-y-8 sm:flex", className)}>
-			{stats.map((stat, index) => (
-				<div
-					key={stat.label}
-					className={cn(
-						"flex flex-col-reverse justify-end gap-2 pr-4 sm:flex-1 sm:px-6 sm:first:pl-0",
-						index > 0 && "border-hairline sm:border-l",
-					)}
-				>
+		<dl className={cn("grid grid-cols-2 gap-3 lg:grid-cols-4", className)}>
+			{stats.map((stat) => (
+				<div key={stat.label} className="group-sheet flex flex-col-reverse justify-end px-4 py-3.5">
 					<dt className="text-[13px] text-muted-foreground">
 						{stat.label}
-						{stat.hint && <span className="block text-foreground/40">{stat.hint}</span>}
+						{stat.hint && (
+							<span className="mt-0.5 block truncate text-[12px] text-tertiary">{stat.hint}</span>
+						)}
 					</dt>
-					<dd className="font-[450] text-4xl leading-none tracking-[-0.035em] sm:text-[44px]">
+					<dd className="metric font-semibold text-[28px] leading-8">
 						<Metric value={stat.value} {...(stat.format ? { format: stat.format } : {})} />
 					</dd>
 				</div>
@@ -168,30 +235,19 @@ export function StatBand({
 	);
 }
 
-/**
- * A card lit by the area's aurora, with a sheen that sweeps across on hover. The signature
- * surface: use one or two per page, for the thing the page is about.
- */
+/** A featured sheet for the one visual a page is about (a chart, a map, a gauge). */
 export function AuroraCard({ children, className }: { children: ReactNode; className?: string }) {
-	return (
-		<div className={cn("aurora group/aurora rounded-2xl", className)}>
-			<span
-				aria-hidden="true"
-				className="pointer-events-none absolute inset-0 z-10 -translate-x-full bg-[linear-gradient(120deg,transparent_35%,var(--sheen)_50%,transparent_65%)] transition-transform duration-1000 ease-out group-hover/aurora:translate-x-full motion-reduce:hidden"
-			/>
-			{children}
-		</div>
-	);
+	return <div className={cn("group-sheet relative overflow-hidden", className)}>{children}</div>;
 }
 
 /** Used/total bar. Turns amber past 80% and red past 95%, always with a text value beside it. */
 export function CapacityBar({ used, total, className }: { used: number; total: number; className?: string }) {
 	const fraction = ratio(used, total);
-	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "bg-area";
+	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "bg-primary";
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: a native <meter> cannot animate its fill.
 		<div
-			className={cn("h-1.5 w-full overflow-hidden rounded-full bg-foreground/[0.08]", className)}
+			className={cn("h-1.5 w-full overflow-hidden rounded-full bg-accent", className)}
 			role="meter"
 			aria-valuemin={0}
 			aria-valuemax={100}
@@ -217,11 +273,7 @@ export function StatusDot({ tone, label }: { tone: "good" | "warn" | "bad" | "id
 	}[tone];
 	return (
 		<span className="inline-flex items-center gap-1.5">
-			<span className={cn("relative flex size-2 rounded-full", color)}>
-				{tone === "good" && (
-					<span className={cn("absolute inset-0 animate-ping rounded-full opacity-40", color)} />
-				)}
-			</span>
+			<span className={cn("size-2 shrink-0 rounded-full", color)} />
 			<span>{label}</span>
 		</span>
 	);
@@ -243,13 +295,13 @@ export function EmptyState({
 	action?: ReactNode;
 }) {
 	return (
-		<div className="aurora flex flex-col items-center justify-center gap-4 rounded-2xl px-6 py-16 text-center [--aurora-strength:0.35]">
-			<span className="flex size-12 items-center justify-center rounded-full bg-background/60 text-foreground backdrop-blur [&_svg]:size-5">
+		<div className="group-sheet flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+			<span className="flex size-11 items-center justify-center rounded-full bg-raised text-muted-foreground [&_svg]:size-5">
 				{icon}
 			</span>
 			<div>
-				<p className="font-medium text-lg tracking-tight">{title}</p>
-				<p className="mt-1 max-w-sm text-muted-foreground text-sm">{description}</p>
+				<p className="font-semibold text-[15px]">{title}</p>
+				<p className="mt-0.5 max-w-sm text-[13px] text-muted-foreground">{description}</p>
 			</div>
 			{action}
 		</div>
@@ -260,7 +312,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 	const upstream = error instanceof ApiError ? error.upstream : undefined;
 	const message = error instanceof Error ? error.message : "Something went wrong";
 	return (
-		<div role="alert" className="flex flex-col items-start gap-3 rounded-lg bg-destructive/8 p-6">
+		<div role="alert" className="group-sheet flex flex-col items-start gap-2 p-4">
 			<div className="flex items-center gap-2 font-medium text-destructive">
 				<AlertTriangle className="size-4" />
 				{upstream ? `SeaweedFS ${upstream} reported a problem` : "Could not load this data"}

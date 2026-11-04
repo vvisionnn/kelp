@@ -141,7 +141,7 @@ export function DataTable<T extends object>({
 			{(searchText || toolbar) && (
 				<div className="flex flex-wrap items-center gap-2">
 					{searchText && (
-						<InputGroup className="w-full sm:w-72">
+						<InputGroup className="w-full sm:w-64">
 							<InputGroupAddon>
 								<Search />
 							</InputGroupAddon>
@@ -170,7 +170,7 @@ export function DataTable<T extends object>({
 						initial={{ opacity: 0, y: -4 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -4 }}
-						className="flex flex-wrap items-center gap-2 rounded-full bg-secondary py-1.5 pr-1.5 pl-4 text-sm"
+						className="flex flex-wrap items-center gap-2 rounded-lg bg-primary/10 py-1.5 pr-1.5 pl-3 text-[13px]"
 					>
 						<span className="font-medium tabular">{selected.length} selected</span>
 						<div className="ml-auto flex flex-wrap gap-2">{bulkActions(selected, clear)}</div>
@@ -194,7 +194,7 @@ export function DataTable<T extends object>({
 					tableLayout={{ headerBackground: false, rowBorder: true, dense: false }}
 				>
 					<div className="w-full space-y-2.5">
-						<DataGridContainer>
+						<DataGridContainer className="group-sheet px-1">
 							<DataGridScrollArea>
 								<DataGridTable />
 							</DataGridScrollArea>

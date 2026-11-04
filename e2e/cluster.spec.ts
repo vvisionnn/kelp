@@ -31,7 +31,7 @@ test("theme choice persists across reloads", async ({ page }) => {
 });
 
 test("viewers can browse but are labeled read-only", async ({ viewerPage }) => {
-	await expect(viewerPage.getByRole("banner").getByText("Read-only")).toBeVisible();
+	await expect(viewerPage.getByRole("complementary").getByText("Read-only")).toBeVisible();
 });
 
 test("signing out returns to the sign-in page and protects the app", async ({ browser }) => {

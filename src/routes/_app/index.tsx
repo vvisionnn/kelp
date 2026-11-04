@@ -1,22 +1,20 @@
-import type { Overview } from "@shared/api.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
-import type { Area } from "@/components/kelp/nav.ts";
+import { NAV_ITEMS } from "@/components/kelp/nav.ts";
 import {
-	AuroraCard,
 	CapacityBar,
 	ErrorState,
-	Panel,
+	Metric,
+	PageHeader,
 	Reveal,
+	Section,
 	SkeletonBlock,
-	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
+import { Tile } from "@/components/kelp/tile.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
 import { queries } from "@/lib/queries.ts";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({
 	staticData: { title: "Overview" },
@@ -24,28 +22,9 @@ export const Route = createFileRoute("/_app/")({
 	component: OverviewPage,
 });
 
-/** One sentence describing cluster health, for the page header. */
-export function healthSummary(overview: Overview): { tone: "good" | "warn" | "bad"; text: string } {
-	const leader = overview.masters.some((m) => m.isLeader);
-	if (!leader) return { tone: "bad", text: "No master leader. The cluster cannot assign new writes." };
-	if (overview.volumeServers.length === 0) return { tone: "bad", text: "No volume servers are reporting." };
-	const used = ratio(
-		overview.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0),
-		overview.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0),
-	);
-	if (used >= 0.9) return { tone: "warn", text: `Disks are ${formatPercent(used)} full. Add capacity soon.` };
-	if (!overview.versions.uniform) return { tone: "warn", text: "Nodes run different SeaweedFS versions." };
-	const servers = overview.volumeServers.length;
-	return {
-		tone: "good",
-		text: `Healthy. ${servers} volume ${servers === 1 ? "server" : "servers"} reporting.`,
-	};
-}
+import { healthSummary } from "@/lib/health.ts";
 
-/** The overview's headline: one short statement, so the page opens with the answer. */
-function headline(tone: "good" | "warn" | "bad"): string {
-	return { good: "Everything is calm.", warn: "Worth a look.", bad: "Needs attention now." }[tone];
-}
+export { healthSummary };
 
 function OverviewPage() {
 	const { data, error, refetch, isPending } = useQuery(queries.overview());
@@ -54,140 +33,106 @@ function OverviewPage() {
 	const health = healthSummary(data);
 	const diskUsed = data.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0);
 	const diskTotal = data.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0);
+	const slotsUsed = data.volumeServers.reduce((sum, s) => sum + s.volumes, 0);
+	const slotsTotal = data.volumeServers.reduce((sum, s) => sum + s.maxVolumes, 0);
 	const leader = data.masters.find((m) => m.isLeader);
 
 	return (
 		<>
-			<section className="grid items-end gap-x-12 gap-y-10 pt-10 pb-14 sm:pt-16 lg:grid-cols-[1.15fr_1fr]">
-				<Reveal>
-					<span className="inline-flex h-8 items-center rounded-full bg-secondary px-3.5 text-[13px]">
+			<PageHeader
+				title="Overview"
+				description={
+					<span className="flex flex-wrap items-center gap-x-2">
 						<StatusDot tone={health.tone} label={health.text} />
+						<span className="text-tertiary">Updated {formatRelative(data.updatedAt)}</span>
 					</span>
-					<h1 className="mt-6 text-balance font-[450] text-5xl leading-[1.02] tracking-[-0.035em] sm:text-6xl">
-						{headline(health.tone)}
-					</h1>
-					<p className="mt-5 max-w-[52ch] text-[17px] text-muted-foreground leading-relaxed">
-						SeaweedFS holds {formatBytes(data.totalSize)} of object data in {formatCount(data.totalVolumes)}{" "}
-						volumes, coordinated by{" "}
-						{leader ? <span className="font-mono text-foreground">{leader.address}</span> : "no leader"}.
-					</p>
-				</Reveal>
-				<Reveal delay={0.08}>
-					<AuroraCard className="p-7 sm:p-8">
-						<div className="flex items-center justify-between text-[13px] text-foreground/70">
-							<span>Disk capacity</span>
-							<span>Across all volume servers</span>
-						</div>
-						<div className="mt-10 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-							<span className="font-[450] text-5xl leading-none tracking-[-0.04em]">
-								{formatBytes(diskUsed)}
-							</span>
-							<span className="text-foreground/70">of {formatBytes(diskTotal)} used</span>
-						</div>
-						<CapacityBar used={diskUsed} total={diskTotal} className="mt-6 h-2 bg-foreground/10" />
-					</AuroraCard>
-				</Reveal>
-			</section>
+				}
+			/>
 
-			<Reveal delay={0.12} className="hairline-t hairline-b py-10">
-				<StatBand
-					stats={[
-						{
-							label: "Volumes",
-							value: data.totalVolumes,
-							hint: `Limit ${formatCount(data.volumeSizeLimitMb)} MiB each`,
-						},
-						{ label: "Files", value: data.totalFiles },
-						{
-							label: "EC shards",
-							value: data.totalEcShards,
-							hint: `${data.totalEcVolumes} encoded ${data.totalEcVolumes === 1 ? "volume" : "volumes"}`,
-						},
-						{ label: "Mounts", value: data.totalMountClients, hint: "FUSE clients connected" },
-					]}
+			<Reveal className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+				<section className="group-sheet flex min-h-56 flex-col p-4 sm:col-span-2 lg:col-span-6 lg:row-span-2">
+					<WidgetLabel to="/cluster">Disk capacity</WidgetLabel>
+					<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
+						<Metric value={diskUsed} format={formatBytes} />
+						<span className="ml-1.5 font-normal font-sans text-[13px] text-muted-foreground tracking-normal">
+							of {formatBytes(diskTotal)} used
+						</span>
+					</p>
+					<div className="mt-3 flex items-center gap-3">
+						<CapacityBar used={diskUsed} total={diskTotal} className="h-2" />
+						<span className="shrink-0 text-[13px] text-muted-foreground tabular">
+							{formatPercent(ratio(diskUsed, diskTotal))}
+						</span>
+					</div>
+					<p className="mt-5 flex items-baseline justify-between text-[13px]">
+						<span className="text-muted-foreground">Volume slots</span>
+						<span className="tabular">
+							{formatCount(slotsUsed)}{" "}
+							<span className="text-muted-foreground">of {formatCount(slotsTotal)}</span>
+						</span>
+					</p>
+					<CapacityBar used={slotsUsed} total={slotsTotal} className="mt-2" />
+					<dl className="mt-auto grid grid-cols-3 gap-3 border-border border-t pt-3.5 text-[12px]">
+						<Fact label="Object data" value={formatBytes(data.totalSize)} />
+						<Fact label="Free" value={formatBytes(Math.max(0, diskTotal - diskUsed))} />
+						<Fact
+							label="Volume servers"
+							value={`${data.volumeServers.length} in ${data.dataCenters.length} ${data.dataCenters.length === 1 ? "data center" : "data centers"}`}
+						/>
+					</dl>
+				</section>
+				<Widget
+					to="/volumes"
+					label="Volumes"
+					value={data.totalVolumes}
+					hint={`Up to ${formatCount(data.volumeSizeLimitMb)} MiB each`}
 				/>
+				<Widget to="/volumes" label="Files" value={data.totalFiles} hint="Across all volumes" />
+				<Widget
+					to="/erasure-coding"
+					label="EC shards"
+					value={data.totalEcShards}
+					hint={`${data.totalEcVolumes} encoded ${data.totalEcVolumes === 1 ? "volume" : "volumes"}`}
+				/>
+				<Widget to="/cluster" label="Mounts" value={data.totalMountClients} hint="FUSE clients connected" />
 			</Reveal>
 
-			<section className="pt-16">
-				<h2 className="font-[450] text-3xl tracking-[-0.025em]">Where to go</h2>
-				<div className="mt-8 grid gap-4 md:grid-cols-6">
-					<AreaCard
-						area="storage"
-						to="/volumes"
-						title="Storage"
-						value={formatCount(data.totalVolumes)}
-						unit="volumes"
-						text="Vacuum, grow and freeze volumes. Watch erasure-coded shards."
-						className="md:col-span-4 md:row-span-2 md:min-h-80"
-					/>
-					<AreaCard
-						area="cluster"
-						to="/cluster"
-						title="Cluster"
-						value={formatCount(data.masters.length + data.volumeServers.length + data.filers.length)}
-						unit="nodes"
-						text="Masters, volume servers, filers and gateways."
-						className="md:col-span-2"
-					/>
-					<AreaCard
-						area="objects"
-						to="/buckets"
-						title="Object store"
-						value={formatCount(data.s3Gateways.length)}
-						unit={data.s3Gateways.length === 1 ? "S3 gateway" : "S3 gateways"}
-						text="Buckets, files and Iceberg tables."
-						className="md:col-span-2"
-					/>
-					<AreaCard
-						area="access"
-						to="/access/users"
-						title="Access"
-						text="Users, keys, groups and IAM policies."
-						className="md:col-span-3"
-					/>
-					<AreaCard
-						area="operations"
-						to="/maintenance"
-						title="Operations"
-						value={formatCount(data.maintenance.workers)}
-						unit={`${data.maintenance.workers === 1 ? "worker" : "workers"}, ${data.maintenance.tasks} tasks running`}
-						text="Maintenance jobs, messaging and settings."
-						className="md:col-span-3"
-					/>
-				</div>
-			</section>
-
-			<section className="mt-16 grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
-				<Panel
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section
 					title="Volume servers"
+					className="mt-0 lg:col-span-7"
 					actions={
-						<Link to="/cluster" className="text-[13px] text-muted-foreground hover:text-foreground">
+						<Link to="/cluster" className="text-[13px] text-primary hover:underline">
 							All nodes
 						</Link>
 					}
 				>
-					<ul className="divide-y divide-hairline">
+					<ul className="group-sheet divide-y divide-border">
 						{data.volumeServers.map((server) => (
-							<li key={server.id} className="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[1fr_12rem]">
+							<li
+								key={server.id}
+								className="grid items-center gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-[1fr_18rem]"
+							>
 								<div className="min-w-0">
-									<p className="truncate font-medium font-mono text-sm">{server.address}</p>
-									<p className="text-muted-foreground text-xs">
+									<p className="truncate font-mono text-[13px]">{server.address}</p>
+									<p className="text-[12px] text-muted-foreground">
 										{server.dataCenter} / {server.rack}, {formatCount(server.volumes)} of{" "}
 										{formatCount(server.maxVolumes)} volume slots
 									</p>
 								</div>
-								<div className="self-center" data-area="storage">
+								<div className="flex items-center gap-3">
 									<CapacityBar used={server.diskUsage} total={server.diskCapacity} />
-									<p className="mt-1 text-right text-muted-foreground text-xs tabular">
+									<span className="w-32 shrink-0 text-right text-[12px] text-muted-foreground tabular">
 										{formatBytes(server.diskUsage)} / {formatBytes(server.diskCapacity)}
-									</p>
+									</span>
 								</div>
 							</li>
 						))}
 					</ul>
-				</Panel>
-				<Panel title="Services">
-					<dl className="grid gap-3 text-sm">
+				</Section>
+
+				<Section title="Services" className="mt-0 lg:col-span-5">
+					<dl className="group-sheet divide-y divide-border">
 						<ServiceRow label="Masters" count={data.masters.length} detail={leader?.address ?? "no leader"} />
 						<ServiceRow label="Filers" count={data.filers.length} detail={data.filers[0]?.address} />
 						<ServiceRow
@@ -206,9 +151,9 @@ function OverviewPage() {
 							note={`${data.maintenance.tasks} tasks running`}
 						/>
 					</dl>
-					<div className="hairline-t mt-5 pt-4 text-sm">
+					<div className="mt-2 px-4 text-[12px] text-muted-foreground">
 						{data.versions.uniform ? (
-							<p className="text-muted-foreground">
+							<p>
 								Every node runs SeaweedFS{" "}
 								<span className="font-mono text-foreground">
 									{data.versions.version.split(" ")[0] || "unknown"}
@@ -220,7 +165,7 @@ function OverviewPage() {
 								<Badge variant="outline" className="border-warning/50 text-warning-foreground">
 									Mixed versions
 								</Badge>
-								<ul className="mt-2 space-y-1 text-xs">
+								<ul className="mt-2 space-y-1">
 									{data.versions.groups.map((group) => (
 										<li key={group.type}>
 											{group.type}:{" "}
@@ -230,74 +175,68 @@ function OverviewPage() {
 								</ul>
 							</div>
 						)}
-						<p className="mt-1 text-muted-foreground text-xs">Updated {formatRelative(data.updatedAt)}</p>
 					</div>
-				</Panel>
-			</section>
+				</Section>
+			</div>
 
 			{data.tiers.length > 0 && (
-				<section className="mt-4" data-area="storage">
-					<Panel title="Storage tiers">
-						<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-							{data.tiers.map((tier) => (
-								<div key={tier.name} className="rounded-md bg-raised p-5">
-									<div className="flex items-center justify-between">
-										<span className="font-medium">{tier.name}</span>
-										<Badge variant="secondary">{tier.isRemote ? "Remote" : "Local disk"}</Badge>
-									</div>
-									<p className="mt-2 text-muted-foreground text-sm">
-										{formatCount(tier.volumeCount)} volumes, {formatCount(tier.ecShardCount)} EC shards,{" "}
-										{formatBytes(tier.dataSize)} of data
-									</p>
-									{!tier.isRemote && (
-										<CapacityBar used={tier.diskUsed} total={tier.diskCapacity} className="mt-3" />
-									)}
+				<Section title="Storage tiers" className="mt-8">
+					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						{data.tiers.map((tier) => (
+							<div key={tier.name} className="group-sheet p-4">
+								<div className="flex items-center justify-between">
+									<span className="font-semibold text-[13px]">{tier.name}</span>
+									<Badge variant="secondary">{tier.isRemote ? "Remote" : "Local disk"}</Badge>
 								</div>
-							))}
-						</div>
-					</Panel>
-				</section>
+								<p className="mt-1 text-[12px] text-muted-foreground">
+									{formatCount(tier.volumeCount)} volumes, {formatCount(tier.ecShardCount)} EC shards,{" "}
+									{formatBytes(tier.dataSize)} of data
+								</p>
+								{!tier.isRemote && (
+									<CapacityBar used={tier.diskUsed} total={tier.diskCapacity} className="mt-3" />
+								)}
+							</div>
+						))}
+					</div>
+				</Section>
 			)}
 		</>
 	);
 }
 
-/** One area in the bento: its own aurora, a live number when there is one, and where it leads. */
-function AreaCard({
-	area,
-	to,
-	title,
-	value,
-	unit,
-	text,
-	className,
-}: {
-	area: Area;
-	to: string;
-	title: string;
-	value?: string;
-	unit?: string;
-	text: string;
-	className?: string;
-}) {
+/** A widget's label: the related page's identity tile and a name, linking to that page. */
+function WidgetLabel({ to, children }: { to: string; children: string }) {
+	const item = NAV_ITEMS.find((i) => i.to === to);
 	return (
-		<Link to={to as "/"} data-area={area} className={cn("group rounded-2xl", className)}>
-			<AuroraCard className="flex h-full min-h-56 flex-col p-7">
-				<div className="flex items-center justify-between">
-					<span className="font-medium text-[15px]">{title}</span>
-					<ArrowUpRight className="size-4 text-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-foreground" />
-				</div>
-				<div className="mt-auto pt-10">
-					{value !== undefined && (
-						<p className="flex items-baseline gap-2">
-							<span className="font-[450] text-5xl leading-none tracking-[-0.04em] tabular">{value}</span>
-							<span className="text-[13px] text-foreground/70">{unit}</span>
-						</p>
-					)}
-					<p className="mt-3 max-w-[40ch] text-[13px] text-foreground/70">{text}</p>
-				</div>
-			</AuroraCard>
+		<Link
+			to={to as "/"}
+			className="flex w-fit items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
+		>
+			{item && <Tile item={item} />}
+			{children}
 		</Link>
+	);
+}
+
+/** One number the operator checks often, linking to where it comes from. */
+function Widget({ to, label, value, hint }: { to: string; label: string; value: number; hint: string }) {
+	return (
+		<section className="group-sheet p-4 lg:col-span-3">
+			<WidgetLabel to={to}>{label}</WidgetLabel>
+			<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
+				<Metric value={value} />
+			</p>
+			<p className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</p>
+		</section>
+	);
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="min-w-0">
+			<dt className="text-muted-foreground">{label}</dt>
+			<dd className="truncate font-medium text-[13px] tabular">{value}</dd>
+		</div>
 	);
 }
 
@@ -313,14 +252,14 @@ function ServiceRow({
 	note?: string;
 }) {
 	return (
-		<div className="flex items-center justify-between gap-3">
+		<div className="flex h-10 items-center justify-between gap-3 px-4 text-[13px]">
 			<dt className="flex items-center gap-2">
 				<StatusDot tone={count > 0 ? "good" : "idle"} label={label} />
 			</dt>
 			<dd className="flex min-w-0 items-center gap-2 text-muted-foreground">
 				{detail && <span className="truncate font-mono text-xs">{detail}</span>}
 				{note && <span className="truncate text-xs">{note}</span>}
-				<span className="tabular font-medium text-foreground">{count}</span>
+				<span className="w-5 text-right font-medium text-foreground tabular">{count}</span>
 			</dd>
 		</div>
 	);
@@ -329,19 +268,20 @@ function ServiceRow({
 function OverviewSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading overview">
-			<div className="grid items-end gap-12 pt-16 pb-14 lg:grid-cols-[1.15fr_1fr]">
-				<div>
-					<SkeletonBlock className="h-8 w-64 rounded-full" />
-					<SkeletonBlock className="mt-6 h-14 w-full max-w-md" />
-					<SkeletonBlock className="mt-5 h-5 w-80" />
+			<div className="flex items-center gap-3 pt-2 pb-6">
+				<SkeletonBlock className="size-9 rounded-[9px]" />
+				<div className="space-y-1.5">
+					<SkeletonBlock className="h-7 w-40" />
+					<SkeletonBlock className="h-4 w-64" />
 				</div>
-				<SkeletonBlock className="h-52 rounded-2xl" />
 			</div>
-			<div className="grid grid-cols-2 gap-8 py-10 sm:grid-cols-4">
+			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+				<SkeletonBlock className="h-56 rounded-xl sm:col-span-2 lg:col-span-6 lg:row-span-2" />
 				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-16" />
+					<SkeletonBlock key={i} className="h-[106px] rounded-xl lg:col-span-3" />
 				))}
 			</div>
+			<SkeletonBlock className="mt-8 h-64 rounded-xl" />
 		</div>
 	);
 }

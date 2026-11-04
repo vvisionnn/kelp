@@ -1,16 +1,8 @@
-import { type QueryClient, useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { LogOut, Monitor, Moon, Search, Sun } from "lucide-react";
+import { ChevronLeft, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
 import { motion } from "motion/react";
-import { type ComponentProps, type CSSProperties, Fragment, type ReactNode, useEffect } from "react";
-import PillNav from "@/components/react-bits/PillNav.tsx";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbList,
-	BreadcrumbPage,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -24,17 +16,22 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
+import { healthSummary } from "@/lib/health.ts";
+import { queries } from "@/lib/queries.ts";
 import { sessionQuery, useSession, useSignOut } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
 import { CommandMenu, useCommandMenu } from "./command-menu.tsx";
-import { NAV, type NavSection, sectionFor } from "./nav.ts";
+import { itemFor, NAV } from "./nav.ts";
+import { PageItemContext } from "./page.tsx";
+import { Tile } from "./tile.tsx";
 
 declare module "@tanstack/react-router" {
 	interface StaticDataRouteOption {
-		/** Section shown before the page title in the breadcrumb. */
+		/** The nav section the page belongs to. */
 		section?: string;
 		title?: string;
 		/** Names the item a detail page shows; defaults to the first URL parameter. */
@@ -47,81 +44,99 @@ export function isActivePath(pathname: string, to: string): boolean {
 	return to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
 }
 
-/** The deepest route with a title: it names the page and, through its section, the area. */
+/** The deepest route with a title: it names the page and, on detail pages, the item. */
 function useLeaf() {
 	const matches = useMatches();
 	return [...matches].reverse().find((m) => m.staticData?.title);
 }
 
-/** Adapts PillNav's `href` links to the router. */
-function RouterLink({ href, ...props }: ComponentProps<"a"> & { href: string }) {
-	return <Link to={href as "/"} {...props} />;
+/** The item a detail page shows, named from loaded data when the route knows how. */
+function useDetailName(): string | undefined {
+	const leaf = useLeaf();
+	const queryClient = useQueryClient();
+	// Re-render when fetches settle so names that come from loaded data appear.
+	useIsFetching();
+	const params = (leaf?.params ?? {}) as Record<string, string>;
+	return leaf?.staticData?.crumb?.(params, queryClient) ?? Object.values(params)[0];
 }
 
-/** Glass and pill colors for PillNav in Kelp's palette (white pill on dark, ink pill on light). */
-const PILL_COLORS: Record<"light" | "dark", CSSProperties> = {
-	dark: {
-		"--pn-surface": "rgba(26, 26, 26, 0.72)",
-		"--pn-text": "rgba(231, 233, 238, 0.62)",
-		"--pn-strong": "#ffffff",
-		"--pn-pill": "#ffffff",
-		"--pn-pill-ink": "#0a0a0a",
-	} as CSSProperties,
-	light: {
-		"--pn-surface": "rgba(242, 243, 247, 0.85)",
-		"--pn-text": "rgba(10, 10, 10, 0.6)",
-		"--pn-strong": "#0a0a0a",
-		"--pn-pill": "#0a0a0a",
-		"--pn-pill-ink": "#ffffff",
-	} as CSSProperties,
-};
-
-function AreaNav({ current }: { current: NavSection }) {
-	const { resolvedTheme } = useTheme();
+function ClusterStatus() {
+	const { data } = useQuery(queries.overview());
+	const health = data ? healthSummary(data) : undefined;
+	const color = { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[health?.tone ?? "good"];
 	return (
-		<PillNav
-			items={NAV.map((section) => ({ label: section.title, href: section.items[0]?.to ?? "/" }))}
-			activeHref={current.items[0]?.to}
-			linkComponent={RouterLink}
-			theme={resolvedTheme}
-			style={PILL_COLORS[resolvedTheme]}
-			size="sm"
-			itemStyle="plain"
-			hoverEffect="glide"
-			indicator="pill"
-			ariaLabel="Areas"
-		/>
+		<span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+			<span className={cn("size-1.5 shrink-0 rounded-full", health ? color : "bg-tertiary")} />
+			<span className="truncate">
+				{health ? health.text.split(".")[0] : "Connecting"}
+				{data && `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}`}
+			</span>
+		</span>
 	);
 }
 
-/** The current area's pages as pills under the top bar. */
-function SectionNav({ section }: { section: NavSection }) {
+/** Sidebar contents, shared by the floating sidebar and the compact-width sheet. */
+function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	if (section.items.length < 2) return null;
+	const current = itemFor(pathname);
 	return (
-		<nav aria-label={section.title} className="-mx-1 flex gap-1 overflow-x-auto px-1 py-3">
-			{section.items.map((item) => {
-				const active = isActivePath(pathname, item.to);
-				return (
-					<Link
-						key={item.to}
-						to={item.to as "/"}
-						data-active={active ? "" : undefined}
-						className="relative flex h-8 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] text-foreground/60 transition-colors hover:text-foreground data-active:text-foreground [&_svg]:size-3.5"
-					>
-						{active && (
-							<motion.span
-								layoutId="section-nav-active"
-								className="absolute inset-0 -z-10 rounded-full bg-secondary"
-								transition={{ type: "spring", stiffness: 500, damping: 40 }}
-							/>
+		<div className="flex h-full min-h-0 flex-col">
+			<Link
+				to="/"
+				onClick={onNavigate}
+				className="mx-2 mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-accent/60"
+			>
+				<span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(180deg,#2c2c2e,#0e0e10)] text-white shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.2)]">
+					<KelpMark className="size-5" />
+				</span>
+				<span className="grid min-w-0 leading-tight">
+					<span className="font-semibold text-[15px] tracking-[-0.01em]">Kelp</span>
+					<ClusterStatus />
+				</span>
+			</Link>
+
+			<nav aria-label="Pages" className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-3">
+				{NAV.map((section) => (
+					<div key={section.title}>
+						{section.title !== "Overview" && (
+							<p className="px-2.5 pb-1 font-medium text-[11px] text-muted-foreground tracking-[0.01em]">
+								{section.title}
+							</p>
 						)}
-						<item.icon />
-						{item.title}
-					</Link>
-				);
-			})}
-		</nav>
+						<ul className="space-y-px">
+							{section.items.map((item) => {
+								const active = current?.to === item.to;
+								return (
+									<li key={item.to}>
+										<Link
+											to={item.to as "/"}
+											onClick={onNavigate}
+											data-active={active ? "" : undefined}
+											aria-current={active ? "page" : undefined}
+											className="relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors hover:bg-accent/60 data-active:font-semibold"
+										>
+											{active && (
+												<motion.span
+													layoutId="sidebar-active"
+													className="absolute inset-0 -z-10 rounded-md bg-accent"
+													transition={{ type: "spring", stiffness: 500, damping: 40 }}
+												/>
+											)}
+											<Tile item={item} />
+											<span className="truncate">{item.title}</span>
+										</Link>
+									</li>
+								);
+							})}
+						</ul>
+					</div>
+				))}
+			</nav>
+
+			<div className="border-border border-t p-2">
+				<AccountMenu />
+			</div>
+		</div>
 	);
 }
 
@@ -131,7 +146,7 @@ const THEMES: Array<{ value: Theme; label: string; icon: ReactNode }> = [
 	{ value: "dark", label: "Dark", icon: <Moon /> },
 ];
 
-function UserMenu() {
+function AccountMenu() {
 	const user = useSession();
 	const { theme, setTheme } = useTheme();
 	const signOut = useSignOut();
@@ -143,25 +158,24 @@ function UserMenu() {
 					<button
 						type="button"
 						aria-label="Account menu"
-						className="flex h-9 items-center gap-2 rounded-full bg-secondary py-1 pr-3.5 pl-1 text-[13px] transition-colors hover:bg-accent"
+						className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors hover:bg-accent/60 aria-expanded:bg-accent"
 					>
-						<span className="flex size-7 items-center justify-center rounded-full bg-[image:var(--spectrum)] font-medium text-white text-xs uppercase">
+						<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#8e8e93,#636366)] font-semibold text-[12px] text-white uppercase">
 							{user.name.slice(0, 1)}
 						</span>
-						<span className="hidden max-w-28 truncate font-medium sm:block">{user.name}</span>
+						<span className="grid min-w-0 flex-1 leading-tight">
+							<span className="truncate font-medium text-[13px]">{user.name}</span>
+							<span className="text-[11px] text-muted-foreground">
+								{user.role === "admin" ? "Administrator" : "Read-only"}
+							</span>
+						</span>
+						<ChevronsUpDown className="size-3.5 text-muted-foreground" />
 					</button>
 				}
 			/>
-			<DropdownMenuContent align="end" className="w-60">
+			<DropdownMenuContent side="top" align="start" className="w-56">
 				<DropdownMenuGroup>
-					<DropdownMenuLabel className="flex flex-col gap-0.5">
-						<span className="truncate font-medium text-foreground text-sm">{user.name}</span>
-						<span>{user.role === "admin" ? "Administrator" : "Read-only"}</span>
-					</DropdownMenuLabel>
-				</DropdownMenuGroup>
-				<DropdownMenuSeparator />
-				<DropdownMenuGroup>
-					<DropdownMenuLabel>Theme</DropdownMenuLabel>
+					<DropdownMenuLabel>Appearance</DropdownMenuLabel>
 					<DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
 						{THEMES.map((option) => (
 							<DropdownMenuRadioItem key={option.value} value={option.value}>
@@ -187,7 +201,13 @@ function ThemeSwitch() {
 	const { resolvedTheme, setTheme } = useTheme();
 	const next = resolvedTheme === "dark" ? "light" : "dark";
 	return (
-		<Button variant="ghost" size="icon" aria-label={`Switch to ${next} theme`} onClick={() => setTheme(next)}>
+		<Button
+			variant="ghost"
+			size="icon"
+			aria-label={`Switch to ${next} theme`}
+			onClick={() => setTheme(next)}
+			className="text-muted-foreground hover:text-foreground"
+		>
 			<motion.span
 				key={resolvedTheme}
 				initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
@@ -201,42 +221,85 @@ function ThemeSwitch() {
 	);
 }
 
-/** On detail pages, the trail back to the list the item came from. */
-function DetailBreadcrumb() {
-	const leaf = useLeaf();
-	const queryClient = useQueryClient();
-	// Re-render when fetches settle so names that come from loaded data appear.
-	useIsFetching();
-	const params = (leaf?.params ?? {}) as Record<string, string>;
-	const detail = leaf?.staticData?.crumb?.(params, queryClient) ?? Object.values(params)[0];
-	if (!detail) return null;
-	const crumbs = [leaf?.staticData?.section, leaf?.staticData?.title].filter(Boolean) as string[];
-	return (
-		<Breadcrumb className="pt-4">
-			<BreadcrumbList>
-				{crumbs.map((text) => (
-					<Fragment key={text}>
-						<BreadcrumbItem>
-							<span className="text-muted-foreground">{text}</span>
-						</BreadcrumbItem>
-						<BreadcrumbSeparator />
-					</Fragment>
-				))}
-				<BreadcrumbItem>
-					<BreadcrumbPage className="max-w-64 truncate">{detail}</BreadcrumbPage>
-				</BreadcrumbItem>
-			</BreadcrumbList>
-		</Breadcrumb>
-	);
+/** True once the page has scrolled far enough that its large title is out of view. */
+function useScrolledPast(offset: number): boolean {
+	const [past, setPast] = useState(false);
+	useEffect(() => {
+		const update = () => setPast(window.scrollY > offset);
+		update();
+		window.addEventListener("scroll", update, { passive: true });
+		return () => window.removeEventListener("scroll", update);
+	}, [offset]);
+	return past;
 }
 
-/** The spectrum hairline under the top bar while any data is loading in the background. */
-function FetchIndicator() {
+/**
+ * The page's toolbar. On detail pages it leads with a back button to the list; the title appears
+ * once the page's own large title scrolls away, as in Apple's apps.
+ */
+function Toolbar({ onShowSidebar, onSearch }: { onShowSidebar: () => void; onSearch: () => void }) {
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const leaf = useLeaf();
+	const item = itemFor(pathname);
+	const detail = useDetailName();
+	const scrolled = useScrolledPast(56);
 	const fetching = useIsFetching() > 0;
+	const title = detail ?? leaf?.staticData?.title;
 	return (
-		<div className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">
-			{fetching && <div className="spectrum h-full w-full animate-pulse" />}
-		</div>
+		<header
+			data-toolbar=""
+			className={cn(
+				"sticky top-0 z-30 transition-[background-color,box-shadow] duration-200",
+				scrolled &&
+					"bg-[var(--glass)] shadow-[0_0.5px_0_var(--border)] backdrop-blur-xl backdrop-saturate-[1.8]",
+			)}
+		>
+			<div className="flex h-13 items-center gap-2 px-4 xl:px-8">
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label="Show sidebar"
+					className="text-muted-foreground lg:hidden"
+					onClick={onShowSidebar}
+				>
+					<PanelLeft />
+				</Button>
+				{detail && item && (
+					<Link
+						to={item.to as "/"}
+						className="-ml-1 flex h-7 shrink-0 items-center gap-0.5 rounded-md pr-2 pl-1 text-[13px] text-primary hover:bg-accent/60"
+					>
+						<ChevronLeft className="size-4" />
+						{item.title}
+					</Link>
+				)}
+				<motion.p
+					initial={false}
+					animate={{ opacity: scrolled ? 1 : 0, y: scrolled ? 0 : 4 }}
+					transition={{ duration: 0.18 }}
+					aria-hidden={!scrolled}
+					className="min-w-0 truncate font-semibold text-[15px] tracking-[-0.01em]"
+				>
+					{title}
+				</motion.p>
+				<div className="ml-auto flex shrink-0 items-center gap-1">
+					<button
+						type="button"
+						aria-label="Search"
+						onClick={onSearch}
+						className="flex h-8 items-center gap-2 rounded-md bg-secondary px-2.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent sm:w-56"
+					>
+						<Search className="size-3.5" />
+						<span className="hidden sm:inline">Search</span>
+						<Kbd className="ml-auto hidden sm:inline-flex">⌘K</Kbd>
+					</button>
+					<ThemeSwitch />
+				</div>
+			</div>
+			<div className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">
+				{fetching && <div className="tide h-full w-full bg-primary/40" />}
+			</div>
+		</header>
 	);
 }
 
@@ -255,58 +318,34 @@ function useSessionWatcher() {
 	}, [queryClient, router]);
 }
 
-/** Kelp's page width: 1232px of content, as on x.ai. */
-export const CONTAINER = "mx-auto w-full max-w-[1280px] px-4 sm:px-6";
-
 export function AppShell() {
 	useSessionWatcher();
 	const command = useCommandMenu();
-	const section = sectionFor(useLeaf()?.staticData?.section);
-	const readOnly = useSession().role !== "admin";
+	const [sheetOpen, setSheetOpen] = useState(false);
+	const pageItem = itemFor(useRouterState({ select: (s) => s.location.pathname }));
 	return (
-		<div data-area={section.area} className="relative isolate flex min-h-svh flex-col overflow-x-clip">
-			<div className="area-glow" aria-hidden="true" />
-			<header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl">
-				<div className={cn(CONTAINER, "flex h-16 items-center gap-3")}>
-					<Link
-						to="/"
-						className="flex shrink-0 items-center gap-2 rounded-full pr-2 font-semibold tracking-tight"
-					>
-						<KelpMark className="size-7" />
-						<span className="hidden text-[17px] md:block">Kelp</span>
-					</Link>
-					<div className="flex min-w-0 flex-1 justify-center">
-						<AreaNav current={section} />
-					</div>
-					<div className="flex shrink-0 items-center gap-1.5">
-						<Button
-							variant="secondary"
-							size="sm"
-							aria-label="Search"
-							className="w-9 px-0 text-muted-foreground sm:w-auto sm:pr-1.5 sm:pl-3.5"
-							onClick={() => command.setOpen(true)}
-						>
-							<Search />
-							<span className="hidden sm:inline">Search</span>
-							<Kbd className="ml-3 hidden rounded-full sm:inline-flex">⌘K</Kbd>
-						</Button>
-						{readOnly && (
-							<span className="hidden h-7 items-center rounded-full px-3 text-[13px] text-muted-foreground ring-1 ring-hairline ring-inset sm:flex">
-								Read-only
-							</span>
-						)}
-						<ThemeSwitch />
-						<UserMenu />
-					</div>
-				</div>
-				<div className="hairline-b" />
-				<FetchIndicator />
-			</header>
-			<main className={cn(CONTAINER, "flex min-w-0 flex-1 flex-col pb-24")}>
-				<SectionNav section={section} />
-				<DetailBreadcrumb />
-				<Outlet />
-			</main>
+		<div className="min-h-svh">
+			<aside className="glass fixed inset-y-2 left-2 z-40 hidden w-62 rounded-xl lg:block">
+				<SidebarBody />
+			</aside>
+			<Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+				<SheetContent
+					side="left"
+					showCloseButton={false}
+					className="w-72 gap-0 bg-background p-0 sm:max-w-72"
+				>
+					<SheetTitle className="sr-only">Pages</SheetTitle>
+					<SidebarBody onNavigate={() => setSheetOpen(false)} />
+				</SheetContent>
+			</Sheet>
+			<div className="flex min-h-svh min-w-0 flex-col lg:pl-66">
+				<Toolbar onShowSidebar={() => setSheetOpen(true)} onSearch={() => command.setOpen(true)} />
+				<main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8">
+					<PageItemContext.Provider value={pageItem}>
+						<Outlet />
+					</PageItemContext.Provider>
+				</main>
+			</div>
 			<CommandMenu open={command.open} onOpenChange={command.setOpen} />
 		</div>
 	);
