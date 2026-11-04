@@ -49,8 +49,8 @@ function OverviewPage() {
 				}
 			/>
 
-			<Reveal className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
-				<section className="group-sheet flex min-h-56 flex-col p-4 sm:col-span-2 lg:col-span-6 lg:row-span-2">
+			<Reveal className="grid grid-cols-2 gap-3 lg:grid-cols-12">
+				<section className="group-sheet col-span-2 flex min-h-56 flex-col p-4 lg:col-span-6 lg:row-span-2">
 					<WidgetLabel to="/cluster">Disk capacity</WidgetLabel>
 					<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
 						<Metric value={diskUsed} format={formatBytes} />
@@ -75,10 +75,7 @@ function OverviewPage() {
 					<dl className="mt-auto grid grid-cols-3 gap-3 border-border border-t pt-3.5 text-[12px]">
 						<Fact label="Object data" value={formatBytes(data.totalSize)} />
 						<Fact label="Free" value={formatBytes(Math.max(0, diskTotal - diskUsed))} />
-						<Fact
-							label="Volume servers"
-							value={`${data.volumeServers.length} in ${data.dataCenters.length} ${data.dataCenters.length === 1 ? "data center" : "data centers"}`}
-						/>
+						<Fact label="Data centers" value={formatCount(data.dataCenters.length)} />
 					</dl>
 				</section>
 				<Widget
@@ -221,7 +218,7 @@ function WidgetLabel({ to, children }: { to: string; children: string }) {
 /** One number the operator checks often, linking to where it comes from. */
 function Widget({ to, label, value, hint }: { to: string; label: string; value: number; hint: string }) {
 	return (
-		<section className="group-sheet p-4 lg:col-span-3">
+		<section className="group-sheet min-w-0 p-4 lg:col-span-3">
 			<WidgetLabel to={to}>{label}</WidgetLabel>
 			<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
 				<Metric value={value} />
@@ -275,8 +272,8 @@ function OverviewSkeleton() {
 					<SkeletonBlock className="h-4 w-64" />
 				</div>
 			</div>
-			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
-				<SkeletonBlock className="h-56 rounded-xl sm:col-span-2 lg:col-span-6 lg:row-span-2" />
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-12">
+				<SkeletonBlock className="col-span-2 h-56 rounded-xl lg:col-span-6 lg:row-span-2" />
 				{[0, 1, 2, 3].map((i) => (
 					<SkeletonBlock key={i} className="h-[106px] rounded-xl lg:col-span-3" />
 				))}

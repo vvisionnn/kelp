@@ -14,6 +14,7 @@ import {
 import { useSignOut } from "@/lib/session.ts";
 import { useTheme } from "../theme-provider.tsx";
 import { NAV } from "./nav.ts";
+import { Tile } from "./tile.tsx";
 
 /** Open state for the command menu, toggled with ⌘K / Ctrl+K anywhere in the app. */
 export function useCommandMenu() {
@@ -66,7 +67,7 @@ export function CommandMenu({
 									value={`${item.title} ${item.keywords ?? ""}`}
 									onSelect={() => run(() => navigate({ to: item.to as "/" }))}
 								>
-									<item.icon />
+									<Tile item={item} />
 									{item.title}
 								</CommandItem>
 							))}
