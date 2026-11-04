@@ -53,3 +53,11 @@ describe("login", () => {
 		expect(safeRedirect(undefined)).toBe("/");
 	});
 });
+
+describe("unknown addresses", () => {
+	test("show a designed not-found page with a way back", async () => {
+		renderApp("/no/such/page");
+		expect(await screen.findByRole("heading", { name: "Nothing lives at this address" })).toBeTruthy();
+		expect(screen.getByRole("link", { name: "Go to the overview" }).getAttribute("href")).toBe("/");
+	});
+});

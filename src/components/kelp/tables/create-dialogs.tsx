@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -283,18 +284,18 @@ export function CreateTableDialog({ bucket, namespaces }: { bucket: string; name
 			<div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-3">
 				<div className="grid gap-1.5">
 					<Label htmlFor="table-namespace">Namespace</Label>
-					<select
-						id="table-namespace"
-						className="h-8 rounded-lg border border-input bg-transparent px-2 font-mono text-sm dark:bg-input/30"
-						value={namespace}
-						onChange={(e) => setNamespace(e.target.value)}
-					>
-						{namespaces.map((ns) => (
-							<option key={ns} value={ns}>
-								{ns}
-							</option>
-						))}
-					</select>
+					<Select value={namespace} onValueChange={(value) => setNamespace(value as string)}>
+						<SelectTrigger id="table-namespace" aria-label="Namespace" className="w-full font-mono">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{namespaces.map((ns) => (
+								<SelectItem key={ns} value={ns} className="font-mono">
+									{ns}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 				<div className="grid gap-1.5">
 					<Label htmlFor="table-name">Name</Label>
@@ -328,18 +329,21 @@ export function CreateTableDialog({ bucket, namespaces }: { bucket: string; name
 								value={column.name}
 								onChange={(e) => update(column.id, { name: e.target.value })}
 							/>
-							<select
-								aria-label={`Column ${index + 1} type`}
-								className="h-8 rounded-lg border border-input bg-transparent px-2 font-mono text-sm dark:bg-input/30"
+							<Select
 								value={column.type}
-								onChange={(e) => update(column.id, { type: e.target.value })}
+								onValueChange={(value) => update(column.id, { type: value as string })}
 							>
-								{ICEBERG_PRIMITIVE_TYPES.map((type) => (
-									<option key={type} value={type}>
-										{type}
-									</option>
-								))}
-							</select>
+								<SelectTrigger aria-label={`Column ${index + 1} type`} className="font-mono">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{ICEBERG_PRIMITIVE_TYPES.map((type) => (
+										<SelectItem key={type} value={type} className="font-mono">
+											{type}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 							<span className="flex items-center gap-1.5 text-xs">
 								<Checkbox
 									id={`column-${column.id}-required`}

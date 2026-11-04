@@ -41,7 +41,7 @@ test("browses an Iceberg table: schema, rows, and a past snapshot", async ({ pag
 	await page.getByRole("tab", { name: "Snapshots" }).click();
 	await expect(page.getByText("current", { exact: true })).toBeVisible();
 	await page.getByRole("button", { name: "Browse this version" }).last().click();
-	await expect(page.getByLabel("Snapshot", { exact: true })).toHaveValue("1000001");
+	await expect(page.getByRole("combobox", { name: "Snapshot" })).toHaveText(/1000001/);
 	await expect(page.getByRole("list", { name: "Data files" }).getByRole("button")).toHaveCount(3);
 });
 
@@ -65,7 +65,8 @@ test("manages a table bucket end to end", async ({ page }) => {
 	await dialog.getByLabel("Name", { exact: true }).fill("events");
 	await dialog.getByRole("button", { name: "Add column" }).click();
 	await dialog.getByLabel("Column 2 name").fill("happened_at");
-	await dialog.getByLabel("Column 2 type").selectOption("timestamptz");
+	await dialog.getByRole("combobox", { name: "Column 2 type" }).click();
+	await page.getByRole("option", { name: "timestamptz" }).click();
 	await dialog.getByText("Required").nth(1).click();
 	await dialog.getByRole("button", { name: "Create table" }).click();
 	await expect(page).toHaveURL(new RegExp(`/tables/${bucket}/${namespace}/events$`));

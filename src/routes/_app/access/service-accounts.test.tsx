@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { accessApi } from "../../../../test/access-fixtures.ts";
-import { choose } from "../../../../test/access-select.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
+import { choose } from "../../../../test/select.ts";
 import { settle } from "../../../../test/settle.ts";
 import { describeExpiry, expiryFrom } from "./service-accounts.tsx";
 

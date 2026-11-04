@@ -1,5 +1,6 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
+import { NotFound } from "./components/kelp/not-found.tsx";
 import { ApiError } from "./lib/api.ts";
 import { routeTree } from "./routeTree.gen.ts";
 
@@ -25,6 +26,7 @@ export function createAppRouter(queryClient: QueryClient, history?: RouterHistor
 		routeTree,
 		context: { queryClient },
 		defaultPreload: "intent",
+		defaultNotFoundComponent: NotFound,
 		defaultPreloadStaleTime: 0,
 		scrollRestoration: true,
 		...(history ? { history } : {}),

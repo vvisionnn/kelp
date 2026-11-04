@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
+import { choose } from "../../../../../test/select.ts";
 import { settle } from "../../../../../test/settle.ts";
 import { tablesApi } from "../../../../../test/streams-fixtures.ts";
 import { snapshotHighlights } from "./$namespace.$table.tsx";
@@ -79,7 +80,7 @@ describe("table page", () => {
 		const second = preview.files[1]?.path as string;
 		fireEvent.click(within(files).getAllByRole("button")[1] as HTMLElement);
 		await waitFor(() => expect(app.api.last("GET", `${ORDERS}/preview`)?.query.get("file")).toBe(second));
-		fireEvent.change(screen.getByLabelText("Snapshot"), { target: { value: "1000001" } });
+		await choose("Snapshot", "1000001");
 		await waitFor(() =>
 			expect(app.api.last("GET", `${ORDERS}/preview`)?.query.get("snapshot")).toBe("1000001"),
 		);

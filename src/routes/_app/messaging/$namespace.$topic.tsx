@@ -40,7 +40,11 @@ import { useCanWrite } from "@/lib/session.ts";
 import { streamsQueries } from "@/lib/streams-queries.ts";
 
 export const Route = createFileRoute("/_app/messaging/$namespace/$topic")({
-	staticData: { section: "Operations", title: "Messaging" },
+	staticData: {
+		section: "Operations",
+		title: "Messaging",
+		crumb: ({ namespace, topic }) => `${namespace}.${topic}`,
+	},
 	loader: ({ context, params }) => {
 		// Prefetch without blocking: the page renders at once and its skeleton gives way to data.
 		void context.queryClient.prefetchQuery(streamsQueries.topic(params.namespace, params.topic));

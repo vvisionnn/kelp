@@ -30,6 +30,7 @@ import {
 } from "@/components/reui/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api.ts";
 import { formatBytes, formatCount, formatDateTime, formatRelative } from "@/lib/format.ts";
@@ -42,7 +43,11 @@ const TABS = ["schema", "data", "snapshots", "details", "access"] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_app/tables/$bucket/$namespace/$table")({
-	staticData: { section: "Object store", title: "Tables" },
+	staticData: {
+		section: "Object store",
+		title: "Tables",
+		crumb: ({ bucket, namespace, table }) => `${bucket} / ${namespace}.${table}`,
+	},
 	validateSearch: z.object({
 		tab: z.enum(TABS).optional(),
 		snapshot: z.string().optional(),
@@ -239,18 +244,21 @@ function DataTab({ detail }: { detail: TableDetail }) {
 					<label htmlFor="preview-snapshot" className="text-muted-foreground">
 						Snapshot
 					</label>
-					<select
-						id="preview-snapshot"
-						className="h-8 rounded-lg border border-input bg-transparent px-2 font-mono text-sm dark:bg-input/30"
+					<Select
 						value={snapshot ?? detail.iceberg?.currentSnapshotId ?? ""}
-						onChange={(e) => select({ snapshot: e.target.value, file: undefined })}
+						onValueChange={(value) => select({ snapshot: value as string, file: undefined })}
 					>
-						{snapshots.map((s) => (
-							<option key={s.id} value={s.id}>
-								{s.id} {s.current ? "(current)" : ""}
-							</option>
-						))}
-					</select>
+						<SelectTrigger id="preview-snapshot" aria-label="Snapshot" className="w-full font-mono">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{snapshots.map((s) => (
+								<SelectItem key={s.id} value={s.id} className="font-mono">
+									{s.id} {s.current ? "(current)" : ""}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 				</div>
 				{preview.isPending ? (
 					<SkeletonBlock className="h-40" />

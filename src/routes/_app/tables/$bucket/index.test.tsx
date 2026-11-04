@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
+import { choose } from "../../../../../test/select.ts";
 import { settle } from "../../../../../test/settle.ts";
 import { tablesApi } from "../../../../../test/streams-fixtures.ts";
 import { groupTables } from "./index.tsx";
@@ -52,7 +53,7 @@ describe("table bucket page", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "Create table" }));
 		const dialog = await screen.findByRole("dialog");
 		const submit = within(dialog).getByRole("button", { name: "Create table" }) as HTMLButtonElement;
-		fireEvent.change(within(dialog).getByLabelText("Namespace"), { target: { value: "web" } });
+		await choose("Namespace", "web");
 		fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Events" } });
 		expect(within(dialog).getByText("Lowercase letters, digits and underscores.")).toBeTruthy();
 		fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "events" } });
@@ -62,7 +63,7 @@ describe("table bucket page", () => {
 		fireEvent.change(within(dialog).getByLabelText("Column 2 name"), { target: { value: "id" } });
 		expect(within(dialog).getByText("Column names must be unique.")).toBeTruthy();
 		fireEvent.change(within(dialog).getByLabelText("Column 2 name"), { target: { value: "at" } });
-		fireEvent.change(within(dialog).getByLabelText("Column 2 type"), { target: { value: "timestamptz" } });
+		await choose("Column 2 type", "timestamptz");
 		fireEvent.click(within(dialog).getByLabelText("Column 2 required"));
 		fireEvent.click(within(dialog).getByRole("button", { name: "Add column" }));
 		fireEvent.click(within(dialog).getByRole("button", { name: "Remove column 3" }));
