@@ -13,12 +13,20 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppAccessServiceAccountsRouteImport } from './routes/_app/access/service-accounts'
 import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
 import { Route as AppCollectionsNameRouteImport } from './routes/_app/collections/$name'
 import { Route as AppErasureCodingIndexRouteImport } from './routes/_app/erasure-coding/index'
 import { Route as AppErasureCodingVolumeIdRouteImport } from './routes/_app/erasure-coding/$volumeId'
 import { Route as AppVolumesIndexRouteImport } from './routes/_app/volumes/index'
 import { Route as AppVolumesVolumeIdRouteImport } from './routes/_app/volumes/$volumeId'
+import { Route as AppAccessGroupsIndexRouteImport } from './routes/_app/access/groups/index'
+import { Route as AppAccessGroupsNameRouteImport } from './routes/_app/access/groups/$name'
+import { Route as AppAccessPoliciesIndexRouteImport } from './routes/_app/access/policies/index'
+import { Route as AppAccessPoliciesNameRouteImport } from './routes/_app/access/policies/$name'
+import { Route as AppAccessPoliciesNewRouteImport } from './routes/_app/access/policies/new'
+import { Route as AppAccessUsersIndexRouteImport } from './routes/_app/access/users/index'
+import { Route as AppAccessUsersUsernameRouteImport } from './routes/_app/access/users/$username'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -39,6 +47,12 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccessServiceAccountsRoute =
+  AppAccessServiceAccountsRouteImport.update({
+    id: '/access/service-accounts',
+    path: '/access/service-accounts',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppCollectionsIndexRoute = AppCollectionsIndexRouteImport.update({
   id: '/collections/',
   path: '/collections/',
@@ -70,28 +84,79 @@ const AppVolumesVolumeIdRoute = AppVolumesVolumeIdRouteImport.update({
   path: '/volumes/$volumeId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAccessGroupsIndexRoute = AppAccessGroupsIndexRouteImport.update({
+  id: '/access/groups/',
+  path: '/access/groups/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessGroupsNameRoute = AppAccessGroupsNameRouteImport.update({
+  id: '/access/groups/$name',
+  path: '/access/groups/$name',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessPoliciesIndexRoute = AppAccessPoliciesIndexRouteImport.update({
+  id: '/access/policies/',
+  path: '/access/policies/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessPoliciesNameRoute = AppAccessPoliciesNameRouteImport.update({
+  id: '/access/policies/$name',
+  path: '/access/policies/$name',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessPoliciesNewRoute = AppAccessPoliciesNewRouteImport.update({
+  id: '/access/policies/new',
+  path: '/access/policies/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessUsersIndexRoute = AppAccessUsersIndexRouteImport.update({
+  id: '/access/users/',
+  path: '/access/users/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccessUsersUsernameRoute = AppAccessUsersUsernameRouteImport.update({
+  id: '/access/users/$username',
+  path: '/access/users/$username',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/collections/': typeof AppCollectionsIndexRoute
   '/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/volumes/': typeof AppVolumesIndexRoute
+  '/access/groups/$name': typeof AppAccessGroupsNameRoute
+  '/access/policies/$name': typeof AppAccessPoliciesNameRoute
+  '/access/policies/new': typeof AppAccessPoliciesNewRoute
+  '/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/access/groups/': typeof AppAccessGroupsIndexRoute
+  '/access/policies/': typeof AppAccessPoliciesIndexRoute
+  '/access/users/': typeof AppAccessUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
   '/': typeof AppIndexRoute
+  '/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/collections': typeof AppCollectionsIndexRoute
   '/erasure-coding': typeof AppErasureCodingIndexRoute
   '/volumes': typeof AppVolumesIndexRoute
+  '/access/groups/$name': typeof AppAccessGroupsNameRoute
+  '/access/policies/$name': typeof AppAccessPoliciesNameRoute
+  '/access/policies/new': typeof AppAccessPoliciesNewRoute
+  '/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/access/groups': typeof AppAccessGroupsIndexRoute
+  '/access/policies': typeof AppAccessPoliciesIndexRoute
+  '/access/users': typeof AppAccessUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -99,12 +164,20 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/_app/collections/$name': typeof AppCollectionsNameRoute
   '/_app/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/_app/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
   '/_app/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/_app/volumes/': typeof AppVolumesIndexRoute
+  '/_app/access/groups/$name': typeof AppAccessGroupsNameRoute
+  '/_app/access/policies/$name': typeof AppAccessPoliciesNameRoute
+  '/_app/access/policies/new': typeof AppAccessPoliciesNewRoute
+  '/_app/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/_app/access/groups/': typeof AppAccessGroupsIndexRoute
+  '/_app/access/policies/': typeof AppAccessPoliciesIndexRoute
+  '/_app/access/users/': typeof AppAccessUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -112,35 +185,59 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/cluster'
+    | '/access/service-accounts'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
     | '/volumes/$volumeId'
     | '/collections/'
     | '/erasure-coding/'
     | '/volumes/'
+    | '/access/groups/$name'
+    | '/access/policies/$name'
+    | '/access/policies/new'
+    | '/access/users/$username'
+    | '/access/groups/'
+    | '/access/policies/'
+    | '/access/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/cluster'
     | '/'
+    | '/access/service-accounts'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
     | '/volumes/$volumeId'
     | '/collections'
     | '/erasure-coding'
     | '/volumes'
+    | '/access/groups/$name'
+    | '/access/policies/$name'
+    | '/access/policies/new'
+    | '/access/users/$username'
+    | '/access/groups'
+    | '/access/policies'
+    | '/access/users'
   id:
     | '__root__'
     | '/_app'
     | '/login'
     | '/_app/cluster'
     | '/_app/'
+    | '/_app/access/service-accounts'
     | '/_app/collections/$name'
     | '/_app/erasure-coding/$volumeId'
     | '/_app/volumes/$volumeId'
     | '/_app/collections/'
     | '/_app/erasure-coding/'
     | '/_app/volumes/'
+    | '/_app/access/groups/$name'
+    | '/_app/access/policies/$name'
+    | '/_app/access/policies/new'
+    | '/_app/access/users/$username'
+    | '/_app/access/groups/'
+    | '/_app/access/policies/'
+    | '/_app/access/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -176,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/cluster'
       fullPath: '/cluster'
       preLoaderRoute: typeof AppClusterRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/service-accounts': {
+      id: '/_app/access/service-accounts'
+      path: '/access/service-accounts'
+      fullPath: '/access/service-accounts'
+      preLoaderRoute: typeof AppAccessServiceAccountsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/collections/': {
@@ -220,29 +324,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppVolumesVolumeIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/access/groups/': {
+      id: '/_app/access/groups/'
+      path: '/access/groups'
+      fullPath: '/access/groups/'
+      preLoaderRoute: typeof AppAccessGroupsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/groups/$name': {
+      id: '/_app/access/groups/$name'
+      path: '/access/groups/$name'
+      fullPath: '/access/groups/$name'
+      preLoaderRoute: typeof AppAccessGroupsNameRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/policies/': {
+      id: '/_app/access/policies/'
+      path: '/access/policies'
+      fullPath: '/access/policies/'
+      preLoaderRoute: typeof AppAccessPoliciesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/policies/$name': {
+      id: '/_app/access/policies/$name'
+      path: '/access/policies/$name'
+      fullPath: '/access/policies/$name'
+      preLoaderRoute: typeof AppAccessPoliciesNameRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/policies/new': {
+      id: '/_app/access/policies/new'
+      path: '/access/policies/new'
+      fullPath: '/access/policies/new'
+      preLoaderRoute: typeof AppAccessPoliciesNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/users/': {
+      id: '/_app/access/users/'
+      path: '/access/users'
+      fullPath: '/access/users/'
+      preLoaderRoute: typeof AppAccessUsersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/access/users/$username': {
+      id: '/_app/access/users/$username'
+      path: '/access/users/$username'
+      fullPath: '/access/users/$username'
+      preLoaderRoute: typeof AppAccessUsersUsernameRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppAccessServiceAccountsRoute: typeof AppAccessServiceAccountsRoute
   AppCollectionsNameRoute: typeof AppCollectionsNameRoute
   AppErasureCodingVolumeIdRoute: typeof AppErasureCodingVolumeIdRoute
   AppVolumesVolumeIdRoute: typeof AppVolumesVolumeIdRoute
   AppCollectionsIndexRoute: typeof AppCollectionsIndexRoute
   AppErasureCodingIndexRoute: typeof AppErasureCodingIndexRoute
   AppVolumesIndexRoute: typeof AppVolumesIndexRoute
+  AppAccessGroupsNameRoute: typeof AppAccessGroupsNameRoute
+  AppAccessPoliciesNameRoute: typeof AppAccessPoliciesNameRoute
+  AppAccessPoliciesNewRoute: typeof AppAccessPoliciesNewRoute
+  AppAccessUsersUsernameRoute: typeof AppAccessUsersUsernameRoute
+  AppAccessGroupsIndexRoute: typeof AppAccessGroupsIndexRoute
+  AppAccessPoliciesIndexRoute: typeof AppAccessPoliciesIndexRoute
+  AppAccessUsersIndexRoute: typeof AppAccessUsersIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
   AppIndexRoute: AppIndexRoute,
+  AppAccessServiceAccountsRoute: AppAccessServiceAccountsRoute,
   AppCollectionsNameRoute: AppCollectionsNameRoute,
   AppErasureCodingVolumeIdRoute: AppErasureCodingVolumeIdRoute,
   AppVolumesVolumeIdRoute: AppVolumesVolumeIdRoute,
   AppCollectionsIndexRoute: AppCollectionsIndexRoute,
   AppErasureCodingIndexRoute: AppErasureCodingIndexRoute,
   AppVolumesIndexRoute: AppVolumesIndexRoute,
+  AppAccessGroupsNameRoute: AppAccessGroupsNameRoute,
+  AppAccessPoliciesNameRoute: AppAccessPoliciesNameRoute,
+  AppAccessPoliciesNewRoute: AppAccessPoliciesNewRoute,
+  AppAccessUsersUsernameRoute: AppAccessUsersUsernameRoute,
+  AppAccessGroupsIndexRoute: AppAccessGroupsIndexRoute,
+  AppAccessPoliciesIndexRoute: AppAccessPoliciesIndexRoute,
+  AppAccessUsersIndexRoute: AppAccessUsersIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

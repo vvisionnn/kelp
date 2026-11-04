@@ -1,0 +1,1 @@
+{"message":"User created successfully","user":{"username":"bob","email":"bob@example.com","access_key":"AKIAKELPEXAMPLE00006","secret_key":"example-secret-7-not-a-real-key","permissions":["Read:media"],"policy_names":["ro"],"is_static":false}}
