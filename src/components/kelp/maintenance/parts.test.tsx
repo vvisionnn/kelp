@@ -106,7 +106,9 @@ describe("badges and icons", () => {
 		expect(screen.getByText("Succeeded")).toBeTruthy();
 		expect(screen.getByText("Unknown")).toBeTruthy();
 		expect(screen.getByText("Skipped")).toBeTruthy();
-		expect(container.querySelectorAll("svg").length).toBe(2);
+		// Five state marks plus the two job type icons.
+		expect(container.querySelectorAll("svg").length).toBe(7);
+		expect(container.querySelector('[data-status="done"]')).toBeTruthy();
 	});
 });
 

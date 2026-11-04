@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
+import StatusMark, { type StatusMarkStatus } from "@/components/react-bits/StatusMark.tsx";
 import { formatRelative } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "../motion.ts";
@@ -65,19 +66,17 @@ const TONES: Record<Tone, string> = {
 	danger: "bg-destructive/12 text-destructive-foreground",
 	info: "bg-info/12 text-info-foreground",
 	warning: "bg-warning/14 text-warning-foreground",
-	neutral: "bg-foreground/[0.07] text-foreground/75",
+	neutral: "bg-secondary text-muted-foreground",
 };
 
 /** A small status pill: tinted by its reserved status color, always with a dot and a word. */
 export function Pill({
 	tone,
-	pulse = false,
 	dot = true,
 	className,
 	children,
 }: {
 	tone: Tone;
-	pulse?: boolean;
 	dot?: boolean;
 	className?: string;
 	children: ReactNode;
@@ -85,25 +84,25 @@ export function Pill({
 	return (
 		<span
 			className={cn(
-				"inline-flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 font-medium text-xs",
+				"inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 font-medium text-xs",
 				TONES[tone],
 				className,
 			)}
 		>
-			{dot && <span className={cn("size-1.5 rounded-full bg-current", pulse && "animate-pulse")} />}
+			{dot && <span className="size-1.5 rounded-full bg-current" />}
 			{children}
 		</span>
 	);
 }
 
-const STATE_STYLE: Record<JobState, { label: string; tone: Tone }> = {
-	pending: { label: "Queued", tone: "neutral" },
-	assigned: { label: "Assigned", tone: "info" },
-	running: { label: "Running", tone: "info" },
-	succeeded: { label: "Succeeded", tone: "success" },
-	failed: { label: "Failed", tone: "danger" },
-	canceled: { label: "Canceled", tone: "warning" },
-	unknown: { label: "Unknown", tone: "neutral" },
+const STATE_STYLE: Record<JobState, { label: string; mark: StatusMarkStatus }> = {
+	pending: { label: "Queued", mark: "pending" },
+	assigned: { label: "Assigned", mark: "pending" },
+	running: { label: "Running", mark: "running" },
+	succeeded: { label: "Succeeded", mark: "done" },
+	failed: { label: "Failed", mark: "failed" },
+	canceled: { label: "Canceled", mark: "cancelled" },
+	unknown: { label: "Unknown", mark: "pending" },
 };
 
 export const ACTIVE_STATES: ReadonlySet<JobState> = new Set(["pending", "assigned", "running"]);
@@ -112,15 +111,41 @@ export function stateLabel(state: JobState): string {
 	return STATE_STYLE[state].label;
 }
 
-export function JobStateBadge({ state, progress }: { state: JobState; progress?: number }) {
+/**
+ * A job's state as a React Bits StatusMark and a word: a ring that fills with progress while
+ * running, then draws a check or a cross. Color appears only for running, success and failure.
+ */
+export function JobStateBadge({
+	state,
+	progress,
+	size = "sm",
+}: {
+	state: JobState;
+	progress?: number;
+	size?: "sm" | "md";
+}) {
 	const style = STATE_STYLE[state];
+	const showProgress = state === "running" && progress !== undefined && progress > 0;
 	return (
-		<Pill tone={style.tone} pulse={state === "running"}>
-			{style.label}
-			{state === "running" && progress !== undefined && progress > 0 && (
-				<span className="tabular opacity-80">{Math.round(progress)}%</span>
-			)}
-		</Pill>
+		<StatusMark
+			status={style.mark}
+			{...(showProgress ? { progress: progress / 100 } : {})}
+			label={
+				<span className="inline-flex items-center gap-1.5">
+					{style.label}
+					{showProgress && <span className="tabular text-muted-foreground">{Math.round(progress)}%</span>}
+				</span>
+			}
+			color={state === "running" || state === "assigned" ? "var(--primary)" : "var(--muted-foreground)"}
+			doneColor="var(--success)"
+			errorColor="var(--destructive)"
+			size={size === "sm" ? 14 : 18}
+			strokeWidth={2}
+			fontSize={size === "sm" ? 13 : 15}
+			fillOpacity={0.14}
+			strike={false}
+			className="shrink-0 whitespace-nowrap font-medium [&>span:last-child]:opacity-100!"
+		/>
 	);
 }
 
@@ -214,9 +239,9 @@ export function KeyValues({
 	empty?: string;
 }) {
 	const entries = Object.entries(values);
-	if (entries.length === 0) return <p className="text-muted-foreground text-sm">{empty}</p>;
+	if (entries.length === 0) return <p className="text-[13px] text-muted-foreground">{empty}</p>;
 	return (
-		<dl className="grid gap-x-8 gap-y-3.5 text-sm sm:grid-cols-[minmax(9rem,auto)_1fr]">
+		<dl className="grid gap-x-8 gap-y-3 text-[13px] sm:grid-cols-[minmax(9rem,auto)_1fr]">
 			{entries.map(([key, value]) => (
 				<div key={key} className="contents">
 					<dt className="text-muted-foreground">{humanize(key)}</dt>
@@ -243,10 +268,12 @@ export function ActivityFeed({
 }) {
 	const reduced = usePrefersReducedMotion();
 	if (activities.length === 0) {
-		return <p className="py-10 text-center text-muted-foreground text-sm">No maintenance activity yet.</p>;
+		return (
+			<p className="py-10 text-center text-[13px] text-muted-foreground">No maintenance activity yet.</p>
+		);
 	}
 	return (
-		<ol className={cn("relative space-y-0.5", className)}>
+		<ol className={cn("relative divide-y divide-border", className)}>
 			<AnimatePresence initial={false}>
 				{activities.map((activity) => (
 					<motion.li
@@ -256,18 +283,18 @@ export function ActivityFeed({
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0 }}
 						transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-						className="grid grid-cols-[auto_1fr_auto] items-start gap-3 rounded-md px-2.5 py-2.5 transition-colors hover:bg-foreground/[0.05]"
+						className="grid grid-cols-[auto_1fr_auto] items-start gap-3 px-4 py-2.5"
 					>
-						<span className="mt-0.5 flex size-7 items-center justify-center rounded-full bg-area/15 text-area">
+						<span className="mt-px flex size-6 items-center justify-center rounded-md bg-raised text-muted-foreground">
 							<JobTypeIcon jobType={activity.jobType} className="size-3.5" />
 						</span>
 						<div className="min-w-0">
-							<p className="text-sm leading-snug [overflow-wrap:anywhere]">
+							<p className="text-[13px] leading-[18px] [overflow-wrap:anywhere]">
 								{activity.jobId ? (
 									<Link
 										to="/maintenance/jobs/$jobId"
 										params={{ jobId: activity.jobId }}
-										className="hover:underline"
+										className="hover:text-primary"
 									>
 										{capitalize(activity.message)}
 									</Link>
@@ -276,7 +303,7 @@ export function ActivityFeed({
 								)}
 							</p>
 							{showJobType && (
-								<p className="text-muted-foreground text-xs">
+								<p className="text-[12px] text-muted-foreground">
 									{names?.[activity.jobType] ?? humanize(activity.jobType)}
 									{`, ${sourceLabel(activity.source).toLowerCase()}`}
 								</p>

@@ -3,6 +3,12 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { maintenanceApi } from "../../../../test/maintenance-fixtures.ts";
 import { renderApp } from "../../../../test/render-app.tsx";
 
+/** Taps a segment the way a pointer does: press on it, release over the track. */
+function pickSegment(radio: HTMLElement) {
+	fireEvent.pointerDown(radio, { pointerId: 1, button: 0 });
+	fireEvent.pointerUp(radio.closest("[role=radiogroup]") as HTMLElement, { pointerId: 1, button: 0 });
+}
+
 describe("maintenance jobs page", () => {
 	test("lists jobs and filters by state and type through the URL", async () => {
 		const { routes, jobs } = await maintenanceApi();
@@ -13,10 +19,10 @@ describe("maintenance jobs page", () => {
 		).toBeGreaterThan(0);
 		expect(jobs.length).toBeGreaterThan(0);
 
-		fireEvent.click(screen.getByRole("button", { name: "Failed" }));
+		pickSegment(screen.getByRole("radio", { name: /^Failed/ }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({ state: "failed" }));
 		await waitFor(() => expect(app.api.last("GET", "/maintenance/jobs")?.query.get("state")).toBe("failed"));
-		fireEvent.click(screen.getByRole("button", { name: "All" }));
+		pickSegment(screen.getByRole("radio", { name: /^All/ }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({}));
 
 		const trigger = screen.getByRole("combobox", { name: "Filter by job type" });

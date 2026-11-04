@@ -7,11 +7,11 @@ describe("settings page", () => {
 	test("theme cards change the theme", async () => {
 		const { routes } = await maintenanceApi();
 		renderApp("/settings", routes);
-		const dark = await screen.findByRole("radio", { name: "Abyss" });
+		const dark = await screen.findByRole("radio", { name: "Dark" });
 		fireEvent.click(dark);
 		expect(localStorage.getItem("kelp-theme")).toBe("dark");
 		expect(document.documentElement.classList.contains("dark")).toBe(true);
-		fireEvent.click(screen.getByRole("radio", { name: "Tidepool" }));
+		fireEvent.click(screen.getByRole("radio", { name: "Light" }));
 		expect(localStorage.getItem("kelp-theme")).toBe("light");
 	});
 

@@ -27,7 +27,7 @@ test("creates a topic, tunes its retention, and purges expired data", async ({ p
 	await expect(page.getByText(`Retention for ${namespace}.orders saved`)).toBeVisible();
 	await expect(page.getByText("Currently: 36 hours.")).toBeVisible();
 
-	await page.getByRole("link", { name: "All topics" }).click();
+	await page.locator("header[data-toolbar]").getByRole("link", { name: "Messaging" }).click();
 	const row = page.getByRole("row").filter({ hasText: `${namespace}.orders` });
 	await expect(row).toContainText("36 hours");
 	await expect(row).toContainText("3");

@@ -2,14 +2,13 @@ import type { TopicPartition } from "@shared/messaging.ts";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { formatBytes, formatCount } from "@/lib/format.ts";
-import { usePrefersReducedMotion } from "../motion.ts";
 
 const RING = 2520;
 /** Categorical hues in fixed order; a broker keeps its color as long as it leads. */
 const HUES = ["var(--data-1)", "var(--data-2)", "var(--data-3)", "var(--data-4)", "var(--data-5)"];
-const SIZE = 240;
-const RADIUS = 100;
-const STROKE = 18;
+const SIZE = 184;
+const RADIUS = 76;
+const STROKE = 14;
 /** Visual gap between arcs, in slots. */
 const GAP = 30;
 
@@ -45,13 +44,12 @@ export function leaderColors(partitions: TopicPartition[]): Map<string, string> 
  * Drawing the ring shows how evenly the topic is split and which broker leads each part.
  */
 export function PartitionRing({ partitions }: { partitions: TopicPartition[] }) {
-	const reduced = usePrefersReducedMotion();
 	const [active, setActive] = useState<TopicPartition | null>(null);
 	const colors = leaderColors(partitions);
 	const total = partitions.reduce((sum, p) => sum + p.messageCount, 0);
 
 	return (
-		<div className="flex flex-wrap items-center gap-8">
+		<div className="flex flex-wrap items-center gap-6">
 			<div className="relative shrink-0" style={{ width: SIZE, height: SIZE }}>
 				<svg
 					viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -68,21 +66,17 @@ export function PartitionRing({ partitions }: { partitions: TopicPartition[] }) 
 						stroke="color-mix(in oklab, var(--foreground) 10%, transparent)"
 						strokeWidth={STROKE}
 					/>
-					{partitions.map((p, index) => (
+					{partitions.map((p) => (
 						<motion.path
 							key={p.rangeStart}
 							d={arcPath(p.rangeStart, p.rangeStop)}
 							fill="none"
 							stroke={colors.get(p.leader)}
-							strokeWidth={active?.rangeStart === p.rangeStart ? STROKE + 4 : STROKE}
+							strokeWidth={active?.rangeStart === p.rangeStart ? STROKE + 3 : STROKE}
 							strokeLinecap="butt"
-							initial={reduced ? false : { pathLength: 0, opacity: 0 }}
-							animate={{ pathLength: 1, opacity: active && active.rangeStart !== p.rangeStart ? 0.35 : 1 }}
-							transition={{
-								duration: reduced ? 0 : 0.7,
-								delay: reduced ? 0 : index * 0.06,
-								ease: [0.22, 1, 0.36, 1],
-							}}
+							initial={false}
+							animate={{ opacity: active && active.rangeStart !== p.rangeStart ? 0.35 : 1 }}
+							transition={{ duration: 0.15 }}
 							onPointerEnter={() => setActive(p)}
 							onPointerLeave={() => setActive(null)}
 							className="cursor-default"
@@ -95,33 +89,31 @@ export function PartitionRing({ partitions }: { partitions: TopicPartition[] }) 
 				<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
 					{active ? (
 						<>
-							<span className="font-mono text-xs">
+							<span className="font-mono text-[11px]">
 								{active.rangeStart}–{active.rangeStop - 1}
 							</span>
-							<span className="mt-1 font-[450] text-3xl leading-none tracking-[-0.03em] tabular">
+							<span className="metric font-semibold text-[20px] leading-6">
 								{formatCount(active.messageCount)}
 							</span>
-							<span className="mt-1 text-foreground/70 text-xs">{formatBytes(active.totalSize)}</span>
+							<span className="text-[11px] text-muted-foreground">{formatBytes(active.totalSize)}</span>
 						</>
 					) : (
 						<>
-							<span className="font-[450] text-5xl leading-none tracking-[-0.04em] tabular">
-								{partitions.length}
-							</span>
-							<span className="mt-1.5 text-foreground/70 text-xs">
+							<span className="metric font-semibold text-[28px] leading-8">{partitions.length}</span>
+							<span className="text-[11px] text-muted-foreground">
 								{partitions.length === 1 ? "partition" : "partitions"}
 							</span>
-							<span className="mt-0.5 text-foreground/70 text-xs tabular">{formatCount(total)} messages</span>
+							<span className="text-[11px] text-muted-foreground tabular">{formatCount(total)} messages</span>
 						</>
 					)}
 				</div>
 			</div>
-			<ul className="space-y-2.5 text-sm" aria-label="Partition leaders">
+			<ul className="space-y-2 text-[13px]" aria-label="Partition leaders">
 				{[...colors].map(([leader, color]) => (
 					<li key={leader} className="flex items-center gap-2">
 						<span className="size-2.5 rounded-full" style={{ background: color }} />
-						<span className="font-mono text-xs">{leader || "Unassigned"}</span>
-						<span className="text-foreground/70 text-xs tabular">
+						<span className="font-mono text-[12px]">{leader || "Unassigned"}</span>
+						<span className="text-[12px] text-muted-foreground tabular">
 							{partitions.filter((p) => p.leader === leader).length} led
 						</span>
 					</li>

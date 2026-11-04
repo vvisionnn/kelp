@@ -160,15 +160,15 @@ export function SettingsForm({
 
 	return (
 		<form
-			className="space-y-4 pb-20"
+			className="space-y-8 pb-20"
 			onSubmit={(event) => {
 				event.preventDefault();
 				if (count > 0 && !invalid) void save();
 			}}
 		>
 			{!canWrite && (
-				<p className="flex w-fit items-center gap-2 rounded-full bg-secondary px-4 py-2 text-muted-foreground text-sm">
-					<Lock className="size-4" />
+				<p className="flex w-fit items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-[13px] text-muted-foreground">
+					<Lock className="size-3.5" />
 					You have read-only access. Ask an administrator to change these settings.
 				</p>
 			)}
@@ -207,7 +207,7 @@ export function SettingsForm({
 							onChange={(value) => setRuntime(key, value ?? 0)}
 						/>
 						{unit === "seconds" && draft.runtime[key] >= 60 && (
-							<p className="mt-1 text-right text-muted-foreground text-xs">
+							<p className="mt-1 text-right text-[12px] text-muted-foreground">
 								{formatDuration(draft.runtime[key] * 1000)}
 							</p>
 						)}
@@ -249,17 +249,17 @@ export function SettingsForm({
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 24 }}
 						transition={{ type: "spring", stiffness: 420, damping: 34 }}
-						className="sticky bottom-5 z-10 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-full bg-popover/85 py-2 pr-2 pl-5 shadow-(--float-shadow) backdrop-blur-xl"
+						className="glass sticky bottom-5 z-10 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-xl py-1.5 pr-1.5 pl-4"
 						role="region"
 						aria-label="Unsaved changes"
 					>
-						<span className="text-sm">
-							<span className="font-medium tabular">{count}</span> unsaved{" "}
+						<span className="text-[13px]">
+							<span className="font-semibold tabular">{count}</span> unsaved{" "}
 							{count === 1 ? "change" : "changes"}
 							{invalid && <span className="ml-2 text-destructive">Fix the highlighted values to save.</span>}
 						</span>
-						<div className="ml-auto flex gap-2">
-							<Button type="button" variant="ghost" disabled={saving} onClick={() => setDraft(initial)}>
+						<div className="ml-auto flex gap-1.5">
+							<Button type="button" variant="secondary" disabled={saving} onClick={() => setDraft(initial)}>
 								Discard
 							</Button>
 							<Button type="submit" disabled={saving || invalid}>
@@ -286,19 +286,19 @@ function SettingsSection({
 	children: ReactNode;
 }) {
 	return (
-		<section className="rounded-lg bg-card">
-			<header className="px-6 pt-6 pb-2">
-				<div className="flex items-center gap-2.5">
-					<h2 className="font-medium text-lg tracking-[-0.01em]">{title}</h2>
+		<section>
+			<header className="mb-3">
+				<div className="flex items-center gap-2">
+					<h2 className="font-semibold text-[17px] leading-[22px] tracking-[-0.012em]">{title}</h2>
 					{tag && (
-						<span className="inline-flex h-6 items-center rounded-full bg-area/15 px-2.5 text-foreground/80 text-xs">
+						<span className="inline-flex h-5 items-center rounded-sm bg-secondary px-1.5 text-[12px] text-muted-foreground">
 							{tag}
 						</span>
 					)}
 				</div>
-				{description && <p className="mt-1 text-muted-foreground text-sm">{description}</p>}
+				{description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
 			</header>
-			<div className="divide-y divide-hairline">{children}</div>
+			<div className="group-sheet divide-y divide-border">{children}</div>
 		</section>
 	);
 }
@@ -319,17 +319,17 @@ function SettingRow({
 	children: ReactNode;
 }) {
 	return (
-		<div className={cn("grid gap-3 px-6 py-5", !wide && "md:grid-cols-[1fr_16rem] md:items-start")}>
+		<div className={cn("grid gap-2 px-4 py-3", !wide && "md:grid-cols-[1fr_16rem] md:items-center md:gap-6")}>
 			<div className="min-w-0">
-				<label htmlFor={id} className="font-medium text-sm">
+				<label htmlFor={id} className="text-[13px]">
 					{label}
 				</label>
-				{description && <p className="mt-0.5 text-muted-foreground text-sm">{description}</p>}
+				{description && <p className="text-[12px] text-muted-foreground leading-4">{description}</p>}
 			</div>
 			<div className={cn("w-full", !wide && "md:flex md:w-56 md:flex-col md:items-end md:justify-self-end")}>
 				{children}
 				{error && (
-					<p role="alert" className="mt-1.5 text-destructive text-xs">
+					<p role="alert" className="mt-1 text-[12px] text-destructive">
 						{error}
 					</p>
 				)}
@@ -411,7 +411,7 @@ function FieldControl({
 
 	if (field.unsupported) {
 		return row(
-			<p id={id} className="max-w-56 text-muted-foreground text-sm">
+			<p id={id} className="max-w-56 text-[12px] text-muted-foreground">
 				Kelp keeps the current value. Change it with <span className="font-mono">weed shell</span>.
 			</p>,
 		);
@@ -453,7 +453,7 @@ function FieldControl({
 			return row(
 				<fieldset id={id} className="grid gap-2" aria-label={field.label}>
 					{field.options.map((option) => (
-						<div key={option.value} className="flex items-center gap-2 text-sm">
+						<div key={option.value} className="flex items-center gap-2 text-[13px]">
 							<Checkbox
 								id={`${id}-${option.value}`}
 								checked={selected.includes(option.value)}
@@ -500,7 +500,7 @@ function FieldControl({
 						onChange={onChange}
 					/>
 					{isDuration && numeric !== null && numeric > 0 && (
-						<p className="mt-1 text-muted-foreground text-xs">{formatDuration(numeric * 1000)}</p>
+						<p className="mt-1 text-[12px] text-muted-foreground">{formatDuration(numeric * 1000)}</p>
 					)}
 				</div>,
 			);

@@ -13,11 +13,11 @@ test("settings show the live cluster and Kelp's connections", async ({ page }) =
 
 test("theme cards switch and remember the theme", async ({ page }) => {
 	await page.goto("/settings");
-	await page.getByRole("radio", { name: "Abyss" }).click();
+	await page.locator('label[for="theme-dark"]').click();
 	await expect(page.locator("html")).toHaveClass(/dark/);
 	await page.reload();
 	await expect(page.locator("html")).toHaveClass(/dark/);
-	await expect(page.getByRole("radio", { name: "Abyss" })).toBeChecked();
-	await page.getByRole("radio", { name: "Tidepool" }).click();
+	await expect(page.getByRole("radio", { name: "Dark" })).toBeChecked();
+	await page.locator('label[for="theme-light"]').click();
 	await expect(page.locator("html")).toHaveClass(/light/);
 });

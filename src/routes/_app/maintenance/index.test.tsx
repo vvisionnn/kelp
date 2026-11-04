@@ -11,7 +11,9 @@ describe("maintenance overview page", () => {
 		const app = renderApp("/maintenance", routes);
 		expect(await screen.findByText(/Running\. 6 of 7 job types are scheduled\./)).toBeTruthy();
 		const vacuum = screen.getByRole("link", { name: /Volume vacuum/ });
-		expect(within(vacuum).getByText("Scheduled")).toBeTruthy();
+		// Scheduled types show their next check; only manual ones carry a tag.
+		expect(within(vacuum).getByText("Next check")).toBeTruthy();
+		expect(vacuum.textContent).not.toContain("Manual only");
 		expect(within(screen.getByRole("link", { name: /S3 lifecycle/ })).getByText(/every day/)).toBeTruthy();
 		expect(screen.getByRole("link", { name: /Iceberg maintenance/ }).textContent).toContain("Manual only");
 		expect(screen.getByText("worker-1.lan")).toBeTruthy();
