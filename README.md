@@ -15,9 +15,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/vvisionnn/kelp?color=0e7a6d" alt="MIT license"></a>
 </p>
 
-![Kelp overview in the dark theme](docs/screenshots/overview.png)
+![Kelp overview in the light theme](docs/screenshots/overview.png)
 
-Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: a design of its own (monochrome, with one aurora color per area; see [DESIGN.md](DESIGN.md)), sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
+Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: an Apple-grade dashboard design of its own (see [DESIGN.md](DESIGN.md)), sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
 
 ## What you can do
 
@@ -34,7 +34,7 @@ Kelp manages a SeaweedFS cluster without changing it. It drives the native admin
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/volumes.png" alt="Volumes in the light theme"></td>
+    <td><img src="docs/screenshots/volumes.png" alt="Volumes in the dark theme"></td>
     <td><img src="docs/screenshots/erasure-coding.png" alt="Shard map of an erasure-coded volume"></td>
   </tr>
   <tr>
@@ -43,7 +43,7 @@ Kelp manages a SeaweedFS cluster without changing it. It drives the native admin
   </tr>
   <tr>
     <td><img src="docs/screenshots/maintenance.png" alt="Maintenance job types"></td>
-    <td><img src="docs/screenshots/user.png" alt="A user's keys, groups and policies, light theme"></td>
+    <td><img src="docs/screenshots/user.png" alt="A user's keys, groups and policies, dark theme"></td>
   </tr>
 </table>
 
