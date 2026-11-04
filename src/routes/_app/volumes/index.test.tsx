@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
+import { pickSegment } from "../../../../test/segment.ts";
 import { busyInventory, realInventory } from "../../../../test/storage-fixtures.ts";
 import { volumesSummary } from "./index.tsx";
 
@@ -9,12 +10,6 @@ const ok = { ok: true };
 function rowFor(id: number) {
 	const link = screen.getByRole("link", { name: String(id) });
 	return link.closest("tr") as HTMLElement;
-}
-
-/** Picks a segment of a segmented control the way a pointer does: press on it, release on the track. */
-function pickSegment(segment: HTMLElement) {
-	fireEvent.pointerDown(segment, { pointerId: 1, button: 0 });
-	fireEvent.pointerUp(segment.closest("[role=radiogroup]") as HTMLElement, { pointerId: 1, button: 0 });
 }
 
 describe("volumes page", () => {

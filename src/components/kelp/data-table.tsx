@@ -160,7 +160,9 @@ export function DataTable<T extends object>({
 							)}
 						</InputGroup>
 					)}
-					{toolbar && <div className="flex flex-1 flex-wrap items-center justify-end gap-2">{toolbar}</div>}
+					{toolbar && (
+						<div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">{toolbar}</div>
+					)}
 				</div>
 			)}
 

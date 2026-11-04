@@ -24,20 +24,24 @@ export function Segmented<T extends string>({
 	className?: string;
 }) {
 	return (
-		<RubberSegment
-			items={items}
-			value={value}
-			onChange={(next) => onChange(next as T)}
-			aria-label={label}
-			size={size}
-			radius={8}
-			inset={2}
-			trackColor="var(--secondary)"
-			thumbColor="var(--thumb)"
-			textColor="var(--foreground)"
-			activeTextColor="var(--foreground)"
-			className={cn("shadow-none [&_[aria-hidden=true]]:shadow-[0_1px_3px_rgb(0_0_0/0.12)]", className)}
-		/>
+		// Segments size to their labels; on narrow screens the control scrolls instead of squeezing.
+		<div className={cn("-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none]", className)}>
+			<RubberSegment
+				items={items}
+				value={value}
+				onChange={(next) => onChange(next as T)}
+				aria-label={label}
+				size={size}
+				radius={8}
+				inset={2}
+				trackColor="var(--secondary)"
+				thumbColor="var(--thumb)"
+				textColor="var(--foreground)"
+				activeTextColor="var(--foreground)"
+				equalSlots={false}
+				className="shadow-none [&_[aria-hidden=true]]:shadow-[0_1px_3px_rgb(0_0_0/0.12)]"
+			/>
+		</div>
 	);
 }
 
