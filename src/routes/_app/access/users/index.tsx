@@ -4,7 +4,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { NameList, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateUserDialog } from "@/components/kelp/access/create-user-dialog.tsx";
-import { sortable } from "@/components/kelp/access/sortable.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
 import { accessQueries, describeActions } from "@/lib/access-queries.ts";
@@ -19,7 +18,7 @@ export const Route = createFileRoute("/_app/access/users/")({
 export const userColumns: Array<Column<IamUser>> = [
 	{
 		accessorKey: "username",
-		header: sortable("User"),
+		header: "User",
 		cell: ({ row }) => (
 			<div className="min-w-0">
 				<p className="flex items-center gap-2 font-medium">
@@ -34,7 +33,7 @@ export const userColumns: Array<Column<IamUser>> = [
 	{
 		id: "keys",
 		accessorFn: (user) => user.accessKeys.length,
-		header: sortable("Access keys"),
+		header: "Access keys",
 		cell: ({ row }) => {
 			const keys = row.original.accessKeys;
 			const inactive = keys.filter((k) => k.status === "Inactive").length;
@@ -49,20 +48,20 @@ export const userColumns: Array<Column<IamUser>> = [
 	{
 		id: "permissions",
 		accessorFn: (user) => describeActions(user.actions),
-		header: sortable("Permissions"),
+		header: "Permissions",
 		cell: ({ row }) => <span className="text-sm">{describeActions(row.original.actions)}</span>,
 		size: 220,
 	},
 	{
 		id: "policies",
 		accessorFn: (user) => user.policies.join(" "),
-		header: sortable("Policies"),
+		header: "Policies",
 		cell: ({ row }) => <NameList names={row.original.policies} />,
 	},
 	{
 		id: "groups",
 		accessorFn: (user) => user.groups.join(" "),
-		header: sortable("Groups"),
+		header: "Groups",
 		cell: ({ row }) => <NameList names={row.original.groups} />,
 	},
 ];

@@ -2,7 +2,6 @@ import type { IamPolicy } from "@shared/iam.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, ScrollText } from "lucide-react";
-import { sortable } from "@/components/kelp/access/sortable.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
@@ -19,18 +18,18 @@ export const Route = createFileRoute("/_app/access/policies/")({
 const columns: Array<Column<IamPolicy>> = [
 	{
 		accessorKey: "name",
-		header: sortable("Policy"),
+		header: "Policy",
 		cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
 	},
 	{
 		accessorKey: "statementCount",
-		header: sortable("Statements"),
+		header: "Statements",
 		cell: ({ row }) => <span className="tabular">{row.original.statementCount}</span>,
 	},
 	{
 		id: "usage",
 		accessorFn: (p) => p.attachedTo.users.length + p.attachedTo.groups.length,
-		header: sortable("Used by"),
+		header: "Used by",
 		cell: ({ row }) => {
 			const usage = describeUsage(row.original);
 			return <span className={usage === "Unused" ? "text-muted-foreground" : ""}>{usage}</span>;
@@ -38,7 +37,7 @@ const columns: Array<Column<IamPolicy>> = [
 	},
 	{
 		accessorKey: "updatedAt",
-		header: sortable("Updated"),
+		header: "Updated",
 		cell: ({ row }) => (
 			<span className="text-muted-foreground text-xs">{formatRelative(row.original.updatedAt)}</span>
 		),

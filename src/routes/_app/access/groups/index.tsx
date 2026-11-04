@@ -4,7 +4,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { NameList } from "@/components/kelp/access/badges.tsx";
-import { sortable } from "@/components/kelp/access/sortable.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Reveal, StatusDot } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
@@ -34,13 +33,13 @@ export const Route = createFileRoute("/_app/access/groups/")({
 const columns: Array<Column<IamGroup>> = [
 	{
 		accessorKey: "name",
-		header: sortable("Group"),
+		header: "Group",
 		cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
 	},
 	{
 		id: "status",
 		accessorFn: (group) => (group.enabled ? "Enabled" : "Disabled"),
-		header: sortable("Status"),
+		header: "Status",
 		cell: ({ row }) =>
 			row.original.enabled ? (
 				<StatusDot tone="good" label="Enabled" />
@@ -51,13 +50,13 @@ const columns: Array<Column<IamGroup>> = [
 	{
 		id: "members",
 		accessorFn: (group) => group.members.length,
-		header: sortable("Members"),
+		header: "Members",
 		cell: ({ row }) => <NameList names={row.original.members} empty="No members" />,
 	},
 	{
 		id: "policies",
 		accessorFn: (group) => group.policies.length,
-		header: sortable("Policies"),
+		header: "Policies",
 		cell: ({ row }) => <NameList names={row.original.policies} empty="No policies" />,
 	},
 ];

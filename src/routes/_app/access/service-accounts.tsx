@@ -12,7 +12,6 @@ import { type FormEvent, useState } from "react";
 import { z } from "zod";
 import { KeyStatusBadge } from "@/components/kelp/access/badges.tsx";
 import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
-import { sortable } from "@/components/kelp/access/sortable.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
@@ -84,7 +83,7 @@ const columns: Array<Column<ServiceAccount>> = [
 	{
 		id: "account",
 		accessorFn: (a) => a.description || a.id,
-		header: sortable("Service account"),
+		header: "Service account",
 		cell: ({ row }) => (
 			<div className="min-w-0">
 				<p className="truncate font-medium">{row.original.description || "No description"}</p>
@@ -95,23 +94,23 @@ const columns: Array<Column<ServiceAccount>> = [
 	},
 	{
 		accessorKey: "parentUser",
-		header: sortable("Acts as"),
+		header: "Acts as",
 		cell: ({ row }) => <span className="font-mono">{row.original.parentUser}</span>,
 	},
 	{
 		accessorKey: "accessKey",
-		header: sortable("Access key"),
+		header: "Access key",
 		cell: ({ row }) => <span className="font-mono text-xs">{row.original.accessKey}</span>,
 	},
 	{
 		accessorKey: "status",
-		header: sortable("Status"),
+		header: "Status",
 		cell: ({ row }) => <KeyStatusBadge status={row.original.status} />,
 	},
 	{
 		id: "expires",
 		accessorFn: (a) => a.expiresAt ?? "9999",
-		header: sortable("Expires"),
+		header: "Expires",
 		cell: ({ row }) => {
 			const { text, expired } = describeExpiry(row.original.expiresAt);
 			return (
