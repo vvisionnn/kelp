@@ -11,7 +11,7 @@
 		"dev:web": "vite",
 		"dev:server": "bun --watch server/main.ts",
 		"stack": "bun run scripts/stack.ts",
-		"seed": "bun run scripts/seed.ts",
+		"seed": "bun scripts/seed.ts",
 		"build": "vite build",
 		"start": "bun server/main.ts",
 		"typecheck": "tsc -p tsconfig.json --noEmit",

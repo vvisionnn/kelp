@@ -137,13 +137,22 @@ describe("creating and changing buckets", () => {
 		}
 	});
 
-	test("surfaces SeaweedFS errors", async () => {
+	test("an existing bucket is a conflict with a plain message", async () => {
 		h.admin.on("POST /api/s3/buckets", () =>
-			Response.json({ error: "Failed to create bucket: bucket already exists" }, { status: 500 }),
+			Response.json({ error: "Failed to create bucket: bucket media already exists" }, { status: 500 }),
+		);
+		const { status, body } = await h.json("POST", "/buckets", { name: "media" });
+		expect(status).toBe(409);
+		expect(body).toEqual({ error: "Bucket media already exists", upstream: "admin" });
+	});
+
+	test("surfaces other SeaweedFS errors", async () => {
+		h.admin.on("POST /api/s3/buckets", () =>
+			Response.json({ error: "Failed to create bucket: filer unavailable" }, { status: 500 }),
 		);
 		const { status, body } = await h.json("POST", "/buckets", { name: "media" });
 		expect(status).toBe(500);
-		expect(body).toEqual({ error: "Failed to create bucket: bucket already exists", upstream: "admin" });
+		expect(body).toEqual({ error: "Failed to create bucket: filer unavailable", upstream: "admin" });
 	});
 
 	test("deletes a bucket", async () => {

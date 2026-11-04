@@ -10,6 +10,7 @@ import {
 } from "../map/objects.ts";
 import { list, obj, type Raw, str } from "../map/raw.ts";
 import type { Services } from "../services.ts";
+import { UpstreamError } from "../upstream/http.ts";
 
 /** S3 bucket naming rules: 3-63 lowercase letters, digits, dots and hyphens, starting and ending alphanumeric. */
 export const bucketName = z
@@ -125,21 +126,28 @@ export function bucketsRoutes({ admin, master }: Services) {
 			})
 			.post("/buckets", async (c) => {
 				const input = createBucket.parse(await c.req.json());
-				await admin.json("s3/buckets", {
-					method: "POST",
-					body: {
-						name: input.name,
-						owner: input.owner,
-						quota_enabled: input.quotaBytes !== null,
-						quota_size: input.quotaBytes ?? 0,
-						quota_unit: "B",
-						versioning_enabled: input.versioning,
-						object_lock_enabled: input.objectLock !== null,
-						object_lock_mode: input.objectLock?.mode ?? "",
-						set_default_retention: Boolean(input.objectLock?.retentionDays),
-						object_lock_duration: input.objectLock?.retentionDays ?? 0,
-					},
-				});
+				await admin
+					.json("s3/buckets", {
+						method: "POST",
+						body: {
+							name: input.name,
+							owner: input.owner,
+							quota_enabled: input.quotaBytes !== null,
+							quota_size: input.quotaBytes ?? 0,
+							quota_unit: "B",
+							versioning_enabled: input.versioning,
+							object_lock_enabled: input.objectLock !== null,
+							object_lock_mode: input.objectLock?.mode ?? "",
+							set_default_retention: Boolean(input.objectLock?.retentionDays),
+							object_lock_duration: input.objectLock?.retentionDays ?? 0,
+						},
+					})
+					.catch((error: unknown) => {
+						if (error instanceof UpstreamError && /already exists/i.test(error.message)) {
+							throw new UpstreamError(error.upstream, 409, `Bucket ${input.name} already exists`);
+						}
+						throw error;
+					});
 				return c.json({ name: input.name }, 201);
 			})
 			/** Names of S3 identities that can own a bucket. Never includes credentials. */
