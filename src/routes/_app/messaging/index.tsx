@@ -2,7 +2,7 @@ import type { ClusterNode } from "@shared/api.ts";
 import type { TopicSummary } from "@shared/messaging.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Crown, Eraser, HardDrive, Inbox, MessagesSquare, Plus, Radio, TriangleAlert } from "lucide-react";
+import { Crown, Eraser, MessagesSquare, Plus, Radio, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
@@ -14,12 +14,13 @@ import {
 	retentionFrom,
 } from "@/components/kelp/messaging/retention.tsx";
 import {
+	AuroraCard,
 	EmptyState,
 	ErrorState,
 	PageHeader,
 	Reveal,
 	SkeletonBlock,
-	StatTile,
+	StatBand,
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,25 +80,29 @@ function MessagingPage() {
 			) : !hasBroker ? (
 				<NoBroker />
 			) : (
-				<Reveal className="space-y-6">
-					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-						<StatTile label="Topics" value={data.topics.length} icon={<MessagesSquare />} />
-						<StatTile
-							label="Messages"
-							value={data.topics.reduce((sum, t) => sum + t.messageCount, 0)}
-							icon={<Inbox />}
+				<>
+					<Reveal className="hairline-t hairline-b py-10">
+						<StatBand
+							stats={[
+								{ label: "Topics", value: data.topics.length },
+								{ label: "Messages", value: data.topics.reduce((sum, t) => sum + t.messageCount, 0) },
+								{
+									label: "Stored",
+									value: data.topics.reduce((sum, t) => sum + t.totalSize, 0),
+									format: formatBytes,
+								},
+								{ label: "Brokers", value: data.brokers.length },
+							]}
 						/>
-						<StatTile
-							label="Stored"
-							value={data.topics.reduce((sum, t) => sum + t.totalSize, 0)}
-							format={formatBytes}
-							icon={<HardDrive />}
-						/>
-						<StatTile label="Brokers" value={data.brokers.length} icon={<Radio />} />
-					</div>
-					<Brokers brokers={data.brokers} leader={data.leader} />
-					<TopicsTable topics={data.topics} />
-				</Reveal>
+					</Reveal>
+					<Reveal delay={0.05} className="mt-12">
+						<Brokers brokers={data.brokers} leader={data.leader} />
+					</Reveal>
+					<Reveal delay={0.1} className="mt-16">
+						<h2 className="mb-6 font-[450] text-3xl tracking-[-0.025em]">Topics</h2>
+						<TopicsTable topics={data.topics} />
+					</Reveal>
+				</>
 			)}
 		</>
 	);
@@ -112,7 +117,7 @@ function NoBroker() {
 				<>
 					SeaweedFS stores topics through a broker. Start one next to your cluster and it appears here within
 					a few seconds.
-					<span className="mt-3 flex items-center justify-center gap-1 rounded-lg bg-muted px-3 py-2 font-mono text-foreground text-xs">
+					<span className="mt-4 flex w-fit items-center justify-center gap-1 justify-self-center rounded-full bg-background/60 py-1.5 pr-1.5 pl-4 font-mono text-foreground text-xs backdrop-blur mx-auto">
 						{BROKER_COMMAND}
 						<CopyButton value={BROKER_COMMAND} label="Copy command" />
 					</span>
@@ -122,25 +127,63 @@ function NoBroker() {
 	);
 }
 
+/** The brokers, with the elected leader as the headline: it balances partitions across the others. */
 function Brokers({ brokers, leader }: { brokers: ClusterNode[]; leader: string | null }) {
+	const lead = brokers.find((b) => b.address === leader);
 	return (
-		<section aria-label="Brokers" className="flex flex-wrap items-center gap-2 text-sm">
-			<span className="mr-1 text-muted-foreground">Brokers</span>
-			{brokers.map((broker) => (
-				<span key={broker.address} className="flex items-center gap-2 rounded-full border bg-card px-3 py-1">
-					{broker.address === leader ? (
-						<Crown className="size-3.5 text-warning" aria-label="Leader" />
+		<AuroraCard className="grid gap-8 p-7 sm:p-8 lg:grid-cols-[1fr_1.2fr] lg:items-end">
+			<section aria-label="Brokers" className="contents">
+				<div className="min-w-0">
+					<p className="text-[13px] text-foreground/70">{lead ? "Leader" : "Brokers"}</p>
+					{lead ? (
+						<p className="mt-3 flex items-center gap-3">
+							<Crown className="size-7 shrink-0 text-warning" aria-label="Leader" />
+							<span className="truncate font-[450] font-mono text-3xl tracking-[-0.03em] sm:text-4xl">
+								{lead.address}
+							</span>
+						</p>
 					) : (
-						<Radio className="size-3.5 text-muted-foreground" />
+						<p className="mt-3 font-[450] text-3xl tracking-[-0.03em] sm:text-4xl">Electing a leader</p>
 					)}
-					<span className="font-mono text-xs">{broker.address}</span>
-					<span className="text-muted-foreground text-xs">{broker.version.split(" ")[0]}</span>
-				</span>
-			))}
-			<span className="text-muted-foreground text-xs">
-				{leader ? "The crowned broker balances partitions." : "Brokers are electing a leader."}
+					<p className="mt-4 max-w-[48ch] text-[15px] text-foreground/75">
+						{leader
+							? "The leader assigns partitions to brokers and moves them when a broker joins or leaves."
+							: "Brokers are electing a leader. Partitions are assigned once one wins."}
+					</p>
+				</div>
+				<ul className="flex flex-wrap gap-2 lg:justify-end">
+					{brokers.map((broker) => (
+						<li
+							key={broker.address}
+							className="flex h-9 items-center gap-2 rounded-full bg-background/50 px-3.5 backdrop-blur"
+						>
+							{broker.address === leader ? (
+								<Crown className="size-3.5 text-warning" aria-hidden="true" />
+							) : (
+								<Radio className="size-3.5 text-foreground/60" />
+							)}
+							<span className="font-mono text-xs">{broker.address}</span>
+							<span className="text-foreground/60 text-xs">{broker.version.split(" ")[0]}</span>
+						</li>
+					))}
+				</ul>
+			</section>
+		</AuroraCard>
+	);
+}
+
+/** One tick per partition (up to 24), so the table shows how finely each topic is split. */
+function PartitionTicks({ count }: { count: number }) {
+	const shown = Math.min(count, 24);
+	return (
+		<span className="flex items-center gap-2.5">
+			<span className="tabular">{count}</span>
+			<span className="flex h-3 items-center gap-[2px]" aria-hidden="true">
+				{Array.from({ length: shown }, (_, i) => i).map((i) => (
+					<span key={i} className="h-full w-[3px] rounded-full bg-area/70" />
+				))}
 			</span>
-		</section>
+		</span>
 	);
 }
 
@@ -169,7 +212,7 @@ export const topicColumns: Array<Column<TopicSummary>> = [
 	{
 		accessorKey: "partitionCount",
 		header: "Partitions",
-		cell: ({ row }) => <span className="tabular">{row.original.partitionCount}</span>,
+		cell: ({ row }) => <PartitionTicks count={row.original.partitionCount} />,
 	},
 	{
 		accessorKey: "messageCount",
@@ -359,14 +402,14 @@ export function CreateTopicDialog() {
 
 function MessagingSkeleton() {
 	return (
-		<div className="space-y-6" role="status" aria-label="Loading messaging">
-			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+		<div role="status" aria-label="Loading messaging">
+			<div className="grid grid-cols-2 gap-8 py-10 sm:grid-cols-4">
 				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-24 rounded-xl" />
+					<SkeletonBlock key={i} className="h-16" />
 				))}
 			</div>
-			<SkeletonBlock className="h-20 rounded-xl" />
-			<SkeletonBlock className="h-64 rounded-xl" />
+			<SkeletonBlock className="mt-12 h-44 rounded-2xl" />
+			<SkeletonBlock className="mt-16 h-64 rounded-lg" />
 		</div>
 	);
 }

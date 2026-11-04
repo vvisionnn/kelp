@@ -33,6 +33,14 @@ function JobsPage() {
 	const search = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
 	const jobs = useQuery(maintenanceQueries.jobs(search));
+	// The band counts every state for the chosen job type, whichever state is selected.
+	const counted = useQuery(maintenanceQueries.jobs(search.jobType ? { jobType: search.jobType } : {}));
+	const counts = (counted.data ?? []).reduce<Record<string, number>>((acc, job) => {
+		acc[job.state] = (acc[job.state] ?? 0) + 1;
+		return acc;
+	}, {});
+	const countOf = (value: "all" | JobState) =>
+		value === "all" ? (counted.data?.length ?? 0) : (counts[value] ?? 0);
 	const overview = useQuery(maintenanceQueries.overview());
 	const names = Object.fromEntries((overview.data?.jobTypes ?? []).map((t) => [t.jobType, t.displayName]));
 	const filtered = Boolean(search.jobType || search.state);
@@ -43,7 +51,7 @@ function JobsPage() {
 			header: "Job",
 			cell: ({ row }) => (
 				<div className="flex min-w-0 items-start gap-2.5">
-					<span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+					<span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-area/15 text-area">
 						<JobTypeIcon jobType={row.original.jobType} className="size-3.5" />
 					</span>
 					<div className="min-w-0">
@@ -89,8 +97,68 @@ function JobsPage() {
 			<PageHeader
 				title="Maintenance jobs"
 				description="Every job the scheduler queued, ran or gave up on, newest first."
+				actions={
+					<Select
+						value={search.jobType ?? "all"}
+						onValueChange={(value) =>
+							navigate({
+								search: (prev) => ({ ...prev, jobType: value === "all" ? undefined : String(value) }),
+							})
+						}
+					>
+						<SelectTrigger className="w-52 rounded-full" aria-label="Filter by job type">
+							<SelectValue>
+								{(value: string) => (value === "all" ? "All job types" : (names[value] ?? humanize(value)))}
+							</SelectValue>
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All job types</SelectItem>
+							{(overview.data?.jobTypes ?? []).map((type) => (
+								<SelectItem key={type.jobType} value={type.jobType}>
+									{type.displayName}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				}
 			/>
 			<Reveal>
+				<ToggleGroup
+					spacing={0}
+					value={[search.state ?? "all"]}
+					onValueChange={(value: string[]) => {
+						const next = value[0];
+						if (!next) return;
+						navigate({
+							search: (prev) => ({
+								...prev,
+								state: next === "all" ? undefined : (next as (typeof STATES)[number]),
+							}),
+						});
+					}}
+					aria-label="Filter by state"
+					className="hairline-t hairline-b mb-10 grid w-full grid-cols-3 rounded-none sm:grid-cols-6"
+				>
+					{FILTERS.map((filter) => (
+						<ToggleGroupItem
+							key={filter.value}
+							value={filter.value}
+							aria-label={filter.label}
+							className="group/state relative flex h-auto flex-col-reverse items-start justify-end gap-2 rounded-none! border-hairline px-5 py-7 text-left font-normal hover:bg-foreground/[0.03] aria-pressed:bg-transparent sm:border-l sm:first:border-l-0 sm:first:pl-0"
+						>
+							<span className="text-[13px] text-muted-foreground group-aria-pressed/state:text-foreground">
+								{filter.label}
+							</span>
+							<span className="font-[450] text-3xl text-foreground/50 leading-none tracking-[-0.03em] tabular transition-colors group-hover/state:text-foreground/80 group-aria-pressed/state:text-foreground sm:text-4xl">
+								{countOf(filter.value)}
+							</span>
+							<span
+								aria-hidden="true"
+								className="absolute inset-x-5 -top-px h-0.5 rounded-full bg-area opacity-0 transition-opacity group-aria-pressed/state:opacity-100 sm:group-first/state:left-0"
+							/>
+						</ToggleGroupItem>
+					))}
+				</ToggleGroup>
 				<DataTable
 					data={jobs.data}
 					isLoading={jobs.isPending}
@@ -100,56 +168,6 @@ function JobsPage() {
 					searchText={(job) => `${job.summary} ${job.message} ${job.id} ${job.workerId}`}
 					searchPlaceholder="Search jobs"
 					columns={columns}
-					toolbar={
-						<>
-							<ToggleGroup
-								variant="outline"
-								size="sm"
-								value={[search.state ?? "all"]}
-								onValueChange={(value: string[]) => {
-									const next = value[0];
-									if (!next) return;
-									navigate({
-										search: (prev) => ({
-											...prev,
-											state: next === "all" ? undefined : (next as (typeof STATES)[number]),
-										}),
-									});
-								}}
-								aria-label="Filter by state"
-							>
-								{FILTERS.map((filter) => (
-									<ToggleGroupItem key={filter.value} value={filter.value}>
-										{filter.label}
-									</ToggleGroupItem>
-								))}
-							</ToggleGroup>
-							<Select
-								value={search.jobType ?? "all"}
-								onValueChange={(value) =>
-									navigate({
-										search: (prev) => ({ ...prev, jobType: value === "all" ? undefined : String(value) }),
-									})
-								}
-							>
-								<SelectTrigger size="sm" className="w-44" aria-label="Filter by job type">
-									<SelectValue>
-										{(value: string) =>
-											value === "all" ? "All job types" : (names[value] ?? humanize(value))
-										}
-									</SelectValue>
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All job types</SelectItem>
-									{(overview.data?.jobTypes ?? []).map((type) => (
-										<SelectItem key={type.jobType} value={type.jobType}>
-											{type.displayName}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</>
-					}
 					empty={
 						<EmptyState
 							icon={<ListChecks />}

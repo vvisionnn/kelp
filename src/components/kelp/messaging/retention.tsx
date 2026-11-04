@@ -113,7 +113,7 @@ export function RetentionFields({
 							<ToggleGroupItem
 								key={u.unit}
 								value={u.unit}
-								className="capitalize aria-pressed:bg-primary/15 aria-pressed:text-primary"
+								className="capitalize aria-pressed:bg-area/20 aria-pressed:text-foreground"
 							>
 								{u.unit}
 							</ToggleGroupItem>

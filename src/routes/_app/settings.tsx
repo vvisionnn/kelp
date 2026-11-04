@@ -6,13 +6,20 @@ import type { ReactNode } from "react";
 import { Wordmark } from "@/components/kelp/brand.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
-import { ErrorState, PageHeader, Panel, Reveal, SkeletonBlock, StatusDot } from "@/components/kelp/page.tsx";
+import {
+	AuroraCard,
+	ErrorState,
+	PageHeader,
+	Panel,
+	Reveal,
+	SkeletonBlock,
+	StatusDot,
+} from "@/components/kelp/page.tsx";
 import { type Theme, useTheme } from "@/components/theme-provider.tsx";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
 import { useSession } from "@/lib/session.ts";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/settings")({
 	staticData: { section: "Operations", title: "Settings" },
@@ -30,46 +37,42 @@ function SettingsPage() {
 	return (
 		<>
 			<PageHeader title="Settings" description="How Kelp looks for you, and how it connects to SeaweedFS." />
-			<div className="grid max-w-4xl gap-4">
-				<Reveal>
-					<Panel title="Appearance" description="Saved in this browser.">
-						<ThemePicker />
-					</Panel>
-				</Reveal>
-				<Reveal delay={0.04}>
-					<ClusterPanel />
-				</Reveal>
-				<Reveal delay={0.08}>
-					<KelpPanel />
-				</Reveal>
-				<Reveal delay={0.12} className="grid gap-4 md:grid-cols-2">
-					<Panel title="Keyboard shortcuts">
-						<dl className="grid gap-3 text-sm">
-							<Shortcut label="Search pages and actions">
-								<KbdGroup>
-									<Kbd>⌘</Kbd>
-									<Kbd>K</Kbd>
-								</KbdGroup>
-								<span className="text-muted-foreground text-xs">or</span>
-								<KbdGroup>
-									<Kbd>Ctrl</Kbd>
-									<Kbd>K</Kbd>
-								</KbdGroup>
-							</Shortcut>
-							<Shortcut label="Toggle the sidebar">
-								<KbdGroup>
-									<Kbd>⌘</Kbd>
-									<Kbd>B</Kbd>
-								</KbdGroup>
-							</Shortcut>
-							<Shortcut label="Close a dialog or panel">
-								<Kbd>Esc</Kbd>
-							</Shortcut>
-						</dl>
-					</Panel>
-					<AboutPanel />
-				</Reveal>
-			</div>
+			<Reveal>
+				<AuroraCard className="p-6 sm:p-8">
+					<div className="mb-7 flex flex-wrap items-end justify-between gap-2">
+						<div>
+							<h2 className="font-[450] text-3xl tracking-[-0.025em]">Appearance</h2>
+							<p className="mt-1.5 text-[15px] text-foreground/70">Saved in this browser.</p>
+						</div>
+					</div>
+					<ThemePicker />
+				</AuroraCard>
+			</Reveal>
+			<Reveal delay={0.05} className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+				<ClusterPanel />
+				<KelpPanel />
+			</Reveal>
+			<Reveal delay={0.1} className="mt-4 grid items-start gap-4 lg:grid-cols-2">
+				<Panel title="Keyboard shortcuts">
+					<dl className="grid gap-4 text-sm">
+						<Shortcut label="Search pages and actions">
+							<KbdGroup>
+								<Kbd>⌘</Kbd>
+								<Kbd>K</Kbd>
+							</KbdGroup>
+							<span className="text-muted-foreground text-xs">or</span>
+							<KbdGroup>
+								<Kbd>Ctrl</Kbd>
+								<Kbd>K</Kbd>
+							</KbdGroup>
+						</Shortcut>
+						<Shortcut label="Close a dialog or panel">
+							<Kbd>Esc</Kbd>
+						</Shortcut>
+					</dl>
+				</Panel>
+				<AboutPanel />
+			</Reveal>
 		</>
 	);
 }
@@ -80,33 +83,37 @@ const THEMES: Array<{ value: Theme; label: string; description: string }> = [
 	{ value: "dark", label: "Abyss", description: "Dark" },
 ];
 
-/** A tiny drawing of the Kelp shell in a given palette. */
+const PREVIEW = {
+	light: { page: "#ffffff", card: "#f2f3f7", ink: "#0a0a0a", line: "rgb(10 10 10 / 0.12)", rays: 0.55 },
+	dark: { page: "#0a0a0a", card: "#1a1a1a", ink: "#ffffff", line: "rgb(255 255 255 / 0.14)", rays: 0.9 },
+};
+
+/** A tiny drawing of Kelp in a given palette: the top bar, an aurora card and a stat row. */
 function ThemePreview({ mode }: { mode: "light" | "dark" }) {
-	const light = mode === "light";
+	const c = PREVIEW[mode];
 	return (
-		<div className={cn("flex h-full w-full gap-1.5 p-2", light ? "bg-[#f2f6f5]" : "bg-[#081210]")}>
-			<div
-				className={cn("flex w-1/4 flex-col gap-1 rounded-sm p-1", light ? "bg-[#e3ecea]" : "bg-[#0d1d1a]")}
-			>
-				<span className={cn("h-1.5 w-3/4 rounded-full", light ? "bg-[#0e7a6d]" : "bg-[#3dd6bc]")} />
-				<span className={cn("h-1 w-full rounded-full", light ? "bg-[#c7d6d3]" : "bg-[#1f3a35]")} />
-				<span className={cn("h-1 w-2/3 rounded-full", light ? "bg-[#c7d6d3]" : "bg-[#1f3a35]")} />
+		<div className="flex h-full w-full flex-col gap-2 p-2.5" style={{ background: c.page }}>
+			<div className="flex items-center gap-1.5">
+				<span className="size-2 rounded-full" style={{ background: c.ink }} />
+				<span className="ml-auto flex gap-1 rounded-full p-0.5" style={{ background: c.card }}>
+					<span className="h-1.5 w-4 rounded-full" style={{ background: c.ink }} />
+					<span className="h-1.5 w-3 rounded-full" style={{ background: c.line }} />
+					<span className="h-1.5 w-3 rounded-full" style={{ background: c.line }} />
+				</span>
+				<span className="ml-auto h-1.5 w-4 rounded-full" style={{ background: c.line }} />
 			</div>
-			<div className="flex flex-1 flex-col gap-1.5">
-				<div className={cn("h-1/2 rounded-sm p-1", light ? "bg-white" : "bg-[#0f211d]")}>
-					<span className={cn("block h-1 w-1/2 rounded-full", light ? "bg-[#c7d6d3]" : "bg-[#1f3a35]")} />
-					<span
-						className={cn("mt-1.5 block h-1.5 w-full rounded-full", light ? "bg-[#d5e5e2]" : "bg-[#173430]")}
-					>
-						<span
-							className={cn("block h-full w-2/3 rounded-full", light ? "bg-[#0e7a6d]" : "bg-[#3dd6bc]")}
-						/>
-					</span>
-				</div>
-				<div className="flex flex-1 gap-1.5">
-					<span className={cn("flex-1 rounded-sm", light ? "bg-white" : "bg-[#0f211d]")} />
-					<span className={cn("flex-1 rounded-sm", light ? "bg-white" : "bg-[#0f211d]")} />
-				</div>
+			<div
+				className="relative flex-1 overflow-hidden rounded-md"
+				style={{
+					background: `radial-gradient(at 0% 100%, color-mix(in oklab, #1fa591 ${c.rays * 70}%, transparent), transparent 60%), radial-gradient(at 70% 30%, color-mix(in oklab, #8b6cf0 ${c.rays * 45}%, transparent), transparent 60%), radial-gradient(at 100% 0%, color-mix(in oklab, #f0607e ${c.rays * 35}%, transparent), transparent 55%), ${c.card}`,
+				}}
+			>
+				<span className="absolute bottom-2 left-2 h-2.5 w-1/3 rounded-full" style={{ background: c.ink }} />
+			</div>
+			<div className="flex gap-2">
+				{[0, 1, 2].map((i) => (
+					<span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: c.line }} />
+				))}
 			</div>
 		</div>
 	);
@@ -120,7 +127,7 @@ export function ThemePicker() {
 			value={theme}
 			onValueChange={(value) => setTheme(value as Theme)}
 			aria-label="Theme"
-			className="grid gap-3 sm:grid-cols-3"
+			className="grid gap-4 sm:grid-cols-3"
 		>
 			{THEMES.map((option) => {
 				const selected = theme === option.value;
@@ -128,16 +135,16 @@ export function ThemePicker() {
 					<label
 						key={option.value}
 						htmlFor={`theme-${option.value}`}
-						className="group relative cursor-pointer rounded-xl border p-2 transition-colors hover:bg-muted/40 has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+						className="group relative cursor-pointer rounded-xl bg-background/55 p-2 backdrop-blur transition-colors hover:bg-background/75 has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
 					>
 						{selected && (
 							<motion.span
 								layoutId={reduced ? undefined : "theme-selected"}
-								className="pointer-events-none absolute inset-0 rounded-xl border-2 border-primary"
+								className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-foreground"
 								transition={{ type: "spring", stiffness: 500, damping: 38 }}
 							/>
 						)}
-						<div className="relative aspect-[16/9] overflow-hidden rounded-lg ring-1 ring-foreground/10">
+						<div className="relative aspect-[16/10] overflow-hidden rounded-md ring-1 ring-foreground/10">
 							{option.value === "system" ? (
 								<div className="relative h-full w-full">
 									<ThemePreview mode="light" />
@@ -149,10 +156,10 @@ export function ThemePicker() {
 								<ThemePreview mode={option.value} />
 							)}
 						</div>
-						<div className="mt-2 flex items-center gap-2 px-1">
+						<div className="mt-2.5 flex items-center gap-2 px-1.5 pb-1">
 							<RadioGroupItem id={`theme-${option.value}`} value={option.value} aria-label={option.label} />
 							<span className="font-medium text-sm">{option.label}</span>
-							<span className="text-muted-foreground text-xs">{option.description}</span>
+							<span className="text-foreground/60 text-xs">{option.description}</span>
 						</div>
 						<span className="sr-only">{selected ? "(selected)" : ""}</span>
 					</label>
@@ -164,7 +171,7 @@ export function ThemePicker() {
 
 function Row({ label, children, copy }: { label: string; children: ReactNode; copy?: string }) {
 	return (
-		<div className="grid gap-1 py-2.5 first:pt-0 last:pb-0 sm:grid-cols-[12rem_1fr] sm:items-center">
+		<div className="grid gap-1 py-3 first:pt-0 last:pb-0 sm:grid-cols-[11rem_1fr] sm:items-center">
 			<dt className="text-muted-foreground text-sm">{label}</dt>
 			<dd className="flex min-w-0 items-center gap-1 text-sm">
 				<span className="min-w-0 break-all">{children}</span>
@@ -191,7 +198,7 @@ function ClusterPanel() {
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
 			) : (
-				<dl className="divide-y">
+				<dl className="divide-y divide-hairline">
 					<Row label="Master" copy={data.masterAddress}>
 						<Mono>{data.masterAddress}</Mono>
 					</Row>
@@ -233,7 +240,7 @@ function KelpPanel() {
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
 			) : (
-				<dl className="divide-y">
+				<dl className="divide-y divide-hairline">
 					<Row label="Signed in as">
 						{user.name}{" "}
 						<span className="text-muted-foreground">
@@ -263,8 +270,12 @@ function AboutPanel() {
 	return (
 		<Panel title="About">
 			<div className="flex items-center gap-3">
-				<Wordmark />
-				{data && <span className="font-mono text-muted-foreground text-xs">v{data.version}</span>}
+				<Wordmark className="text-lg" />
+				{data && (
+					<span className="inline-flex h-6 items-center rounded-full bg-foreground/[0.07] px-2.5 font-mono text-xs">
+						v{data.version}
+					</span>
+				)}
 			</div>
 			<p className="mt-3 text-muted-foreground text-sm">
 				A console for SeaweedFS. Kelp talks to the cluster you already run and never changes how SeaweedFS
@@ -276,7 +287,7 @@ function AboutPanel() {
 						href={REPO}
 						target="_blank"
 						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-primary hover:underline"
+						className="inline-flex items-center gap-1 text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
 					>
 						Source and releases
 						<ExternalLink className="size-3" />
@@ -287,7 +298,7 @@ function AboutPanel() {
 						href="https://github.com/seaweedfs/seaweedfs/wiki"
 						target="_blank"
 						rel="noreferrer"
-						className="inline-flex items-center gap-1 text-primary hover:underline"
+						className="inline-flex items-center gap-1 text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
 					>
 						SeaweedFS documentation
 						<ExternalLink className="size-3" />
