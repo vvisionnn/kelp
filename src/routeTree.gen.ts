@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
 import { Route as AppFilesRouteImport } from './routes/_app/files'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppAccessServiceAccountsRouteImport } from './routes/_app/access/service-accounts'
 import { Route as AppBucketsIndexRouteImport } from './routes/_app/buckets/index'
 import { Route as AppBucketsBucketRouteImport } from './routes/_app/buckets/$bucket'
@@ -21,6 +22,8 @@ import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collectio
 import { Route as AppCollectionsNameRouteImport } from './routes/_app/collections/$name'
 import { Route as AppErasureCodingIndexRouteImport } from './routes/_app/erasure-coding/index'
 import { Route as AppErasureCodingVolumeIdRouteImport } from './routes/_app/erasure-coding/$volumeId'
+import { Route as AppMaintenanceIndexRouteImport } from './routes/_app/maintenance/index'
+import { Route as AppMaintenanceJobTypeRouteImport } from './routes/_app/maintenance/$jobType'
 import { Route as AppVolumesIndexRouteImport } from './routes/_app/volumes/index'
 import { Route as AppVolumesVolumeIdRouteImport } from './routes/_app/volumes/$volumeId'
 import { Route as AppAccessGroupsIndexRouteImport } from './routes/_app/access/groups/index'
@@ -30,6 +33,8 @@ import { Route as AppAccessPoliciesNameRouteImport } from './routes/_app/access/
 import { Route as AppAccessPoliciesNewRouteImport } from './routes/_app/access/policies/new'
 import { Route as AppAccessUsersIndexRouteImport } from './routes/_app/access/users/index'
 import { Route as AppAccessUsersUsernameRouteImport } from './routes/_app/access/users/$username'
+import { Route as AppMaintenanceJobsIndexRouteImport } from './routes/_app/maintenance/jobs.index'
+import { Route as AppMaintenanceJobsJobIdRouteImport } from './routes/_app/maintenance/jobs.$jobId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -53,6 +58,11 @@ const AppClusterRoute = AppClusterRouteImport.update({
 const AppFilesRoute = AppFilesRouteImport.update({
   id: '/files',
   path: '/files',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAccessServiceAccountsRoute =
@@ -92,6 +102,16 @@ const AppErasureCodingVolumeIdRoute =
     path: '/erasure-coding/$volumeId',
     getParentRoute: () => AppRoute,
   } as any)
+const AppMaintenanceIndexRoute = AppMaintenanceIndexRouteImport.update({
+  id: '/maintenance/',
+  path: '/maintenance/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceJobTypeRoute = AppMaintenanceJobTypeRouteImport.update({
+  id: '/maintenance/$jobType',
+  path: '/maintenance/$jobType',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVolumesIndexRoute = AppVolumesIndexRouteImport.update({
   id: '/volumes/',
   path: '/volumes/',
@@ -137,50 +157,70 @@ const AppAccessUsersUsernameRoute = AppAccessUsersUsernameRouteImport.update({
   path: '/access/users/$username',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMaintenanceJobsIndexRoute = AppMaintenanceJobsIndexRouteImport.update({
+  id: '/maintenance/jobs/',
+  path: '/maintenance/jobs/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceJobsJobIdRoute = AppMaintenanceJobsJobIdRouteImport.update({
+  id: '/maintenance/jobs/$jobId',
+  path: '/maintenance/jobs/$jobId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
   '/files': typeof AppFilesRoute
+  '/settings': typeof AppSettingsRoute
   '/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/buckets/$bucket': typeof AppBucketsBucketRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/buckets/': typeof AppBucketsIndexRoute
   '/collections/': typeof AppCollectionsIndexRoute
   '/erasure-coding/': typeof AppErasureCodingIndexRoute
+  '/maintenance/': typeof AppMaintenanceIndexRoute
   '/volumes/': typeof AppVolumesIndexRoute
   '/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
   '/access/groups/': typeof AppAccessGroupsIndexRoute
   '/access/policies/': typeof AppAccessPoliciesIndexRoute
   '/access/users/': typeof AppAccessUsersIndexRoute
+  '/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
   '/files': typeof AppFilesRoute
+  '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
   '/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/buckets/$bucket': typeof AppBucketsBucketRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/buckets': typeof AppBucketsIndexRoute
   '/collections': typeof AppCollectionsIndexRoute
   '/erasure-coding': typeof AppErasureCodingIndexRoute
+  '/maintenance': typeof AppMaintenanceIndexRoute
   '/volumes': typeof AppVolumesIndexRoute
   '/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
   '/access/groups': typeof AppAccessGroupsIndexRoute
   '/access/policies': typeof AppAccessPoliciesIndexRoute
   '/access/users': typeof AppAccessUsersIndexRoute
+  '/maintenance/jobs': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,23 +228,28 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
   '/_app/files': typeof AppFilesRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/access/service-accounts': typeof AppAccessServiceAccountsRoute
   '/_app/buckets/$bucket': typeof AppBucketsBucketRoute
   '/_app/collections/$name': typeof AppCollectionsNameRoute
   '/_app/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/_app/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
   '/_app/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
   '/_app/buckets/': typeof AppBucketsIndexRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
   '/_app/erasure-coding/': typeof AppErasureCodingIndexRoute
+  '/_app/maintenance/': typeof AppMaintenanceIndexRoute
   '/_app/volumes/': typeof AppVolumesIndexRoute
   '/_app/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/_app/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/_app/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/_app/access/users/$username': typeof AppAccessUsersUsernameRoute
+  '/_app/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
   '/_app/access/groups/': typeof AppAccessGroupsIndexRoute
   '/_app/access/policies/': typeof AppAccessPoliciesIndexRoute
   '/_app/access/users/': typeof AppAccessUsersIndexRoute
+  '/_app/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -213,67 +258,82 @@ export interface FileRouteTypes {
     | '/login'
     | '/cluster'
     | '/files'
+    | '/settings'
     | '/access/service-accounts'
     | '/buckets/$bucket'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
+    | '/maintenance/$jobType'
     | '/volumes/$volumeId'
     | '/buckets/'
     | '/collections/'
     | '/erasure-coding/'
+    | '/maintenance/'
     | '/volumes/'
     | '/access/groups/$name'
     | '/access/policies/$name'
     | '/access/policies/new'
     | '/access/users/$username'
+    | '/maintenance/jobs/$jobId'
     | '/access/groups/'
     | '/access/policies/'
     | '/access/users/'
+    | '/maintenance/jobs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/cluster'
     | '/files'
+    | '/settings'
     | '/'
     | '/access/service-accounts'
     | '/buckets/$bucket'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
+    | '/maintenance/$jobType'
     | '/volumes/$volumeId'
     | '/buckets'
     | '/collections'
     | '/erasure-coding'
+    | '/maintenance'
     | '/volumes'
     | '/access/groups/$name'
     | '/access/policies/$name'
     | '/access/policies/new'
     | '/access/users/$username'
+    | '/maintenance/jobs/$jobId'
     | '/access/groups'
     | '/access/policies'
     | '/access/users'
+    | '/maintenance/jobs'
   id:
     | '__root__'
     | '/_app'
     | '/login'
     | '/_app/cluster'
     | '/_app/files'
+    | '/_app/settings'
     | '/_app/'
     | '/_app/access/service-accounts'
     | '/_app/buckets/$bucket'
     | '/_app/collections/$name'
     | '/_app/erasure-coding/$volumeId'
+    | '/_app/maintenance/$jobType'
     | '/_app/volumes/$volumeId'
     | '/_app/buckets/'
     | '/_app/collections/'
     | '/_app/erasure-coding/'
+    | '/_app/maintenance/'
     | '/_app/volumes/'
     | '/_app/access/groups/$name'
     | '/_app/access/policies/$name'
     | '/_app/access/policies/new'
     | '/_app/access/users/$username'
+    | '/_app/maintenance/jobs/$jobId'
     | '/_app/access/groups/'
     | '/_app/access/policies/'
     | '/_app/access/users/'
+    | '/_app/maintenance/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -316,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/files'
       preLoaderRoute: typeof AppFilesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/access/service-accounts': {
@@ -365,6 +432,20 @@ declare module '@tanstack/react-router' {
       path: '/erasure-coding/$volumeId'
       fullPath: '/erasure-coding/$volumeId'
       preLoaderRoute: typeof AppErasureCodingVolumeIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/': {
+      id: '/_app/maintenance/'
+      path: '/maintenance'
+      fullPath: '/maintenance/'
+      preLoaderRoute: typeof AppMaintenanceIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/$jobType': {
+      id: '/_app/maintenance/$jobType'
+      path: '/maintenance/$jobType'
+      fullPath: '/maintenance/$jobType'
+      preLoaderRoute: typeof AppMaintenanceJobTypeRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/volumes/': {
@@ -430,51 +511,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAccessUsersUsernameRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/maintenance/jobs/': {
+      id: '/_app/maintenance/jobs/'
+      path: '/maintenance/jobs'
+      fullPath: '/maintenance/jobs/'
+      preLoaderRoute: typeof AppMaintenanceJobsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/jobs/$jobId': {
+      id: '/_app/maintenance/jobs/$jobId'
+      path: '/maintenance/jobs/$jobId'
+      fullPath: '/maintenance/jobs/$jobId'
+      preLoaderRoute: typeof AppMaintenanceJobsJobIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
   AppFilesRoute: typeof AppFilesRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccessServiceAccountsRoute: typeof AppAccessServiceAccountsRoute
   AppBucketsBucketRoute: typeof AppBucketsBucketRoute
   AppCollectionsNameRoute: typeof AppCollectionsNameRoute
   AppErasureCodingVolumeIdRoute: typeof AppErasureCodingVolumeIdRoute
+  AppMaintenanceJobTypeRoute: typeof AppMaintenanceJobTypeRoute
   AppVolumesVolumeIdRoute: typeof AppVolumesVolumeIdRoute
   AppBucketsIndexRoute: typeof AppBucketsIndexRoute
   AppCollectionsIndexRoute: typeof AppCollectionsIndexRoute
   AppErasureCodingIndexRoute: typeof AppErasureCodingIndexRoute
+  AppMaintenanceIndexRoute: typeof AppMaintenanceIndexRoute
   AppVolumesIndexRoute: typeof AppVolumesIndexRoute
   AppAccessGroupsNameRoute: typeof AppAccessGroupsNameRoute
   AppAccessPoliciesNameRoute: typeof AppAccessPoliciesNameRoute
   AppAccessPoliciesNewRoute: typeof AppAccessPoliciesNewRoute
   AppAccessUsersUsernameRoute: typeof AppAccessUsersUsernameRoute
+  AppMaintenanceJobsJobIdRoute: typeof AppMaintenanceJobsJobIdRoute
   AppAccessGroupsIndexRoute: typeof AppAccessGroupsIndexRoute
   AppAccessPoliciesIndexRoute: typeof AppAccessPoliciesIndexRoute
   AppAccessUsersIndexRoute: typeof AppAccessUsersIndexRoute
+  AppMaintenanceJobsIndexRoute: typeof AppMaintenanceJobsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
   AppFilesRoute: AppFilesRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccessServiceAccountsRoute: AppAccessServiceAccountsRoute,
   AppBucketsBucketRoute: AppBucketsBucketRoute,
   AppCollectionsNameRoute: AppCollectionsNameRoute,
   AppErasureCodingVolumeIdRoute: AppErasureCodingVolumeIdRoute,
+  AppMaintenanceJobTypeRoute: AppMaintenanceJobTypeRoute,
   AppVolumesVolumeIdRoute: AppVolumesVolumeIdRoute,
   AppBucketsIndexRoute: AppBucketsIndexRoute,
   AppCollectionsIndexRoute: AppCollectionsIndexRoute,
   AppErasureCodingIndexRoute: AppErasureCodingIndexRoute,
+  AppMaintenanceIndexRoute: AppMaintenanceIndexRoute,
   AppVolumesIndexRoute: AppVolumesIndexRoute,
   AppAccessGroupsNameRoute: AppAccessGroupsNameRoute,
   AppAccessPoliciesNameRoute: AppAccessPoliciesNameRoute,
   AppAccessPoliciesNewRoute: AppAccessPoliciesNewRoute,
   AppAccessUsersUsernameRoute: AppAccessUsersUsernameRoute,
+  AppMaintenanceJobsJobIdRoute: AppMaintenanceJobsJobIdRoute,
   AppAccessGroupsIndexRoute: AppAccessGroupsIndexRoute,
   AppAccessPoliciesIndexRoute: AppAccessPoliciesIndexRoute,
   AppAccessUsersIndexRoute: AppAccessUsersIndexRoute,
+  AppMaintenanceJobsIndexRoute: AppMaintenanceJobsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

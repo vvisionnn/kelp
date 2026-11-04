@@ -7,6 +7,7 @@ import { filesRoutes } from "./files.ts";
 import { iamRoutes } from "./iam.ts";
 import { maintenanceRoutes } from "./maintenance.ts";
 import { messagingRoutes } from "./messaging.ts";
+import { settingsRoutes } from "./settings.ts";
 import { storageRoutes } from "./storage.ts";
 import { tablesRoutes } from "./tables.ts";
 
@@ -21,5 +22,6 @@ export function apiRoutes(services: Services): Array<[string, Hono<Env>]> {
 		["/", maintenanceRoutes(services)],
 		["/", messagingRoutes(services)],
 		["/", tablesRoutes(services)],
+		["/", settingsRoutes(services)],
 	];
 }
