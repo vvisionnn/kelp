@@ -1,0 +1,1 @@
+{"policy":"{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::kelp-dev:user/analyst\"},\"Action\":[\"s3tables:GetTableData\"],\"Resource\":\"*\"}]}"}

@@ -34,7 +34,7 @@ export default defineConfig({
 	],
 	webServer: [
 		{
-			command: `bun scripts/stack.ts --data .tmp/e2e/stack --fresh --offset ${ports.master - 9333}`,
+			command: `bun scripts/stack.ts --data .tmp/e2e/stack --fresh --broker --offset ${ports.master - 9333}`,
 			url: `http://127.0.0.1:${ports.admin}/health`,
 			timeout: 120_000,
 			reuseExistingServer: !process.env.CI,

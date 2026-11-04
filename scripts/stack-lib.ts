@@ -6,6 +6,7 @@ export const PORTS = {
 	filer: 8888,
 	s3: 8333,
 	iceberg: 8181,
+	broker: 17777,
 	admin: 12535,
 } as const;
 export type Ports = { [K in keyof typeof PORTS]: number };
@@ -18,6 +19,7 @@ export function stackPorts(offset = 0): Ports {
 		filer: PORTS.filer + offset,
 		s3: PORTS.s3 + offset,
 		iceberg: PORTS.iceberg + offset,
+		broker: PORTS.broker + offset,
 		admin: PORTS.admin + offset,
 	};
 }

@@ -70,6 +70,9 @@ beforeAll(async () => {
 				],
 			});
 		},
+		FindBrokerLeader(_call: unknown, done: grpc.sendUnaryData<unknown>) {
+			done(null, { broker: "10.0.0.7:17777" });
+		},
 	});
 	const port = await new Promise<number>((resolve, reject) =>
 		server.bindAsync("127.0.0.1:0", grpc.ServerCredentials.createInsecure(), (e, p) =>
@@ -148,6 +151,12 @@ describe("SeaweedGrpc", () => {
 			{ namespace: "events", name: "audit" },
 			{ namespace: "events", name: "orders" },
 		]);
+		client.close();
+	});
+
+	test("asks a broker which broker leads", async () => {
+		const client = new SeaweedGrpc(address);
+		expect(await client.findBrokerLeader(address)).toBe("10.0.0.7:17777");
 		client.close();
 	});
 

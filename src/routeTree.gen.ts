@@ -24,6 +24,8 @@ import { Route as AppErasureCodingIndexRouteImport } from './routes/_app/erasure
 import { Route as AppErasureCodingVolumeIdRouteImport } from './routes/_app/erasure-coding/$volumeId'
 import { Route as AppMaintenanceIndexRouteImport } from './routes/_app/maintenance/index'
 import { Route as AppMaintenanceJobTypeRouteImport } from './routes/_app/maintenance/$jobType'
+import { Route as AppMessagingIndexRouteImport } from './routes/_app/messaging/index'
+import { Route as AppTablesIndexRouteImport } from './routes/_app/tables/index'
 import { Route as AppVolumesIndexRouteImport } from './routes/_app/volumes/index'
 import { Route as AppVolumesVolumeIdRouteImport } from './routes/_app/volumes/$volumeId'
 import { Route as AppAccessGroupsIndexRouteImport } from './routes/_app/access/groups/index'
@@ -35,6 +37,9 @@ import { Route as AppAccessUsersIndexRouteImport } from './routes/_app/access/us
 import { Route as AppAccessUsersUsernameRouteImport } from './routes/_app/access/users/$username'
 import { Route as AppMaintenanceJobsIndexRouteImport } from './routes/_app/maintenance/jobs.index'
 import { Route as AppMaintenanceJobsJobIdRouteImport } from './routes/_app/maintenance/jobs.$jobId'
+import { Route as AppMessagingNamespaceTopicRouteImport } from './routes/_app/messaging/$namespace.$topic'
+import { Route as AppTablesBucketIndexRouteImport } from './routes/_app/tables/$bucket/index'
+import { Route as AppTablesBucketNamespaceTableRouteImport } from './routes/_app/tables/$bucket/$namespace.$table'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -112,6 +117,16 @@ const AppMaintenanceJobTypeRoute = AppMaintenanceJobTypeRouteImport.update({
   path: '/maintenance/$jobType',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMessagingIndexRoute = AppMessagingIndexRouteImport.update({
+  id: '/messaging/',
+  path: '/messaging/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTablesIndexRoute = AppTablesIndexRouteImport.update({
+  id: '/tables/',
+  path: '/tables/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVolumesIndexRoute = AppVolumesIndexRouteImport.update({
   id: '/volumes/',
   path: '/volumes/',
@@ -167,6 +182,23 @@ const AppMaintenanceJobsJobIdRoute = AppMaintenanceJobsJobIdRouteImport.update({
   path: '/maintenance/jobs/$jobId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMessagingNamespaceTopicRoute =
+  AppMessagingNamespaceTopicRouteImport.update({
+    id: '/messaging/$namespace/$topic',
+    path: '/messaging/$namespace/$topic',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppTablesBucketIndexRoute = AppTablesBucketIndexRouteImport.update({
+  id: '/tables/$bucket/',
+  path: '/tables/$bucket/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTablesBucketNamespaceTableRoute =
+  AppTablesBucketNamespaceTableRouteImport.update({
+    id: '/tables/$bucket/$namespace/$table',
+    path: '/tables/$bucket/$namespace/$table',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -184,16 +216,21 @@ export interface FileRoutesByFullPath {
   '/collections/': typeof AppCollectionsIndexRoute
   '/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/maintenance/': typeof AppMaintenanceIndexRoute
+  '/messaging/': typeof AppMessagingIndexRoute
+  '/tables/': typeof AppTablesIndexRoute
   '/volumes/': typeof AppVolumesIndexRoute
   '/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/access/users/$username': typeof AppAccessUsersUsernameRoute
   '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
   '/access/groups/': typeof AppAccessGroupsIndexRoute
   '/access/policies/': typeof AppAccessPoliciesIndexRoute
   '/access/users/': typeof AppAccessUsersIndexRoute
   '/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
+  '/tables/$bucket/': typeof AppTablesBucketIndexRoute
+  '/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -211,16 +248,21 @@ export interface FileRoutesByTo {
   '/collections': typeof AppCollectionsIndexRoute
   '/erasure-coding': typeof AppErasureCodingIndexRoute
   '/maintenance': typeof AppMaintenanceIndexRoute
+  '/messaging': typeof AppMessagingIndexRoute
+  '/tables': typeof AppTablesIndexRoute
   '/volumes': typeof AppVolumesIndexRoute
   '/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/access/users/$username': typeof AppAccessUsersUsernameRoute
   '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
   '/access/groups': typeof AppAccessGroupsIndexRoute
   '/access/policies': typeof AppAccessPoliciesIndexRoute
   '/access/users': typeof AppAccessUsersIndexRoute
   '/maintenance/jobs': typeof AppMaintenanceJobsIndexRoute
+  '/tables/$bucket': typeof AppTablesBucketIndexRoute
+  '/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -240,16 +282,21 @@ export interface FileRoutesById {
   '/_app/collections/': typeof AppCollectionsIndexRoute
   '/_app/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/_app/maintenance/': typeof AppMaintenanceIndexRoute
+  '/_app/messaging/': typeof AppMessagingIndexRoute
+  '/_app/tables/': typeof AppTablesIndexRoute
   '/_app/volumes/': typeof AppVolumesIndexRoute
   '/_app/access/groups/$name': typeof AppAccessGroupsNameRoute
   '/_app/access/policies/$name': typeof AppAccessPoliciesNameRoute
   '/_app/access/policies/new': typeof AppAccessPoliciesNewRoute
   '/_app/access/users/$username': typeof AppAccessUsersUsernameRoute
   '/_app/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/_app/messaging/$namespace/$topic': typeof AppMessagingNamespaceTopicRoute
   '/_app/access/groups/': typeof AppAccessGroupsIndexRoute
   '/_app/access/policies/': typeof AppAccessPoliciesIndexRoute
   '/_app/access/users/': typeof AppAccessUsersIndexRoute
   '/_app/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
+  '/_app/tables/$bucket/': typeof AppTablesBucketIndexRoute
+  '/_app/tables/$bucket/$namespace/$table': typeof AppTablesBucketNamespaceTableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -269,16 +316,21 @@ export interface FileRouteTypes {
     | '/collections/'
     | '/erasure-coding/'
     | '/maintenance/'
+    | '/messaging/'
+    | '/tables/'
     | '/volumes/'
     | '/access/groups/$name'
     | '/access/policies/$name'
     | '/access/policies/new'
     | '/access/users/$username'
     | '/maintenance/jobs/$jobId'
+    | '/messaging/$namespace/$topic'
     | '/access/groups/'
     | '/access/policies/'
     | '/access/users/'
     | '/maintenance/jobs/'
+    | '/tables/$bucket/'
+    | '/tables/$bucket/$namespace/$table'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -296,16 +348,21 @@ export interface FileRouteTypes {
     | '/collections'
     | '/erasure-coding'
     | '/maintenance'
+    | '/messaging'
+    | '/tables'
     | '/volumes'
     | '/access/groups/$name'
     | '/access/policies/$name'
     | '/access/policies/new'
     | '/access/users/$username'
     | '/maintenance/jobs/$jobId'
+    | '/messaging/$namespace/$topic'
     | '/access/groups'
     | '/access/policies'
     | '/access/users'
     | '/maintenance/jobs'
+    | '/tables/$bucket'
+    | '/tables/$bucket/$namespace/$table'
   id:
     | '__root__'
     | '/_app'
@@ -324,16 +381,21 @@ export interface FileRouteTypes {
     | '/_app/collections/'
     | '/_app/erasure-coding/'
     | '/_app/maintenance/'
+    | '/_app/messaging/'
+    | '/_app/tables/'
     | '/_app/volumes/'
     | '/_app/access/groups/$name'
     | '/_app/access/policies/$name'
     | '/_app/access/policies/new'
     | '/_app/access/users/$username'
     | '/_app/maintenance/jobs/$jobId'
+    | '/_app/messaging/$namespace/$topic'
     | '/_app/access/groups/'
     | '/_app/access/policies/'
     | '/_app/access/users/'
     | '/_app/maintenance/jobs/'
+    | '/_app/tables/$bucket/'
+    | '/_app/tables/$bucket/$namespace/$table'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -448,6 +510,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMaintenanceJobTypeRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/messaging/': {
+      id: '/_app/messaging/'
+      path: '/messaging'
+      fullPath: '/messaging/'
+      preLoaderRoute: typeof AppMessagingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/': {
+      id: '/_app/tables/'
+      path: '/tables'
+      fullPath: '/tables/'
+      preLoaderRoute: typeof AppTablesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/volumes/': {
       id: '/_app/volumes/'
       path: '/volumes'
@@ -525,6 +601,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppMaintenanceJobsJobIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/messaging/$namespace/$topic': {
+      id: '/_app/messaging/$namespace/$topic'
+      path: '/messaging/$namespace/$topic'
+      fullPath: '/messaging/$namespace/$topic'
+      preLoaderRoute: typeof AppMessagingNamespaceTopicRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/$bucket/': {
+      id: '/_app/tables/$bucket/'
+      path: '/tables/$bucket'
+      fullPath: '/tables/$bucket/'
+      preLoaderRoute: typeof AppTablesBucketIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables/$bucket/$namespace/$table': {
+      id: '/_app/tables/$bucket/$namespace/$table'
+      path: '/tables/$bucket/$namespace/$table'
+      fullPath: '/tables/$bucket/$namespace/$table'
+      preLoaderRoute: typeof AppTablesBucketNamespaceTableRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -543,16 +640,21 @@ interface AppRouteChildren {
   AppCollectionsIndexRoute: typeof AppCollectionsIndexRoute
   AppErasureCodingIndexRoute: typeof AppErasureCodingIndexRoute
   AppMaintenanceIndexRoute: typeof AppMaintenanceIndexRoute
+  AppMessagingIndexRoute: typeof AppMessagingIndexRoute
+  AppTablesIndexRoute: typeof AppTablesIndexRoute
   AppVolumesIndexRoute: typeof AppVolumesIndexRoute
   AppAccessGroupsNameRoute: typeof AppAccessGroupsNameRoute
   AppAccessPoliciesNameRoute: typeof AppAccessPoliciesNameRoute
   AppAccessPoliciesNewRoute: typeof AppAccessPoliciesNewRoute
   AppAccessUsersUsernameRoute: typeof AppAccessUsersUsernameRoute
   AppMaintenanceJobsJobIdRoute: typeof AppMaintenanceJobsJobIdRoute
+  AppMessagingNamespaceTopicRoute: typeof AppMessagingNamespaceTopicRoute
   AppAccessGroupsIndexRoute: typeof AppAccessGroupsIndexRoute
   AppAccessPoliciesIndexRoute: typeof AppAccessPoliciesIndexRoute
   AppAccessUsersIndexRoute: typeof AppAccessUsersIndexRoute
   AppMaintenanceJobsIndexRoute: typeof AppMaintenanceJobsIndexRoute
+  AppTablesBucketIndexRoute: typeof AppTablesBucketIndexRoute
+  AppTablesBucketNamespaceTableRoute: typeof AppTablesBucketNamespaceTableRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -570,16 +672,21 @@ const AppRouteChildren: AppRouteChildren = {
   AppCollectionsIndexRoute: AppCollectionsIndexRoute,
   AppErasureCodingIndexRoute: AppErasureCodingIndexRoute,
   AppMaintenanceIndexRoute: AppMaintenanceIndexRoute,
+  AppMessagingIndexRoute: AppMessagingIndexRoute,
+  AppTablesIndexRoute: AppTablesIndexRoute,
   AppVolumesIndexRoute: AppVolumesIndexRoute,
   AppAccessGroupsNameRoute: AppAccessGroupsNameRoute,
   AppAccessPoliciesNameRoute: AppAccessPoliciesNameRoute,
   AppAccessPoliciesNewRoute: AppAccessPoliciesNewRoute,
   AppAccessUsersUsernameRoute: AppAccessUsersUsernameRoute,
   AppMaintenanceJobsJobIdRoute: AppMaintenanceJobsJobIdRoute,
+  AppMessagingNamespaceTopicRoute: AppMessagingNamespaceTopicRoute,
   AppAccessGroupsIndexRoute: AppAccessGroupsIndexRoute,
   AppAccessPoliciesIndexRoute: AppAccessPoliciesIndexRoute,
   AppAccessUsersIndexRoute: AppAccessUsersIndexRoute,
   AppMaintenanceJobsIndexRoute: AppMaintenanceJobsIndexRoute,
+  AppTablesBucketIndexRoute: AppTablesBucketIndexRoute,
+  AppTablesBucketNamespaceTableRoute: AppTablesBucketNamespaceTableRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

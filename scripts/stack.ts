@@ -3,7 +3,9 @@
  * maintenance worker from the `weed` binary that mise installs. Used for local development, the
  * review environment and CI end-to-end tests. Ctrl-C stops everything.
  *
- *   bun run stack [--data .stack] [--fresh] [--offset 0]
+ *   bun run stack [--data .stack] [--fresh] [--offset 0] [--broker]
+ *
+ * `--broker` also starts a message queue broker (`weed mq.broker`) for the messaging pages.
  */
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -16,6 +18,7 @@ const { values } = parseArgs({
 		data: { type: "string", default: ".stack" },
 		fresh: { type: "boolean", default: false },
 		offset: { type: "string", default: "0" },
+		broker: { type: "boolean", default: false },
 	},
 });
 const PORTS = stackPorts(Number(values.offset));
@@ -81,6 +84,8 @@ start("server", [
 	"-s3",
 	`-s3.port=${PORTS.s3}`,
 	`-s3.port.iceberg=${PORTS.iceberg}`,
+	// Kelp does not use the Lance namespace server; its fixed port would collide across stacks.
+	"-s3.port.lance=0",
 	`-s3.config=${join(dataDir, "s3.json")}`,
 	"-volume.max=0",
 	"-master.volumeSizeLimitMB=256",
@@ -95,6 +100,23 @@ grpc.close();
 if (!filerJoined) {
 	console.error("[stack] the filer never registered with the master");
 	stop(1);
+}
+
+// Start the broker early: its balancer election takes a while and overlaps admin startup.
+if (values.broker) {
+	start("broker", [
+		"mq.broker",
+		"-ip=127.0.0.1",
+		`-port=${PORTS.broker}`,
+		`-master=127.0.0.1:${PORTS.master}`,
+	]);
+	const brokerGrpc = new SeaweedGrpc(`127.0.0.1:${PORTS.master + 10000}`);
+	const brokerJoined = await waitFor(async () => (await brokerGrpc.listClusterNodes("broker")).length > 0);
+	brokerGrpc.close();
+	if (!brokerJoined) {
+		console.error("[stack] the message queue broker never registered with the master");
+		stop(1);
+	}
 }
 
 start("admin", [
@@ -114,5 +136,5 @@ start("worker", [
 ]);
 
 console.log(
-	`[stack] ready: master :${PORTS.master}, filer :${PORTS.filer}, s3 :${PORTS.s3}, admin :${PORTS.admin} (data in ${dataDir})`,
+	`[stack] ready: master :${PORTS.master}, filer :${PORTS.filer}, s3 :${PORTS.s3}, admin :${PORTS.admin}${values.broker ? `, broker :${PORTS.broker}` : ""} (data in ${dataDir})`,
 );
