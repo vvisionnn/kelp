@@ -54,15 +54,15 @@ export function ShardMap({
 					{ label: "Parity", cells: cells.slice(ec.dataShards) },
 				]
 			: [{ label: "Shards", cells }];
-	const cell = size === "lg" ? "size-9 rounded-md" : "size-3.5 rounded-[3px]";
+	const cell = size === "lg" ? "size-6 rounded sm:size-9 sm:rounded-md" : "size-3.5 rounded-[3px]";
 
 	return (
-		<div className={cn("flex items-end", size === "lg" ? "gap-4" : "gap-2")}>
+		<div className={cn("flex items-end", size === "lg" ? "flex-wrap gap-4" : "gap-2")}>
 			{groups.map((group, groupIndex) => (
 				<div key={group.label}>
 					{size === "lg" && <p className="mb-1.5 text-muted-foreground text-xs">{group.label}</p>}
 					<ul
-						className={cn("flex", size === "lg" ? "gap-1.5" : "gap-0.5")}
+						className={cn("flex", size === "lg" ? "gap-1 sm:gap-1.5" : "gap-0.5")}
 						aria-label={`${group.label} shards of volume ${ec.id}`}
 					>
 						{group.cells.map((shard, index) => {
