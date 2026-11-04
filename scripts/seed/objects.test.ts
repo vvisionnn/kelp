@@ -1,0 +1,16 @@
+import { expect, test } from "bun:test";
+import { SEED_BUCKETS, seedObjects } from "./objects.ts";
+
+test("seed objects cover every bucket with unique keys and real bodies", () => {
+	const objects = seedObjects();
+	expect(new Set(objects.map((o) => o.bucket))).toEqual(new Set(SEED_BUCKETS));
+	const keys = objects.map((o) => `${o.bucket}/${o.key}`);
+	expect(new Set(keys).size).toBe(keys.length);
+	expect(objects.filter((o) => o.key.startsWith("thumbnails/")).length).toBe(240);
+	for (const object of objects.filter((_, i) => i % 25 === 0)) {
+		const body = object.body();
+		expect(body.length).toBeGreaterThan(0);
+	}
+	const backup = objects.find((o) => o.bucket === "backups");
+	expect(backup?.body().length).toBe(6 * 1024 * 1024);
+});
