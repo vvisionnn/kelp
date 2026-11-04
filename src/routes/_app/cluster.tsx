@@ -5,12 +5,13 @@ import { Cable, Crown, Network, Server } from "lucide-react";
 import { z } from "zod";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
+	AuroraCard,
 	CapacityBar,
 	EmptyState,
 	PageHeader,
-	Panel,
 	Reveal,
 	SkeletonBlock,
+	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
@@ -36,13 +37,10 @@ function ClusterPage() {
 			<PageHeader title="Nodes" description="Every process that makes up your SeaweedFS cluster." />
 			<Reveal>
 				<TopologyMap />
+				<NodeCounts />
 			</Reveal>
-			<Tabs
-				value={tab}
-				onValueChange={(value) => navigate({ search: { tab: value as Tab } })}
-				className="mt-6"
-			>
-				<TabsList variant="line" className="mb-4 flex-wrap">
+			<Tabs value={tab} onValueChange={(value) => navigate({ search: { tab: value as Tab } })}>
+				<TabsList variant="line" className="mb-6 max-w-full justify-start overflow-x-auto">
 					<TabsTrigger value="masters">Masters</TabsTrigger>
 					<TabsTrigger value="volume-servers">Volume servers</TabsTrigger>
 					<TabsTrigger value="filers">Filers</TabsTrigger>
@@ -77,45 +75,81 @@ function ClusterPage() {
 	);
 }
 
-/** Data centers as columns of racks, each rack listing its volume servers with live fill level. */
+/** How many of each process the cluster runs, as the page's stat band. */
+function NodeCounts() {
+	const { data } = useQuery(queries.overview());
+	if (!data) return <div className="my-10" />;
+	return (
+		<div className="hairline-t hairline-b my-10 py-8">
+			<StatBand
+				stats={[
+					{ label: "Masters", value: data.masters.length },
+					{ label: "Volume servers", value: data.volumeServers.length },
+					{ label: "Filers", value: data.filers.length },
+					{ label: "S3 gateways", value: data.s3Gateways.length },
+					{ label: "Message brokers", value: data.brokers.length },
+					{ label: "Mounts", value: data.totalMountClients },
+				]}
+			/>
+		</div>
+	);
+}
+
+/**
+ * The cluster's shape on its aurora: data centers side by side, racks inside them, and every volume
+ * server as a glass tile with its live fill level.
+ */
 export function TopologyMap() {
 	const { data, isPending, error } = useQuery(queries.topology());
-	if (isPending) return <SkeletonBlock className="h-40 rounded-xl" />;
+	if (isPending) return <SkeletonBlock className="h-64 rounded-2xl" />;
 	if (error) return null;
+	const racks = data.reduce((sum, dc) => sum + dc.racks.length, 0);
 	return (
-		<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-			{data.map((dc: TopologyDataCenter) => (
-				<Panel
-					key={dc.id}
-					title={dc.id}
-					description={`${dc.racks.length} ${dc.racks.length === 1 ? "rack" : "racks"}`}
-				>
-					<div className="space-y-4">
-						{dc.racks.map((rack) => (
-							<div key={rack.id}>
-								<p className="mb-2 text-muted-foreground text-xs">{rack.id}</p>
-								<ul className="space-y-2">
-									{rack.nodes.map((node) => (
-										<li key={node.id} className="rounded-lg bg-muted/50 px-3 py-2">
-											<div className="flex items-center justify-between gap-2 text-sm">
-												<span className="flex min-w-0 items-center gap-2">
-													<Server className="size-3.5 shrink-0 text-muted-foreground" />
-													<span className="truncate font-mono">{node.address}</span>
-												</span>
-												<span className="shrink-0 text-muted-foreground text-xs tabular">
-													{formatCount(node.volumes)} vols
-												</span>
-											</div>
-											<CapacityBar used={node.diskUsage} total={node.diskCapacity} className="mt-2" />
-										</li>
-									))}
-								</ul>
-							</div>
-						))}
-					</div>
-				</Panel>
-			))}
-		</div>
+		<AuroraCard className="p-7 sm:p-9">
+			<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 text-[13px] text-foreground/70">
+				<h2>Topology</h2>
+				<p>
+					{data.length} {data.length === 1 ? "data center" : "data centers"}, {racks}{" "}
+					{racks === 1 ? "rack" : "racks"}
+				</p>
+			</div>
+			<div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+				{data.map((dc: TopologyDataCenter) => (
+					<section key={dc.id}>
+						<h3 className="font-[450] text-2xl tracking-[-0.02em]">{dc.id}</h3>
+						<p className="text-[13px] text-foreground/70">
+							{dc.racks.length} {dc.racks.length === 1 ? "rack" : "racks"}
+						</p>
+						<div className="mt-5 space-y-5">
+							{dc.racks.map((rack) => (
+								<div key={rack.id}>
+									<p className="mb-2 text-[13px] text-foreground/70">{rack.id}</p>
+									<ul className="space-y-2">
+										{rack.nodes.map((node) => (
+											<li key={node.id} className="rounded-xl bg-background/55 px-4 py-3 backdrop-blur-md">
+												<div className="flex items-center justify-between gap-2 text-sm">
+													<span className="flex min-w-0 items-center gap-2">
+														<Server className="size-3.5 shrink-0 text-foreground/60" />
+														<span className="truncate font-mono">{node.address}</span>
+													</span>
+													<span className="shrink-0 text-[13px] text-foreground/70 tabular">
+														{formatCount(node.volumes)} volumes
+													</span>
+												</div>
+												<CapacityBar used={node.diskUsage} total={node.diskCapacity} className="mt-3" />
+												<p className="mt-1.5 text-right text-foreground/60 text-xs tabular">
+													{formatBytes(node.diskUsage)} of {formatBytes(node.diskCapacity)}
+												</p>
+											</li>
+										))}
+									</ul>
+								</div>
+							))}
+						</div>
+					</section>
+				))}
+			</div>
+		</AuroraCard>
 	);
 }
 
@@ -124,7 +158,7 @@ function MastersTab() {
 	return (
 		<div className="space-y-3">
 			{data && (
-				<p className="text-muted-foreground text-sm">
+				<p className="text-[15px] text-muted-foreground">
 					Leader <span className="font-mono text-foreground">{data.leader}</span>. Highest volume id{" "}
 					{formatCount(data.maxVolumeId)}.
 				</p>
@@ -210,7 +244,7 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 	{
 		accessorKey: "version",
 		header: "Version",
-		cell: ({ row }) => <span className="text-xs">{row.original.version.split(" ")[0] || "—"}</span>,
+		cell: ({ row }) => <span className="font-mono text-xs">{row.original.version.split(" ")[0] || "—"}</span>,
 	},
 	{
 		accessorKey: "lastHeartbeat",

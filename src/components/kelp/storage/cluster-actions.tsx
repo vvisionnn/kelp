@@ -18,6 +18,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatBytes, formatPercent } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { storageApi, storageKey, VACUUM_THRESHOLD } from "@/lib/storage-queries.ts";
+import { cn } from "@/lib/utils";
 import { PRESSED } from "./common.tsx";
 
 /** Plain-language reading of a replication setting like "011". */
@@ -98,7 +99,7 @@ export function GrowVolumesDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger render={<Button size="sm" />}>
+			<DialogTrigger render={<Button />}>
 				<Plus />
 				Grow volumes
 			</DialogTrigger>
@@ -226,7 +227,7 @@ export function VacuumClusterDialog({ inventory }: { inventory: StorageInventory
 	});
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger render={<Button size="sm" variant="outline" />}>
+			<DialogTrigger render={<Button variant="secondary" />}>
 				<Eraser />
 				Vacuum cluster
 			</DialogTrigger>
@@ -241,13 +242,17 @@ export function VacuumClusterDialog({ inventory }: { inventory: StorageInventory
 				<div className="grid gap-2 py-2">
 					<p className="font-medium text-sm">Compact volumes with at least this much garbage</p>
 					<ToggleGroup
-						variant="outline"
+						className="rounded-full bg-muted p-1"
 						value={[String(threshold)]}
 						onValueChange={(value) => value[0] && setThreshold(Number(value[0]))}
 						aria-label="Garbage threshold"
 					>
 						{THRESHOLDS.map((t) => (
-							<ToggleGroupItem key={t} value={String(t)} className={PRESSED}>
+							<ToggleGroupItem
+								key={t}
+								value={String(t)}
+								className={cn(PRESSED, "flex-1 aria-pressed:bg-background aria-pressed:shadow-sm")}
+							>
 								{formatPercent(t)}
 							</ToggleGroupItem>
 						))}

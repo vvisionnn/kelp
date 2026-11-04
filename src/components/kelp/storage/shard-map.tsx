@@ -6,7 +6,7 @@ import { formatBytes } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 
 /** Diagonal hatching marks parity shards, so data vs. parity never depends on color alone. */
-const PARITY_TEXTURE =
+export const PARITY_TEXTURE =
 	"bg-[image:repeating-linear-gradient(135deg,transparent_0_3px,color-mix(in_oklab,var(--card)_55%,transparent)_3px_5px)]";
 
 /** Categorical fills in fixed order; servers beyond five share a neutral "other" fill. */

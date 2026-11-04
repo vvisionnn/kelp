@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Layers } from "lucide-react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { AuroraCard, EmptyState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
 import { CollectionShare } from "@/components/kelp/storage/collection-share.tsx";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 					</Badge>
 				))}
 				{row.original.diskTypes.map((d) => (
-					<Badge key={d} variant="secondary">
+					<Badge key={d} variant="area">
 						{d}
 					</Badge>
 				))}
@@ -96,6 +96,8 @@ function CollectionsPage() {
 	const canWrite = useCanWrite();
 	const navigate = useNavigate();
 	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
+	const total = data?.collections.reduce((sum, c) => sum + c.size, 0) ?? 0;
+	const files = data?.collections.reduce((sum, c) => sum + c.fileCount, 0) ?? 0;
 	return (
 		<>
 			<PageHeader
@@ -103,15 +105,33 @@ function CollectionsPage() {
 				description="Collections group volumes so their data can be sized, placed and deleted together. Every S3 bucket stores into its own collection."
 				actions={canWrite && <GrowVolumesDialog inventory={data} />}
 			/>
-			<Reveal>
-				<Panel
-					title="Where the bytes are"
-					description="Stored bytes by collection, including erasure-coded data."
-				>
-					{data ? <CollectionShare collections={data.collections} /> : <SkeletonBlock className="h-10" />}
-				</Panel>
-			</Reveal>
-			<div className="mt-6">
+			{data ? (
+				<Reveal>
+					<AuroraCard className="p-7 sm:p-9">
+						<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+							<h2 className="text-[13px] text-foreground/70">Where the bytes are</h2>
+							<p className="text-[13px] text-foreground/70">
+								Stored bytes by collection, including erasure-coded data
+							</p>
+						</div>
+						<p className="mt-10 flex flex-wrap items-baseline gap-x-3">
+							<span className="font-[450] text-5xl leading-none tracking-[-0.04em]">
+								{formatBytes(total)}
+							</span>
+							<span className="text-foreground/70">
+								in {formatCount(data.collections.length)}{" "}
+								{data.collections.length === 1 ? "collection" : "collections"}, {formatCount(files)} files
+							</span>
+						</p>
+						<div className="mt-8">
+							<CollectionShare collections={data.collections} />
+						</div>
+					</AuroraCard>
+				</Reveal>
+			) : (
+				!error && <SkeletonBlock className="h-64 rounded-2xl" />
+			)}
+			<div className="mt-12">
 				<DataTable
 					data={data?.collections}
 					columns={collectionColumns}

@@ -67,7 +67,7 @@ export function EcVolumeList({
 				header: "Collection",
 				cell: ({ row }) =>
 					row.original.collection ? (
-						<Badge variant="secondary">{row.original.collection}</Badge>
+						<Badge variant="area">{row.original.collection}</Badge>
 					) : (
 						<span className="text-muted-foreground">{collectionLabel("")}</span>
 					),

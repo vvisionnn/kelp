@@ -17,6 +17,7 @@ describe("volumes page", () => {
 		renderApp("/volumes", { "GET /storage": inventory });
 		expect(await screen.findByText(/5 volumes on 1 server\. Each grows to 256 MiB/)).toBeTruthy();
 		expect(screen.getByText("Reclaimable")).toBeTruthy();
+		expect(screen.getByRole("img", { name: /^5 volumes by fill level/ })).toBeTruthy();
 		for (const v of inventory.volumes) expect(screen.getByRole("link", { name: String(v.id) })).toBeTruthy();
 	});
 

@@ -47,9 +47,12 @@ export function matchesFilter(volume: StorageVolume, filter: VolumeFilter): bool
 function FillBar({ fullness }: { fullness: number }) {
 	const width = Math.min(1, fullness) * 100;
 	return (
-		<span className="mt-1 block h-1 w-24 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+		<span
+			className="mt-1.5 block h-1 w-24 overflow-hidden rounded-full bg-foreground/[0.08]"
+			aria-hidden="true"
+		>
 			<span
-				className={cn("block h-full rounded-full", fullness >= 0.95 ? "bg-warning" : "bg-primary/70")}
+				className={cn("block h-full rounded-full", fullness >= 0.95 ? "bg-warning" : "bg-area")}
 				style={{ width: `${width}%` }}
 			/>
 		</span>
@@ -122,7 +125,7 @@ export function volumeColumns({
 			header: "Collection",
 			cell: ({ row }) =>
 				row.original.collection ? (
-					<Badge variant="secondary">{row.original.collection}</Badge>
+					<Badge variant="area">{row.original.collection}</Badge>
 				) : (
 					<span className="text-muted-foreground">{collectionLabel("")}</span>
 				),
@@ -242,7 +245,6 @@ export function VolumeTable({
 			toolbar={
 				<>
 					<ToggleGroup
-						variant="outline"
 						size="sm"
 						value={[filter]}
 						onValueChange={(value) => setFilter((value[0] as VolumeFilter | undefined) ?? "all")}
