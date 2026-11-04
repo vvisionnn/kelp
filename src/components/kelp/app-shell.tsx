@@ -262,6 +262,7 @@ export function AppShell() {
 	useSessionWatcher();
 	const command = useCommandMenu();
 	const section = sectionFor(useLeaf()?.staticData?.section);
+	const readOnly = useSession().role !== "admin";
 	return (
 		<div data-area={section.area} className="relative isolate flex min-h-svh flex-col">
 			<div className="area-glow" aria-hidden="true" />
@@ -289,6 +290,11 @@ export function AppShell() {
 							<span className="hidden sm:inline">Search</span>
 							<Kbd className="ml-3 hidden rounded-full sm:inline-flex">⌘K</Kbd>
 						</Button>
+						{readOnly && (
+							<span className="hidden h-7 items-center rounded-full px-3 text-[13px] text-muted-foreground ring-1 ring-hairline ring-inset sm:flex">
+								Read-only
+							</span>
+						)}
 						<ThemeSwitch />
 						<UserMenu />
 					</div>

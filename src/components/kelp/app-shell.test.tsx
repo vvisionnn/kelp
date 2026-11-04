@@ -47,8 +47,9 @@ describe("app shell", () => {
 	test("account menu shows the role and changes theme", async () => {
 		const { routes } = await clusterApi();
 		renderApp("/", routes, viewerUser);
-		fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
 		expect(await screen.findByText("Read-only")).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
+		expect(within(await screen.findByRole("menu")).getByText("Read-only")).toBeTruthy();
 		fireEvent.click(await screen.findByRole("menuitemradio", { name: "Dark" }));
 		expect(localStorage.getItem("kelp-theme")).toBe("dark");
 	});
