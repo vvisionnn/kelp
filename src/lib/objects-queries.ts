@@ -95,9 +95,10 @@ export const objectApi = {
 };
 
 /** URL that streams a file through Kelp; `download` asks the browser to save it. */
-export function contentUrl(path: string, download = false): string {
+export function contentUrl(path: string, download = false, versionId?: string): string {
 	const params = new URLSearchParams({ path });
 	if (download) params.set("download", "1");
+	if (versionId) params.set("versionId", versionId);
 	return `/api/files/content?${params}`;
 }
 

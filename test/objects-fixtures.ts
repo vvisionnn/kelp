@@ -19,6 +19,7 @@ export function entry(path: string, patch: Partial<FileEntry> = {}): FileEntry {
 		md5: null,
 		chunks: 1,
 		symlinkTarget: null,
+		versionId: null,
 		...patch,
 	};
 }
@@ -29,9 +30,11 @@ export function details(path: string, patch: Partial<FileDetails> = {}): FileDet
 		uid: 501,
 		gid: 20,
 		tags: {},
+		s3Tags: {},
 		attributes: {},
 		chunkList: [{ fileId: "3,01abc", volumeId: 3, size: 1024, modifiedAt: null }],
 		remote: false,
+		versions: [],
 		...patch,
 	};
 }

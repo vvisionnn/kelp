@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -282,6 +283,41 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 					{file.remote && <Property label="Storage">Remote (tiered)</Property>}
 				</dl>
 			</section>
+			{file.versions.length > 0 && (
+				<section aria-labelledby="versions-heading">
+					<h3 id="versions-heading" className="mb-2 font-medium text-sm">
+						Versions
+					</h3>
+					<ol className="divide-y rounded-lg border text-xs">
+						{file.versions.map((version) => (
+							<li key={version.versionId} className="flex items-center gap-3 px-3 py-2">
+								<span className="min-w-0 flex-1">
+									<span className="block truncate font-mono">{version.versionId}</span>
+									<span className="text-muted-foreground">{formatDateTime(version.modifiedAt)}</span>
+								</span>
+								{version.isLatest && <Badge variant="secondary">Current</Badge>}
+								{version.isDeleteMarker ? (
+									<span className="text-muted-foreground">Delete marker</span>
+								) : (
+									<>
+										<span className="text-muted-foreground tabular">{formatBytes(version.size)}</span>
+										<Button
+											variant="ghost"
+											size="icon-xs"
+											aria-label={`Download version ${version.versionId}`}
+											render={
+												<a href={contentUrl(file.path, true, version.versionId)} download={file.name} />
+											}
+										>
+											<Download />
+										</Button>
+									</>
+								)}
+							</li>
+						))}
+					</ol>
+				</section>
+			)}
 			{file.chunkList.length > 0 && (
 				<section>
 					<h3 className="mb-2 font-medium text-sm">
@@ -306,6 +342,20 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 						{Object.entries(file.attributes).map(([key, value]) => (
 							<Property key={key} label={key}>
 								<span className="break-all font-mono text-xs">{value}</span>
+							</Property>
+						))}
+					</dl>
+				</section>
+			)}
+			{Object.keys(file.s3Tags).length > 0 && (
+				<section aria-labelledby="s3-tags-heading">
+					<h3 id="s3-tags-heading" className="mb-1 font-medium text-sm">
+						S3 object tags
+					</h3>
+					<dl className="divide-y">
+						{Object.entries(file.s3Tags).map(([key, value]) => (
+							<Property key={key} label={key}>
+								{value}
 							</Property>
 						))}
 					</dl>

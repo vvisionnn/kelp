@@ -74,6 +74,8 @@ export interface FileEntry {
 	md5: string | null;
 	chunks: number;
 	symlinkTarget: string | null;
+	/** S3 version of this object in a versioned bucket; null for unversioned files. */
+	versionId: string | null;
 }
 
 export interface FileListing {
@@ -95,11 +97,24 @@ export interface FileDetails extends FileEntry {
 	gid: number;
 	/** User tags (the filer's `Seaweed-` attributes) without the prefix. */
 	tags: Record<string, string>;
+	/** S3 object tags set through the S3 API (read-only here). */
+	s3Tags: Record<string, string>;
 	/** Other extended attributes, decoded when they are text. */
 	attributes: Record<string, string>;
 	chunkList: FileChunk[];
 	/** Content lives in remote storage (tiered/mounted). */
 	remote: boolean;
+	/** Every stored version, newest first, for objects in versioned buckets. */
+	versions: ObjectVersion[];
+}
+
+export interface ObjectVersion {
+	versionId: string;
+	size: number;
+	modifiedAt: string | null;
+	md5: string | null;
+	isLatest: boolean;
+	isDeleteMarker: boolean;
 }
 
 export interface DeleteResult {

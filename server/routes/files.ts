@@ -1,8 +1,16 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import type { DeleteResult } from "../../shared/objects.ts";
+import type { DeleteResult, FileDetails, FileEntry } from "../../shared/objects.ts";
 import type { Env } from "../app.ts";
-import { hasControlCharacters, mapDetails, mapEntry, TAG_PREFIX } from "../map/objects.ts";
+import {
+	hasControlCharacters,
+	latestVersionFile,
+	mapDetails,
+	mapListEntry,
+	mapVersion,
+	TAG_PREFIX,
+	VERSIONS_SUFFIX,
+} from "../map/objects.ts";
 import { list, num, type Raw, str } from "../map/raw.ts";
 import type { Services } from "../services.ts";
 import { UpstreamError } from "../upstream/http.ts";
@@ -96,6 +104,27 @@ export function filesRoutes({ filer }: Services) {
 		}
 	}
 
+	async function exists(path: string): Promise<Raw | null> {
+		try {
+			return await entry(path);
+		} catch (error) {
+			if (error instanceof UpstreamError && error.status === 404) return null;
+			throw error;
+		}
+	}
+
+	/**
+	 * Where `path` really lives. In a versioned bucket the object `key` is stored as the folder
+	 * `key.versions/`, holding one file per version; `latest` is the current version's file there.
+	 */
+	async function locate(path: string): Promise<{ store: string; latest: string | null }> {
+		if (await exists(path)) return { store: path, latest: null };
+		const versions = await exists(`${path}${VERSIONS_SUFFIX}`);
+		const latest = versions ? latestVersionFile(versions) : null;
+		if (!versions || !latest) throw new UpstreamError("filer", 404, `${path} does not exist`);
+		return { store: `${path}${VERSIONS_SUFFIX}`, latest };
+	}
+
 	return new Hono<Env>()
 		.get("/files/list", async (c) => {
 			const path = filerPath.parse(c.req.query("path") ?? "/");
@@ -114,7 +143,9 @@ export function filesRoutes({ filer }: Services) {
 				}
 				throw error;
 			}
-			const entries = list(raw.Entries).map(mapEntry);
+			const entries = list(raw.Entries)
+				.map(mapListEntry)
+				.filter((e): e is FileEntry => e !== null);
 			return c.json({
 				path,
 				entries,
@@ -124,7 +155,22 @@ export function filesRoutes({ filer }: Services) {
 		})
 		.get("/files/entry", async (c) => {
 			const path = filerPath.parse(c.req.query("path"));
-			return c.json(mapDetails(await entry(path)));
+			const { store, latest } = await locate(path);
+			if (!latest) return c.json(mapDetails(await entry(path)));
+			const [current, listing] = await Promise.all([
+				entry(`${store}/${latest}`),
+				filer.json<Raw>(`${encodePath(store)}/`, {
+					query: { limit: 1000 },
+					headers: { accept: "application/json" },
+				}),
+			]);
+			const details: FileDetails = {
+				...mapDetails(current),
+				name: path.slice(path.lastIndexOf("/") + 1),
+				path,
+				versions: list(listing.Entries).map((v) => mapVersion(v, latest)),
+			};
+			return c.json(details);
 		})
 		.get("/files/content", async (c) => {
 			const path = filerPath.parse(c.req.query("path"));
@@ -134,7 +180,23 @@ export function filesRoutes({ filer }: Services) {
 				const value = c.req.header(name);
 				if (value) headers[name] = value;
 			}
-			const upstream = await stream(path, { headers, signal: c.req.raw.signal });
+			const versionId = z
+				.string()
+				.regex(/^[\w-]{1,128}$/, "That is not a version id")
+				.optional()
+				.parse(c.req.query("versionId") || undefined);
+			let upstream: Response;
+			try {
+				if (versionId) {
+					const { store } = await locate(path);
+					upstream = await stream(`${store}/v_${versionId}`, { headers, signal: c.req.raw.signal });
+				} else upstream = await stream(path, { headers, signal: c.req.raw.signal });
+			} catch (error) {
+				if (versionId || !(error instanceof UpstreamError) || error.status !== 404) throw error;
+				// Not a plain file: it may be an object in a versioned bucket.
+				const { store, latest } = await locate(path);
+				upstream = await stream(`${store}/${latest}`, { headers, signal: c.req.raw.signal });
+			}
 			const out = new Headers();
 			for (const name of PASS_THROUGH) {
 				const value = upstream.headers.get(name);
@@ -180,8 +242,9 @@ export function filesRoutes({ filer }: Services) {
 			if (input.to === input.from || input.to.startsWith(`${input.from}/`)) {
 				return c.json({ error: "Choose a destination outside the item you are moving" }, 400);
 			}
-			await entry(input.from);
-			await filer.raw(encodePath(input.to), { method: "POST", query: { "mv.from": input.from } });
+			const { store, latest } = await locate(input.from);
+			const to = latest ? `${input.to}${VERSIONS_SUFFIX}` : input.to;
+			await filer.raw(encodePath(to), { method: "POST", query: { "mv.from": store } });
 			return c.json({ path: input.to });
 		})
 		.post("/files/delete", async (c) => {
@@ -196,7 +259,8 @@ export function filesRoutes({ filer }: Services) {
 					continue;
 				}
 				try {
-					await filer.raw(encodePath(path), {
+					const { store } = await locate(path).catch(() => ({ store: path }));
+					await filer.raw(encodePath(store), {
 						method: "DELETE",
 						query: { recursive: "true", ignoreRecursiveError: "false" },
 					});
@@ -209,9 +273,11 @@ export function filesRoutes({ filer }: Services) {
 		})
 		.put("/files/tags", async (c) => {
 			const input = z.object({ path: filerPath, tags: z.record(tagKey, tagValue) }).parse(await c.req.json());
-			const current = mapDetails(await entry(input.path));
+			const { store, latest } = await locate(input.path);
+			const file = latest ? `${store}/${latest}` : input.path;
+			const current = mapDetails(await entry(file));
 			if (current.isDirectory) return c.json({ error: "Tags can only be set on files" }, 400);
-			const target = encodePath(input.path);
+			const target = encodePath(file);
 			const existing = Object.keys(current.tags);
 			if (existing.length > 0) {
 				await filer.raw(target, { method: "DELETE", query: { tagging: existing.join(",") } });
@@ -221,6 +287,7 @@ export function filesRoutes({ filer }: Services) {
 			);
 			if (Object.keys(headers).length > 0)
 				await filer.raw(target, { method: "PUT", query: { tagging: "" }, headers });
-			return c.json(mapDetails(await entry(input.path)));
+			const name = input.path.slice(input.path.lastIndexOf("/") + 1);
+			return c.json({ ...mapDetails(await entry(file)), name, path: input.path });
 		});
 }

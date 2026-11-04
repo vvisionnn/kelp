@@ -245,6 +245,57 @@ describe("files page", () => {
 		globalThis.fetch = realFetch;
 	});
 
+	test("versioned objects list their versions with downloads, and S3 tags", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/files?path=/buckets/media", {
+			...routes,
+			"GET /files/entry": (call: ApiCall) =>
+				details(call.query.get("path") ?? "", {
+					versionId: "bbb",
+					s3Tags: { team: "design" },
+					versions: [
+						{
+							versionId: "bbb",
+							size: 85,
+							modifiedAt: "2026-11-04T12:00:00.000Z",
+							md5: null,
+							isLatest: true,
+							isDeleteMarker: false,
+						},
+						{
+							versionId: "aaa",
+							size: 77,
+							modifiedAt: "2026-11-03T12:00:00.000Z",
+							md5: null,
+							isLatest: false,
+							isDeleteMarker: false,
+						},
+						{
+							versionId: "zzz",
+							size: 0,
+							modifiedAt: "2026-11-02T12:00:00.000Z",
+							md5: null,
+							isLatest: false,
+							isDeleteMarker: true,
+						},
+					],
+				}),
+		});
+		fireEvent.click(await screen.findByRole("button", { name: "README.md" }));
+		const sheet = await screen.findByRole("dialog");
+		const versions = within(await within(sheet).findByRole("region", { name: "Versions" }));
+		expect(versions.getByText("Current")).toBeTruthy();
+		expect(versions.getByText("Delete marker")).toBeTruthy();
+		const older = versions.getByRole("link", { name: "Download version aaa" });
+		expect(older.getAttribute("href")).toBe(
+			"/api/files/content?path=%2Fbuckets%2Fmedia%2FREADME.md&download=1&versionId=aaa",
+		);
+		expect(versions.queryByRole("link", { name: "Download version zzz" })).toBeNull();
+		const s3 = within(within(sheet).getByRole("region", { name: "S3 object tags" }));
+		expect(s3.getByText("team")).toBeTruthy();
+		expect(s3.getByText("design")).toBeTruthy();
+	});
+
 	test("a missing file explains itself in the preview", async () => {
 		const { routes } = await objectsApi();
 		renderApp("/files?path=/buckets/media", {

@@ -6,6 +6,7 @@ import type {
 	FileEntry,
 	LifecycleRule,
 	ObjectLockMode,
+	ObjectVersion,
 	Versioning,
 } from "../../shared/objects.ts";
 import { bool, list, nanos, num, obj, type Raw, str, time } from "./raw.ts";
@@ -148,6 +149,69 @@ function baseName(path: string): string {
 	return path.slice(path.lastIndexOf("/") + 1);
 }
 
+/** Where S3 keeps the versions of `key` in a versioned bucket. */
+export const VERSIONS_SUFFIX = ".versions";
+const EXT = {
+	versionId: "Seaweed-X-Amz-Version-Id",
+	deleteMarker: "Seaweed-X-Amz-Delete-Marker",
+	latestFile: "Seaweed-X-Amz-Latest-Version-File-Name",
+	latestId: "Seaweed-X-Amz-Latest-Version-Id",
+	latestSize: "Seaweed-X-Amz-Latest-Version-Size",
+	latestEtag: "Seaweed-X-Amz-Latest-Version-ETag",
+	latestMtime: "Seaweed-X-Amz-Latest-Version-Mtime",
+	latestDeleted: "Seaweed-X-Amz-Latest-Version-Is-Delete-Marker",
+	nullIsLatest: "Seaweed-X-Amz-Null-Version-Is-Latest",
+} as const;
+
+/** An extended attribute as text (the filer base64-encodes them). */
+export function extended(raw: Raw, key: string): string {
+	const value = str(obj(raw.Extended)[key]);
+	return value ? Buffer.from(value, "base64").toString("utf8") : "";
+}
+
+/** The latest version file inside a `.versions` folder, or null when the object is deleted or not versioned. */
+export function latestVersionFile(versionsDir: Raw): string | null {
+	if (extended(versionsDir, EXT.latestDeleted) === "true" || extended(versionsDir, EXT.nullIsLatest))
+		return null;
+	return extended(versionsDir, EXT.latestFile) || null;
+}
+
+/**
+ * Maps one directory listing entry. A `<key>.versions` folder becomes the object `<key>` (the way S3
+ * presents it); a deleted object, or one whose plain file is current, is skipped.
+ */
+export function mapListEntry(raw: Raw): FileEntry | null {
+	const entry = mapEntry(raw);
+	if (!entry.isDirectory || !entry.name.endsWith(VERSIONS_SUFFIX) || !extended(raw, EXT.latestFile))
+		return entry;
+	if (!latestVersionFile(raw)) return null;
+	const etag = extended(raw, EXT.latestEtag);
+	const seconds = Number(extended(raw, EXT.latestMtime));
+	return {
+		...entry,
+		name: entry.name.slice(0, -VERSIONS_SUFFIX.length),
+		path: entry.path.slice(0, -VERSIONS_SUFFIX.length),
+		isDirectory: false,
+		size: Number(extended(raw, EXT.latestSize)) || 0,
+		modifiedAt: seconds > 0 ? new Date(seconds * 1000).toISOString() : entry.modifiedAt,
+		md5: /^[0-9a-f]{32}$/.test(etag) ? etag : null,
+		versionId: extended(raw, EXT.latestId) || null,
+	};
+}
+
+/** One version file inside a `.versions` folder. */
+export function mapVersion(raw: Raw, latestFile: string): ObjectVersion {
+	const entry = mapEntry(raw);
+	return {
+		versionId: entry.versionId ?? entry.name.replace(/^v_/, ""),
+		size: entry.size,
+		modifiedAt: entry.modifiedAt,
+		md5: entry.md5,
+		isLatest: entry.name === latestFile,
+		isDeleteMarker: extended(raw, EXT.deleteMarker) === "true",
+	};
+}
+
 export function mapEntry(raw: Raw): FileEntry {
 	const path = str(raw.FullPath);
 	const mode = num(raw.Mode);
@@ -165,11 +229,16 @@ export function mapEntry(raw: Raw): FileEntry {
 		md5: md5Hex(raw.Md5),
 		chunks: list(raw.chunks).length,
 		symlinkTarget: str(raw.SymlinkTarget) || null,
+		versionId: extended(raw, EXT.versionId) || null,
 	};
 }
 
 /** The filer prefix for user tags set with `?tagging`. */
 export const TAG_PREFIX = "Seaweed-";
+/** SeaweedFS's own S3 bookkeeping, which shares the tag prefix. */
+const S3_INTERNAL_PREFIX = "Seaweed-X-Amz-";
+/** Tags set through the S3 PutObjectTagging API. */
+const S3_TAG_PREFIX = "X-Amz-Tagging-";
 
 /** True when `text` holds ASCII control characters; tab, newline and carriage return pass when `allowWhitespace`. */
 export function hasControlCharacters(text: string, allowWhitespace = false): boolean {
@@ -200,10 +269,14 @@ function mapChunk(raw: Raw): FileChunk {
 
 export function mapDetails(raw: Raw): FileDetails {
 	const tags: Record<string, string> = {};
+	const s3Tags: Record<string, string> = {};
 	const attributes: Record<string, string> = {};
 	for (const [key, value] of Object.entries(obj(raw.Extended))) {
 		const decoded = decodeAttribute(str(value));
-		if (key.startsWith(TAG_PREFIX)) tags[key.slice(TAG_PREFIX.length)] = decoded;
+		if (key.startsWith(TAG_PREFIX) && !key.startsWith(S3_INTERNAL_PREFIX))
+			tags[key.slice(TAG_PREFIX.length)] = decoded;
+		else if (key.startsWith(S3_TAG_PREFIX) && key !== "X-Amz-Tagging-Directive")
+			s3Tags[key.slice(S3_TAG_PREFIX.length)] = decoded;
 		else attributes[key] = decoded;
 	}
 	return {
@@ -211,8 +284,10 @@ export function mapDetails(raw: Raw): FileDetails {
 		uid: num(raw.Uid),
 		gid: num(raw.Gid),
 		tags,
+		s3Tags,
 		attributes,
 		chunkList: list(raw.chunks).map(mapChunk),
 		remote: raw.Remote !== null && raw.Remote !== undefined,
+		versions: [],
 	};
 }
