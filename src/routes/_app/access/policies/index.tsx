@@ -11,7 +11,7 @@ import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/policies/")({
 	staticData: { section: "Access", title: "Policies" },
-	loader: ({ context }) => context.queryClient.prefetchQuery(accessQueries.policies()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(accessQueries.policies()),
 	component: PoliciesPage,
 });
 

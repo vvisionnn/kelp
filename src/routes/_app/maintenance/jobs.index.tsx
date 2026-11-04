@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_app/maintenance/jobs/")({
 	staticData: { section: "Operations", title: "Maintenance jobs" },
 	validateSearch: z.object({ jobType: z.string().optional(), state: z.enum(STATES).optional() }),
 	loaderDeps: ({ search }) => search,
-	loader: ({ context, deps }) => context.queryClient.prefetchQuery(maintenanceQueries.jobs(deps)),
+	loader: ({ context, deps }) => void context.queryClient.prefetchQuery(maintenanceQueries.jobs(deps)),
 	component: JobsPage,
 });
 

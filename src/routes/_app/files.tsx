@@ -8,7 +8,8 @@ export const Route = createFileRoute("/_app/files")({
 	staticData: { section: "Object store", title: "Files" },
 	validateSearch: z.object({ path: z.string().optional() }),
 	loaderDeps: ({ search }) => ({ path: search.path ?? "/" }),
-	loader: ({ context, deps }) => context.queryClient.prefetchInfiniteQuery(objectQueries.folder(deps.path)),
+	loader: ({ context, deps }) =>
+		void context.queryClient.prefetchInfiniteQuery(objectQueries.folder(deps.path)),
 	component: FilesPage,
 });
 

@@ -10,7 +10,7 @@ import { storageQueries } from "@/lib/storage-queries.ts";
 
 export const Route = createFileRoute("/_app/erasure-coding/")({
 	staticData: { section: "Storage", title: "Erasure coding" },
-	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: ErasureCodingPage,
 });
 

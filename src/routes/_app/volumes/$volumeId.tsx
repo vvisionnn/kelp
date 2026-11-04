@@ -34,7 +34,7 @@ import { collectionLabel, collectionParam, storageQueries, volumeHealth } from "
 
 export const Route = createFileRoute("/_app/volumes/$volumeId")({
 	staticData: { section: "Storage", title: "Volumes", crumb: ({ volumeId }) => `Volume ${volumeId}` },
-	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: VolumePage,
 });
 

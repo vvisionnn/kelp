@@ -15,7 +15,7 @@ import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/groups/$name")({
 	staticData: { section: "Access", title: "Groups" },
-	loader: ({ context, params }) => context.queryClient.prefetchQuery(accessQueries.group(params.name)),
+	loader: ({ context, params }) => void context.queryClient.prefetchQuery(accessQueries.group(params.name)),
 	component: GroupPage,
 });
 

@@ -24,7 +24,7 @@ type Tab = (typeof TABS)[number];
 export const Route = createFileRoute("/_app/cluster")({
 	staticData: { section: "Cluster", title: "Nodes" },
 	validateSearch: z.object({ tab: z.enum(TABS).optional() }),
-	loader: ({ context }) => context.queryClient.prefetchQuery(queries.topology()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(queries.topology()),
 	component: ClusterPage,
 });
 

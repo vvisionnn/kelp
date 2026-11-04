@@ -24,7 +24,8 @@
 		"release": "bun scripts/release.ts",
 		"routes": "tsr generate",
 		"build:server": "bun build server/main.ts --target bun --outfile build/server.js",
-		"compose:smoke": "bun scripts/compose-smoke.ts"
+		"compose:smoke": "bun scripts/compose-smoke.ts",
+		"review": "bun scripts/review.ts"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.9.0",

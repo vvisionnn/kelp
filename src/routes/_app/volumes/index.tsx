@@ -14,7 +14,7 @@ import { storageQueries, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-qu
 export const Route = createFileRoute("/_app/volumes/")({
 	staticData: { section: "Storage", title: "Volumes" },
 	validateSearch: z.object({ filter: z.enum(["all", "attention", "read-only", "vacuum"]).optional() }),
-	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: VolumesPage,
 });
 

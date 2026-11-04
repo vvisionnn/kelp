@@ -48,7 +48,7 @@ import { useCanWrite } from "@/lib/session.ts";
 export const Route = createFileRoute("/_app/access/service-accounts")({
 	staticData: { section: "Access", title: "Service accounts" },
 	validateSearch: z.object({ account: z.string().optional() }),
-	loader: ({ context }) => context.queryClient.prefetchQuery(accessQueries.serviceAccounts()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(accessQueries.serviceAccounts()),
 	component: ServiceAccountsPage,
 });
 

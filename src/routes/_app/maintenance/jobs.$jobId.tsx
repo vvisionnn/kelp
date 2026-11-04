@@ -40,7 +40,8 @@ export const Route = createFileRoute("/_app/maintenance/jobs/$jobId")({
 		title: "Maintenance job",
 		crumb: ({ jobId = "" }) => `Job ${jobId.slice(0, 8)}`,
 	},
-	loader: ({ context, params }) => context.queryClient.prefetchQuery(maintenanceQueries.job(params.jobId)),
+	loader: ({ context, params }) =>
+		void context.queryClient.prefetchQuery(maintenanceQueries.job(params.jobId)),
 	component: JobPage,
 });
 

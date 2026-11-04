@@ -18,7 +18,7 @@ import { queries } from "@/lib/queries.ts";
 
 export const Route = createFileRoute("/_app/")({
 	staticData: { title: "Overview" },
-	loader: ({ context }) => context.queryClient.prefetchQuery(queries.overview()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(queries.overview()),
 	component: OverviewPage,
 });
 
@@ -77,7 +77,7 @@ function OverviewPage() {
 						label="EC shards"
 						value={data.totalEcShards}
 						icon={<Blocks />}
-						hint={`${data.totalEcVolumes} encoded volumes`}
+						hint={`${data.totalEcVolumes} encoded ${data.totalEcVolumes === 1 ? "volume" : "volumes"}`}
 					/>
 					<StatTile
 						label="Mounts"

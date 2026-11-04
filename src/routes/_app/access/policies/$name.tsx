@@ -6,7 +6,7 @@ import { accessQueries, describeUsage } from "@/lib/access-queries.ts";
 
 export const Route = createFileRoute("/_app/access/policies/$name")({
 	staticData: { section: "Access", title: "Policies" },
-	loader: ({ context, params }) => context.queryClient.prefetchQuery(accessQueries.policy(params.name)),
+	loader: ({ context, params }) => void context.queryClient.prefetchQuery(accessQueries.policy(params.name)),
 	component: PolicyPage,
 });
 

@@ -13,7 +13,7 @@ import { collectionLabel, collectionParam, storageQueries } from "@/lib/storage-
 
 export const Route = createFileRoute("/_app/collections/")({
 	staticData: { section: "Storage", title: "Collections" },
-	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: CollectionsPage,
 });
 

@@ -4,27 +4,38 @@
  * users, keys, groups, policies and service accounts; storage activity (grown and frozen volumes,
  * an erasure-coded volume, vacuum history). Safe to re-run.
  *
- *   bun run seed                          # local stack (bun run stack) + Kelp on :3000
+ *   bun run seed [--offset N]             # local stack (bun run stack --broker) + Kelp on :3000
  *   bun run seed --kelp http://host:3000 --user admin --password … --s3 http://host:8333 \
  *     --access-key … --secret-key … --shell "docker compose exec -T seaweedfs weed shell"
  */
 
 import { parseArgs } from "node:util";
 import { S3Client } from "bun";
+import { createSampleTables } from "./iceberg-sample.ts";
 import { KelpClient } from "./seed/kelp-client.ts";
 import { SEED_BUCKETS, seedObjects } from "./seed/objects.ts";
-import { S3_CREDENTIALS, stackPorts } from "./stack-lib.ts";
+import { S3_CREDENTIALS, stackPorts, waitFor } from "./stack-lib.ts";
 
+const { values: base } = parseArgs({
+	options: { offset: { type: "string", default: "0" } },
+	strict: false,
+});
+const ports = stackPorts(Number(base.offset ?? 0));
 const { values } = parseArgs({
 	options: {
+		offset: { type: "string", default: "0" },
 		kelp: { type: "string", default: process.env.KELP_URL ?? "http://127.0.0.1:3000" },
 		user: { type: "string", default: process.env.KELP_ADMIN_USER ?? "admin" },
 		password: { type: "string", default: process.env.KELP_ADMIN_PASSWORD ?? "" },
-		s3: { type: "string", default: `http://127.0.0.1:${stackPorts().s3}` },
+		s3: { type: "string", default: `http://127.0.0.1:${ports.s3}` },
+		// The native admin, filer and Iceberg catalog, for writing sample Iceberg tables.
+		admin: { type: "string", default: `http://127.0.0.1:${ports.admin}` },
+		filer: { type: "string", default: `http://127.0.0.1:${ports.filer}` },
+		iceberg: { type: "string", default: `http://127.0.0.1:${ports.iceberg}` },
 		"access-key": { type: "string", default: S3_CREDENTIALS.accessKey },
 		"secret-key": { type: "string", default: S3_CREDENTIALS.secretKey },
 		// How to open `weed shell` against the cluster (for the one-off erasure coding step).
-		shell: { type: "string", default: `weed shell -master=127.0.0.1:${stackPorts().master}` },
+		shell: { type: "string", default: `weed shell -master=127.0.0.1:${ports.master}` },
 	},
 });
 
@@ -252,5 +263,62 @@ if (inventory.ecVolumes.length === 0) {
 }
 await kelp.post("/maintenance/job-types/vacuum/run").catch(() => undefined);
 done("collections, read-only volume, EC and vacuum run ready");
+
+// ---------------------------------------------------------------- messaging
+step("Messaging: topics with retention");
+const topics = [
+	{
+		namespace: "orders",
+		name: "created",
+		partitionCount: 6,
+		retention: { enabled: true, seconds: 7 * 86_400 },
+	},
+	{
+		namespace: "orders",
+		name: "shipped",
+		partitionCount: 4,
+		retention: { enabled: true, seconds: 30 * 86_400 },
+	},
+	{
+		namespace: "web",
+		name: "clickstream",
+		partitionCount: 12,
+		retention: { enabled: true, seconds: 86_400 },
+	},
+	{ namespace: "ops", name: "audit-log", partitionCount: 1, retention: { enabled: false, seconds: 0 } },
+];
+type Messaging = { brokers: unknown[]; leader: string | null };
+const messaging = await kelp.get<Messaging>("/messaging");
+if (messaging.brokers.length === 0) {
+	done("skipped: no message broker is running (start the stack with --broker)");
+} else {
+	// A fresh broker needs a little while to elect a leader before it accepts topics.
+	const elected = await waitFor(async () => (await kelp.get<Messaging>("/messaging")).leader !== null, {
+		timeoutMs: 120_000,
+		intervalMs: 1000,
+	});
+	if (!elected) throw new Error("The message broker did not elect a leader within two minutes");
+	for (const topic of topics) {
+		const create = () => kelp.ensure(() => kelp.post("/messaging/topics", topic));
+		// Right after the election the broker can still turn requests away; retry briefly, then
+		// make one last attempt that reports its real error.
+		const created = await waitFor(() => create().then(() => true), { timeoutMs: 60_000, intervalMs: 1000 });
+		if (!created) await create();
+	}
+	done(`${topics.length} topics`);
+}
+
+// ---------------------------------------------------------------- tables
+step("S3 Tables: an Iceberg warehouse with real data");
+await createSampleTables(
+	{
+		adminUrl: values.admin as string,
+		filerUrl: values.filer as string,
+		icebergUrl: values.iceberg as string,
+		credentials: { accessKey: values["access-key"] as string, secretKey: values["secret-key"] as string },
+	},
+	"warehouse",
+);
+done("warehouse bucket with sales, web and finance tables");
 
 console.log(`\nSeeded. Open ${values.kelp} and sign in as ${values.user}.`);

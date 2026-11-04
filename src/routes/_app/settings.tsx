@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/settings")({
 	staticData: { section: "Operations", title: "Settings" },
 	loader: ({ context }) =>
-		Promise.all([
+		void Promise.all([
 			context.queryClient.prefetchQuery(maintenanceQueries.systemConfig()),
 			context.queryClient.prefetchQuery(maintenanceQueries.kelpSettings()),
 		]),

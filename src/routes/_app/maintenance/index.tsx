@@ -32,7 +32,7 @@ import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
 export const Route = createFileRoute("/_app/maintenance/")({
 	staticData: { section: "Operations", title: "Maintenance" },
 	loader: ({ context }) =>
-		Promise.all([
+		void Promise.all([
 			context.queryClient.prefetchQuery(maintenanceQueries.overview()),
 			context.queryClient.prefetchQuery(maintenanceQueries.jobs()),
 		]),

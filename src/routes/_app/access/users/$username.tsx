@@ -23,7 +23,8 @@ import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/users/$username")({
 	staticData: { section: "Access", title: "Users" },
-	loader: ({ context, params }) => context.queryClient.prefetchQuery(accessQueries.user(params.username)),
+	loader: ({ context, params }) =>
+		void context.queryClient.prefetchQuery(accessQueries.user(params.username)),
 	component: UserPage,
 });
 

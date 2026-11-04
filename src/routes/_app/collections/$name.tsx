@@ -29,7 +29,7 @@ import {
 
 export const Route = createFileRoute("/_app/collections/$name")({
 	staticData: { section: "Storage", title: "Collections" },
-	loader: ({ context }) => context.queryClient.prefetchQuery(storageQueries.inventory()),
+	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: CollectionPage,
 });
 

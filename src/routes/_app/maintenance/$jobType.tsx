@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_app/maintenance/$jobType")({
 	},
 	validateSearch: z.object({ tab: z.enum(TABS).optional() }),
 	loader: ({ context, params }) =>
-		context.queryClient.prefetchQuery(maintenanceQueries.jobType(params.jobType)),
+		void context.queryClient.prefetchQuery(maintenanceQueries.jobType(params.jobType)),
 	component: JobTypePage,
 });
 

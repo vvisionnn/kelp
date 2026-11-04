@@ -22,7 +22,8 @@ type Tab = (typeof TABS)[number];
 export const Route = createFileRoute("/_app/buckets/$bucket")({
 	staticData: { section: "Object store", title: "Buckets" },
 	validateSearch: z.object({ tab: z.enum(TABS).optional(), path: z.string().optional() }),
-	loader: ({ context, params }) => context.queryClient.prefetchQuery(objectQueries.bucket(params.bucket)),
+	loader: ({ context, params }) =>
+		void context.queryClient.prefetchQuery(objectQueries.bucket(params.bucket)),
 	component: BucketPage,
 });
 
