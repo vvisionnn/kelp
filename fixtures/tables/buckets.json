@@ -1,0 +1,1 @@
+{"username":"","buckets":[{"arn":"arn:aws:s3tables:us-east-1:kelp-dev:bucket/analytics","name":"analytics","ownerAccountId":"kelp-dev","createdAt":"2026-11-04T22:15:19.579365+08:00","format":"ICEBERG","policy_statement_count":1}],"total_buckets":1,"iceberg_port":8181,"lance_port":9101,"last_updated":"2026-11-04T22:21:04.680824+08:00"}

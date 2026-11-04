@@ -43,6 +43,8 @@ export interface ClusterGrpc {
 	listClusterNodes(type: "filer" | "s3" | "broker"): Promise<ClusterNode[]>;
 	listMountClients(filers: Array<{ display: string; grpc: string }>): Promise<MountClient[]>;
 	listTopics(broker: string): Promise<Topic[]>;
+	/** The broker currently balancing partitions, asked of `broker` (addresses are gRPC addresses). */
+	findBrokerLeader(broker: string): Promise<string>;
 	close(): void;
 }
 
@@ -103,6 +105,11 @@ export class SeaweedGrpc implements ClusterGrpc {
 		return list(response.topics)
 			.map((t) => ({ namespace: str(t.namespace), name: str(t.name) }))
 			.sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`));
+	}
+
+	async findBrokerLeader(broker: string): Promise<string> {
+		const response = await this.call(broker, "broker", "FindBrokerLeader", {});
+		return str(response.broker);
 	}
 
 	close(): void {

@@ -1,0 +1,1 @@
+{"error":"Failed to get topic details: failed to get topic configuration: rpc error: code = Unknown desc = failed to read topic configuration: all filer connections failed, last error: filer: no entry is found in filer store"}

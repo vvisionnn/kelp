@@ -10,6 +10,8 @@ export interface FakeGrpc extends ClusterGrpc {
 	nodes: Record<"filer" | "s3" | "broker", Awaited<ReturnType<ClusterGrpc["listClusterNodes"]>>>;
 	mounts: Awaited<ReturnType<ClusterGrpc["listMountClients"]>>;
 	topics: Awaited<ReturnType<ClusterGrpc["listTopics"]>>;
+	/** Elected broker leader; null makes `findBrokerLeader` fail like a broker mid-election. */
+	brokerLeader: string | null;
 	failing: boolean;
 	calls: string[];
 }
@@ -23,6 +25,7 @@ export function fakeGrpc(): FakeGrpc {
 		},
 		mounts: [],
 		topics: [],
+		brokerLeader: null,
 		failing: false,
 		calls: [],
 		async listClusterNodes(type) {
@@ -37,6 +40,11 @@ export function fakeGrpc(): FakeGrpc {
 		async listTopics(broker) {
 			fake.calls.push(`topics:${broker}`);
 			return fake.topics;
+		},
+		async findBrokerLeader(broker) {
+			fake.calls.push(`leader:${broker}`);
+			if (!fake.brokerLeader) throw new Error("lock broker_balancer not found");
+			return fake.brokerLeader;
 		},
 		close() {},
 	};
