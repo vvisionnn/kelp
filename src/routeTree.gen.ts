@@ -13,6 +13,9 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppFilesRouteImport } from './routes/_app/files'
+import { Route as AppBucketsIndexRouteImport } from './routes/_app/buckets/index'
+import { Route as AppBucketsBucketRouteImport } from './routes/_app/buckets/$bucket'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,30 +36,63 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFilesRoute = AppFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBucketsIndexRoute = AppBucketsIndexRouteImport.update({
+  id: '/buckets/',
+  path: '/buckets/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBucketsBucketRoute = AppBucketsBucketRouteImport.update({
+  id: '/buckets/$bucket',
+  path: '/buckets/$bucket',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/files': typeof AppFilesRoute
+  '/buckets/$bucket': typeof AppBucketsBucketRoute
+  '/buckets/': typeof AppBucketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/files': typeof AppFilesRoute
   '/': typeof AppIndexRoute
+  '/buckets/$bucket': typeof AppBucketsBucketRoute
+  '/buckets': typeof AppBucketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
+  '/_app/files': typeof AppFilesRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/buckets/$bucket': typeof AppBucketsBucketRoute
+  '/_app/buckets/': typeof AppBucketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/cluster'
+  fullPaths:
+    '/' | '/login' | '/cluster' | '/files' | '/buckets/$bucket' | '/buckets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/cluster' | '/'
-  id: '__root__' | '/_app' | '/login' | '/_app/cluster' | '/_app/'
+  to: '/login' | '/cluster' | '/files' | '/' | '/buckets/$bucket' | '/buckets'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/cluster'
+    | '/_app/files'
+    | '/_app/'
+    | '/_app/buckets/$bucket'
+    | '/_app/buckets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,17 +130,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClusterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/files': {
+      id: '/_app/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof AppFilesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/buckets/': {
+      id: '/_app/buckets/'
+      path: '/buckets'
+      fullPath: '/buckets/'
+      preLoaderRoute: typeof AppBucketsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/buckets/$bucket': {
+      id: '/_app/buckets/$bucket'
+      path: '/buckets/$bucket'
+      fullPath: '/buckets/$bucket'
+      preLoaderRoute: typeof AppBucketsBucketRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
+  AppFilesRoute: typeof AppFilesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppBucketsBucketRoute: typeof AppBucketsBucketRoute
+  AppBucketsIndexRoute: typeof AppBucketsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
+  AppFilesRoute: AppFilesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppBucketsBucketRoute: AppBucketsBucketRoute,
+  AppBucketsIndexRoute: AppBucketsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
