@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Download, FileQuestion, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { AuroraCard, ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,7 +101,7 @@ function TextPreview({ file }: { file: FileDetails }) {
 	if (error) return <ErrorState error={error} />;
 	return (
 		<div className="grid gap-2">
-			<pre className="max-h-[50svh] overflow-auto rounded-lg bg-muted/60 p-3 font-mono text-xs leading-relaxed [font-variant-ligatures:none]">
+			<pre className="max-h-[50svh] overflow-auto rounded-md bg-background/80 p-4 backdrop-blur font-mono text-xs leading-relaxed [font-variant-ligatures:none]">
 				{formatText(data, file.name, complete)}
 			</pre>
 			{!complete && (
@@ -119,14 +119,18 @@ function Preview({ file }: { file: FileDetails }) {
 	switch (kind) {
 		case "image":
 			return (
-				<div className="flex justify-center rounded-lg bg-[repeating-conic-gradient(var(--muted)_0_25%,transparent_0_50%)] bg-[length:16px_16px] p-2">
-					<img src={src} alt={file.name} className="max-h-[50svh] max-w-full rounded object-contain" />
+				<div className="flex min-w-0 justify-center">
+					<img
+						src={src}
+						alt={file.name}
+						className="max-h-[50svh] min-w-0 max-w-full rounded-md bg-[repeating-conic-gradient(var(--muted)_0_25%,var(--card)_0_50%)] bg-[length:16px_16px] object-contain shadow-(--float-shadow)"
+					/>
 				</div>
 			);
 		case "video":
 			return (
 				// biome-ignore lint/a11y/useMediaCaption: stored files have no caption track to offer.
-				<video src={src} controls className="max-h-[50svh] w-full rounded-lg bg-black" />
+				<video src={src} controls className="max-h-[50svh] w-full rounded-md bg-black" />
 			);
 		case "audio":
 			return (
@@ -134,13 +138,15 @@ function Preview({ file }: { file: FileDetails }) {
 				<audio src={src} controls className="w-full" />
 			);
 		case "pdf":
-			return <iframe src={src} title={file.name} className="h-[60svh] w-full rounded-lg border" />;
+			return <iframe src={src} title={file.name} className="h-[60svh] w-full rounded-md bg-white" />;
 		case "text":
 			return <TextPreview file={file} />;
 		default:
 			return (
-				<div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center text-muted-foreground text-sm">
-					<FileQuestion className="size-5" />
+				<div className="flex flex-col items-center gap-3 px-4 py-10 text-center text-foreground/75 text-sm">
+					<span className="flex size-11 items-center justify-center rounded-full bg-background/60 backdrop-blur">
+						<FileQuestion className="size-5" />
+					</span>
 					Kelp cannot preview this type of file. Download it to open it.
 				</div>
 			);
@@ -236,8 +242,10 @@ function TagsEditor({ file }: { file: FileDetails }) {
 function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string | null | undefined }) {
 	const url = s3Url(s3Endpoint, file.path);
 	return (
-		<div className="grid gap-6 px-4 pb-6">
-			<Preview file={file} />
+		<div className="grid grid-cols-[minmax(0,1fr)] gap-6 px-4 pb-6">
+			<AuroraCard className="p-3 [--aurora-strength:0.45] dark:[--aurora-strength:0.8]">
+				<Preview file={file} />
+			</AuroraCard>
 			<div className="flex flex-wrap gap-2">
 				<Button render={<a href={contentUrl(file.path, true)} download={file.name} />}>
 					<Download />
@@ -246,7 +254,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			</div>
 			<section>
 				<h3 className="mb-1 font-medium text-sm">Properties</h3>
-				<dl className="divide-y">
+				<dl className="divide-y divide-hairline">
 					<Property label="Path">
 						<span className="flex min-w-0 items-start justify-between gap-1">
 							<span className="min-w-0 break-all font-mono text-xs">{file.path}</span>
@@ -288,7 +296,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 					<h3 id="versions-heading" className="mb-2 font-medium text-sm">
 						Versions
 					</h3>
-					<ol className="divide-y rounded-lg border text-xs">
+					<ol className="divide-y divide-hairline rounded-md bg-raised text-xs">
 						{file.versions.map((version) => (
 							<li key={version.versionId} className="flex items-center gap-3 px-3 py-2">
 								<span className="min-w-0 flex-1">
@@ -323,7 +331,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 					<h3 className="mb-2 font-medium text-sm">
 						Chunks <span className="text-muted-foreground">({file.chunkList.length})</span>
 					</h3>
-					<ul className="max-h-48 divide-y overflow-auto rounded-lg border text-xs">
+					<ul className="max-h-48 divide-y divide-hairline overflow-auto rounded-md bg-raised text-xs">
 						{file.chunkList.map((chunk) => (
 							<li key={chunk.fileId} className="flex items-center justify-between gap-3 px-3 py-1.5">
 								<span className="font-mono">{chunk.fileId}</span>
@@ -338,7 +346,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 			{Object.keys(file.attributes).length > 0 && (
 				<section>
 					<h3 className="mb-1 font-medium text-sm">Attributes</h3>
-					<dl className="divide-y">
+					<dl className="divide-y divide-hairline">
 						{Object.entries(file.attributes).map(([key, value]) => (
 							<Property key={key} label={key}>
 								<span className="break-all font-mono text-xs">{value}</span>
@@ -352,7 +360,7 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 					<h3 id="s3-tags-heading" className="mb-1 font-medium text-sm">
 						S3 object tags
 					</h3>
-					<dl className="divide-y">
+					<dl className="divide-y divide-hairline">
 						{Object.entries(file.s3Tags).map(([key, value]) => (
 							<Property key={key} label={key}>
 								{value}
@@ -379,7 +387,10 @@ export function FilePreviewSheet({ path, onClose }: { path: string | null; onClo
 	const name = path?.slice(path.lastIndexOf("/") + 1) ?? "";
 	return (
 		<Sheet open={path !== null} onOpenChange={(open) => !open && onClose()}>
-			<SheetContent className="w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-xl">
+			<SheetContent
+				data-area="objects"
+				className="w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-xl"
+			>
 				<SheetHeader className="flex-row items-center gap-3 pr-12">
 					<FileType type={getFileType(name)} size="sm" aria-hidden="true" />
 					<div className="min-w-0">
@@ -389,7 +400,7 @@ export function FilePreviewSheet({ path, onClose }: { path: string | null; onClo
 				</SheetHeader>
 				{isPending ? (
 					<div className="grid gap-3 px-4">
-						<SkeletonBlock className="h-56 rounded-lg" />
+						<SkeletonBlock className="h-56 rounded-2xl" />
 						<SkeletonBlock className="h-40 rounded-lg" />
 					</div>
 				) : error ? (

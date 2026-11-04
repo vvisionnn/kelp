@@ -438,7 +438,7 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 		invalidate: [objectKeys.bucket(bucket), objectKeys.buckets],
 	});
 
-	if (isPending) return <SkeletonBlock className="h-40 rounded-xl" />;
+	if (isPending) return <SkeletonBlock className="h-40 rounded-lg" />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
 
 	const dirty = JSON.stringify(rules) !== JSON.stringify(data);
@@ -481,12 +481,12 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 								initial={{ opacity: 0, y: 6 }}
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0, x: -12 }}
-								className="flex flex-wrap items-start gap-4 rounded-xl border bg-card p-4"
+								className="flex flex-wrap items-start gap-4 rounded-lg bg-card p-5"
 							>
 								<div className="grid min-w-0 flex-1 gap-1.5">
 									<div className="flex flex-wrap items-center gap-2">
-										<span className="font-medium">{rule.id || `Rule ${index + 1}`}</span>
-										<Badge variant={rule.enabled ? "secondary" : "outline"}>
+										<span className="font-medium text-[15px]">{rule.id || `Rule ${index + 1}`}</span>
+										<Badge variant={rule.enabled ? "area" : "outline"}>
 											{rule.enabled ? "Active" : "Paused"}
 										</Badge>
 									</div>
@@ -540,7 +540,7 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 8 }}
-						className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-popover px-4 py-3 shadow-lg"
+						className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-full bg-popover py-2 pr-2 pl-5 shadow-(--float-shadow)"
 					>
 						<span className="text-sm">You have unsaved rule changes.</span>
 						<div className="flex gap-2">

@@ -84,9 +84,9 @@ function OwnerPanel({ bucket }: { bucket: Bucket }) {
 function Fact({ label, value, note }: { label: string; value: string; note: string }) {
 	return (
 		<div className="grid gap-0.5">
-			<dt className="text-muted-foreground text-xs">{label}</dt>
-			<dd className="font-medium text-sm">{value}</dd>
-			<dd className="text-muted-foreground text-xs">{note}</dd>
+			<dt className="text-[13px] text-muted-foreground">{label}</dt>
+			<dd className="mt-1 font-[450] text-2xl tracking-[-0.02em]">{value}</dd>
+			<dd className="text-[13px] text-muted-foreground">{note}</dd>
 		</div>
 	);
 }

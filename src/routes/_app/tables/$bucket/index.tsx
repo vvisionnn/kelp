@@ -1,9 +1,19 @@
 import type { TableBucketDetail, TableNamespace, TableSummary } from "@shared/tables.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
+import { ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
-import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { CopyButton } from "@/components/kelp/copy-button.tsx";
+import {
+	AuroraCard,
+	EmptyState,
+	ErrorState,
+	PageHeader,
+	Panel,
+	Reveal,
+	SkeletonBlock,
+	StatBand,
+} from "@/components/kelp/page.tsx";
 import { CreateNamespaceDialog, CreateTableDialog } from "@/components/kelp/tables/create-dialogs.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
@@ -41,12 +51,7 @@ function BucketPage() {
 		<>
 			<PageHeader
 				title={bucket}
-				description={
-					<Link to="/tables" className="inline-flex items-center gap-1 hover:text-foreground">
-						<ArrowLeft className="size-3.5" />
-						All table buckets
-					</Link>
-				}
+				description="Namespaces and the Iceberg tables in them, with the rules that guard them."
 				actions={
 					canWrite && data ? (
 						<>
@@ -59,8 +64,8 @@ function BucketPage() {
 			/>
 			{isPending ? (
 				<div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]" role="status" aria-label="Loading table bucket">
-					<SkeletonBlock className="h-80 rounded-xl" />
-					<SkeletonBlock className="h-80 rounded-xl" />
+					<SkeletonBlock className="h-80 rounded-lg" />
+					<SkeletonBlock className="h-80 rounded-2xl" />
 				</div>
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
@@ -94,8 +99,20 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 	});
 
 	return (
-		<Reveal className="grid items-start gap-4 lg:grid-cols-[1.5fr_1fr]">
+		<Reveal className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
 			<div className="space-y-4">
+				<StatBand
+					className="mb-8"
+					stats={[
+						{ label: "Namespaces", value: detail.namespaces.length },
+						{ label: "Tables", value: detail.tables.length },
+						{
+							label: "With data",
+							value: detail.tables.filter((t) => t.metadataLocation).length,
+							hint: "Tables an engine has written",
+						},
+					]}
+				/>
 				{groups.length === 0 ? (
 					<EmptyState
 						icon={<FolderOpen />}
@@ -114,16 +131,19 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 				)}
 			</div>
 			<div className="space-y-4">
-				<Panel title="Details">
-					<dl className="grid grid-cols-[6rem_1fr] gap-y-2 text-sm">
-						<dt className="text-muted-foreground">Owner</dt>
+				<AuroraCard className="p-7">
+					<span className="text-[13px] text-foreground/70">Warehouse</span>
+					<p className="mt-8 flex items-center gap-1 break-all font-mono text-2xl tracking-tight">
+						s3://{name}
+						<CopyButton value={`s3://${name}`} label="Copy warehouse" />
+					</p>
+					<dl className="mt-6 grid grid-cols-[4rem_1fr] gap-y-1.5 text-[13px]">
+						<dt className="text-foreground/65">Owner</dt>
 						<dd>{detail.bucket.owner || "admin"}</dd>
-						<dt className="text-muted-foreground">Warehouse</dt>
-						<dd className="font-mono">s3://{name}</dd>
-						<dt className="text-muted-foreground">ARN</dt>
+						<dt className="text-foreground/65">ARN</dt>
 						<dd className="break-all font-mono text-xs">{detail.bucket.arn}</dd>
 					</dl>
-				</Panel>
+				</AuroraCard>
 				<Panel title="Tags">
 					<TagsEditor tags={detail.tags} canEdit={canWrite} onSave={(tags) => saveTags.mutateAsync(tags)} />
 				</Panel>
@@ -158,12 +178,12 @@ function NamespaceSection({
 		invalidate: [["tables", "bucket", bucket]],
 	});
 	return (
-		<section className="rounded-xl border bg-card" aria-label={`Namespace ${namespace}`}>
-			<header className="flex items-center justify-between gap-3 border-b px-5 py-3">
-				<h2 className="flex items-center gap-2 font-medium text-sm">
-					<FolderOpen className="size-4 text-muted-foreground" />
+		<section className="rounded-lg bg-card" aria-label={`Namespace ${namespace}`}>
+			<header className="flex items-center justify-between gap-3 px-6 pt-5 pb-4 hairline-b">
+				<h2 className="flex items-center gap-2.5 font-medium text-[15px]">
+					<FolderOpen className="size-4 text-area" />
 					<span className="font-mono">{namespace}</span>
-					<span className="text-muted-foreground text-xs tabular">
+					<span className="text-[13px] text-muted-foreground tabular">
 						{tables.length} {tables.length === 1 ? "table" : "tables"}
 					</span>
 				</h2>
@@ -183,15 +203,15 @@ function NamespaceSection({
 				)}
 			</header>
 			{tables.length ? (
-				<ul className="divide-y">
+				<ul className="divide-y divide-hairline">
 					{tables.map((table) => (
 						<li key={table.arn}>
 							<Link
 								to="/tables/$bucket/$namespace/$table"
 								params={{ bucket, namespace, table: table.name }}
-								className="group flex items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-muted/50"
+								className="group flex items-center gap-3 px-6 py-3.5 text-sm transition-colors last:rounded-b-lg hover:bg-raised"
 							>
-								<Table2 className="size-4 text-primary" />
+								<Table2 className="size-4 text-area" />
 								<span className="font-mono">{table.name}</span>
 								{table.metadataLocation ? (
 									<Badge variant="secondary">{table.format.toLowerCase()}</Badge>
@@ -207,7 +227,7 @@ function NamespaceSection({
 					))}
 				</ul>
 			) : (
-				<p className="px-5 py-4 text-muted-foreground text-sm">No tables in this namespace yet.</p>
+				<p className="px-6 py-5 text-muted-foreground text-sm">No tables in this namespace yet.</p>
 			)}
 		</section>
 	);

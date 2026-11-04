@@ -1,18 +1,20 @@
 import type { DataFileInfo, IcebergSnapshot, IcebergTable, TableDetail } from "@shared/tables.ts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Camera, Database, FileStack, HardDrive, Rows3, Trash2 } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Camera, Database, Rows3, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
+import { BackPill, Facts } from "@/components/kelp/objects/showcase.tsx";
 import {
+	AuroraCard,
 	EmptyState,
 	ErrorState,
+	Metric,
 	PageHeader,
 	Panel,
 	Reveal,
 	SkeletonBlock,
-	StatTile,
 } from "@/components/kelp/page.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { SchemaTree } from "@/components/kelp/tables/schema-tree.tsx";
@@ -68,30 +70,23 @@ function TablePage() {
 	const canWrite = useCanWrite();
 	return (
 		<>
+			<BackPill to="/tables/$bucket" params={{ bucket }}>
+				<span className="font-mono">{bucket}</span>
+			</BackPill>
 			<PageHeader
 				title={`${namespace}.${table}`}
-				description={
-					<Link
-						to="/tables/$bucket"
-						params={{ bucket }}
-						className="inline-flex items-center gap-1 hover:text-foreground"
-					>
-						<ArrowLeft className="size-3.5" />
-						<span className="font-mono">{bucket}</span>
-					</Link>
-				}
+				description={`An Iceberg table in the ${namespace} namespace.`}
 				actions={
 					canWrite && data ? <DeleteTable bucket={bucket} namespace={namespace} table={table} /> : null
 				}
 			/>
 			{isPending ? (
 				<div className="space-y-6" role="status" aria-label="Loading table">
-					<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-						{[0, 1, 2, 3].map((i) => (
-							<SkeletonBlock key={i} className="h-24 rounded-xl" />
-						))}
+					<div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+						<SkeletonBlock className="h-72 rounded-2xl" />
+						<SkeletonBlock className="h-72 rounded-lg" />
 					</div>
-					<SkeletonBlock className="h-80 rounded-xl" />
+					<SkeletonBlock className="h-80 rounded-lg" />
 				</div>
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
@@ -113,19 +108,13 @@ function TableBody({ detail }: { detail: TableDetail }) {
 					<AlertDescription>{detail.metadataError}</AlertDescription>
 				</Alert>
 			)}
-			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				<StatTile label="Records" value={iceberg?.metrics.records ?? 0} icon={<Rows3 />} />
-				<StatTile label="Data files" value={iceberg?.metrics.dataFiles ?? 0} icon={<FileStack />} />
-				<StatTile
-					label="Size"
-					value={iceberg?.metrics.totalSize ?? 0}
-					format={formatBytes}
-					icon={<HardDrive />}
-				/>
-				<StatTile label="Snapshots" value={iceberg?.snapshots.length ?? 0} icon={<Camera />} />
-			</div>
-			<Tabs value={tab} onValueChange={(value) => navigate({ search: (s) => ({ ...s, tab: value as Tab }) })}>
-				<TabsList variant="line" className="mb-4 flex-wrap">
+			<TableHero detail={detail} />
+			<Tabs
+				value={tab}
+				className="pt-6"
+				onValueChange={(value) => navigate({ search: (s) => ({ ...s, tab: value as Tab }) })}
+			>
+				<TabsList className="mb-6 max-w-full justify-start overflow-x-auto">
 					<TabsTrigger value="schema">Schema</TabsTrigger>
 					<TabsTrigger value="data">Data</TabsTrigger>
 					<TabsTrigger value="snapshots">Snapshots</TabsTrigger>
@@ -152,6 +141,73 @@ function TableBody({ detail }: { detail: TableDetail }) {
 	);
 }
 
+/** The table at a glance: its rows in the aurora, the history as a strand of snapshots, and the facts. */
+function TableHero({ detail }: { detail: TableDetail }) {
+	const iceberg = detail.iceberg;
+	const metrics = iceberg?.metrics;
+	const snapshots = iceberg?.snapshots ?? [];
+	const latest = snapshots[0];
+	return (
+		<div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+			<AuroraCard className="flex min-h-72 flex-col p-7 sm:p-8">
+				<span className="text-[13px] text-foreground/70">Records</span>
+				<p className="mt-auto pt-12 font-[450] text-5xl leading-none tracking-[-0.04em] sm:text-6xl">
+					<Metric value={metrics?.records ?? 0} />
+				</p>
+				<p className="mt-4 text-[15px] text-foreground/75">
+					{latest
+						? `Last ${latest.operation} ${formatRelative(latest.timestamp)}.`
+						: "No engine has written to this table yet."}
+				</p>
+				{snapshots.length > 0 && <SnapshotStrand snapshots={snapshots} />}
+			</AuroraCard>
+			<Panel>
+				<Facts
+					items={[
+						{ label: "Data files", value: formatCount(metrics?.dataFiles ?? 0) },
+						{ label: "Size", value: formatBytes(metrics?.totalSize ?? 0) },
+						{ label: "Snapshots", value: formatCount(snapshots.length) },
+						{ label: "Columns", value: formatCount(iceberg?.fields.length ?? 0) },
+						{
+							label: "Partitioned by",
+							value: iceberg?.partition.length
+								? iceberg.partition.map((p) => p.sourceName).join(", ")
+								: "Nothing",
+							mono: Boolean(iceberg?.partition.length),
+						},
+					]}
+				/>
+			</Panel>
+		</div>
+	);
+}
+
+/** Every snapshot as a bead on one line, oldest on the left; the live one glows. */
+function SnapshotStrand({ snapshots }: { snapshots: IcebergSnapshot[] }) {
+	const ordered = [...snapshots].reverse();
+	return (
+		<div
+			role="img"
+			aria-label={`${snapshots.length} ${snapshots.length === 1 ? "snapshot" : "snapshots"}, oldest first`}
+			className="relative mt-8 flex h-4 items-center justify-between"
+		>
+			<span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-foreground/25" />
+			{ordered.map((snapshot) => (
+				<span
+					key={snapshot.id}
+					title={`${snapshot.operation}, ${formatRelative(snapshot.timestamp)}`}
+					className={cn(
+						"relative rounded-full",
+						snapshot.current
+							? "size-3.5 bg-foreground shadow-[0_0_0_4px_color-mix(in_oklab,var(--foreground)_18%,transparent)]"
+							: "size-2 bg-foreground/60",
+					)}
+				/>
+			))}
+		</div>
+	);
+}
+
 function SchemaTab({ iceberg }: { iceberg: IcebergTable | null }) {
 	if (!iceberg) {
 		return (
@@ -163,7 +219,7 @@ function SchemaTab({ iceberg }: { iceberg: IcebergTable | null }) {
 		);
 	}
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-[1.6fr_1fr]">
+		<div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
 			<Panel
 				title="Columns"
 				description={
@@ -281,7 +337,7 @@ function DataTab({ detail }: { detail: TableDetail }) {
 				}
 				actions={
 					preview.isFetching && !preview.isPending ? (
-						<span className="tide h-1 w-16 rounded-full bg-primary/30" />
+						<span className="tide h-1 w-16 rounded-full bg-area/30" />
 					) : null
 				}
 			>
@@ -327,8 +383,8 @@ function FileList({
 							onClick={() => onSelect(f.path)}
 							aria-current={f.path === selected}
 							className={cn(
-								"w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-muted",
-								f.path === selected && "bg-primary/10 ring-1 ring-primary/30",
+								"w-full rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-raised",
+								f.path === selected && "bg-area/10 ring-1 ring-area/40 ring-inset hover:bg-area/15",
 							)}
 						>
 							<span className="block truncate font-mono text-xs">{f.path.split("/").pop()}</span>
@@ -351,12 +407,15 @@ function FileList({
 
 function RowsGrid({ columns, rows }: { columns: string[]; rows: Array<Array<string | null>> }) {
 	return (
-		<div className="max-h-[32rem] overflow-auto rounded-lg border">
+		<div className="-mx-6 -mb-6 max-h-[32rem] overflow-auto">
 			<table className="w-full text-sm">
-				<thead className="sticky top-0 bg-muted">
-					<tr>
+				<thead className="sticky top-0 bg-card">
+					<tr className="hairline-b">
 						{columns.map((c) => (
-							<th key={c} className="whitespace-nowrap px-3 py-2 text-left font-medium font-mono text-xs">
+							<th
+								key={c}
+								className="whitespace-nowrap px-6 py-2.5 text-left font-mono font-normal text-[13px] text-muted-foreground"
+							>
 								{c}
 							</th>
 						))}
@@ -365,13 +424,13 @@ function RowsGrid({ columns, rows }: { columns: string[]; rows: Array<Array<stri
 				<tbody>
 					{rows.map((row, index) => (
 						// biome-ignore lint/suspicious/noArrayIndexKey: preview rows have no identity; order is fixed.
-						<tr key={index} className="border-t">
+						<tr key={index} className="hairline-b transition-colors last:border-0 hover:bg-raised">
 							{row.map((value, column) => (
 								<td
 									// biome-ignore lint/suspicious/noArrayIndexKey: cells are positional.
 									key={column}
 									className={cn(
-										"whitespace-nowrap px-3 py-1.5 font-mono text-xs",
+										"whitespace-nowrap px-6 py-2 font-mono text-xs",
 										value === null && "text-muted-foreground",
 									)}
 								>
@@ -430,7 +489,7 @@ function SnapshotsTab({ iceberg }: { iceberg: IcebergTable | null }) {
 							<TimelineTitle className="flex flex-wrap items-center gap-2">
 								<span className="capitalize">{snapshot.operation}</span>
 								<span className="font-mono text-muted-foreground text-xs">{snapshot.id}</span>
-								{snapshot.current && <Badge>current</Badge>}
+								{snapshot.current && <Badge variant="area">current</Badge>}
 							</TimelineTitle>
 							<TimelineIndicator />
 						</TimelineHeader>

@@ -79,7 +79,9 @@ describe("files page", () => {
 		expect(screen.getByText("expires")).toBeTruthy();
 
 		const crumbs = screen.getByRole("navigation", { name: "Folder path" });
-		expect(within(crumbs).getByText("kelp").getAttribute("aria-current")).toBe("page");
+		expect(within(crumbs).getByText("kelp").closest("[aria-current]")?.getAttribute("aria-current")).toBe(
+			"page",
+		);
 		fireEvent.click(within(crumbs).getByRole("button", { name: "All files" }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({}));
 	});
