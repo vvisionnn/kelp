@@ -1,11 +1,11 @@
 import type { StorageInventory } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Database, Eraser, HardDrive, Lock, TriangleAlert } from "lucide-react";
 import { z } from "zod";
-import { PageHeader, Reveal, StatTile } from "@/components/kelp/page.tsx";
+import { AuroraCard, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog, VacuumClusterDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
+import { Band, HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import { VolumeSkyline } from "@/components/kelp/storage/visuals.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -56,51 +56,53 @@ function VolumesPage() {
 			/>
 			{data ? (
 				<Reveal>
-					<Tiles>
-						<StatTile
-							label="Volumes"
-							value={data.volumes.length}
-							icon={<HardDrive />}
-							hint={`${formatCount(freeSlots)} free slots`}
+					{data.volumes.length > 0 && (
+						<AuroraCard className="p-7 sm:p-9">
+							<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+								<p className="flex items-baseline gap-3">
+									<span className="font-[450] text-5xl leading-none tracking-[-0.04em]">
+										{formatBytes(stored)}
+									</span>
+									<span className="text-foreground/70">stored across the fleet</span>
+								</p>
+								<p className="text-[13px] text-foreground/70">Each bar is one volume</p>
+							</div>
+							<VolumeSkyline volumes={data.volumes} limit={data.volumeSizeLimitBytes} className="mt-10" />
+						</AuroraCard>
+					)}
+					<Band>
+						<StatBand
+							stats={[
+								{
+									label: "Volumes",
+									value: data.volumes.length,
+									hint: `${formatCount(freeSlots)} free slots`,
+								},
+								{ label: "Files", value: data.totals.files, hint: `in ${formatBytes(stored)}` },
+								{
+									label: "Reclaimable",
+									value: garbage,
+									format: formatBytes,
+									hint:
+										needsVacuum > 0
+											? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
+											: `${formatPercent(ratio(garbage, stored))} of stored bytes`,
+								},
+								{ label: "Needs attention", value: attention, hint: `${readOnly} read-only` },
+							]}
 						/>
-						<StatTile
-							label="Stored"
-							value={stored}
-							format={formatBytes}
-							icon={<Database />}
-							hint={`${formatCount(data.totals.files)} files`}
-						/>
-						<StatTile
-							label="Reclaimable"
-							value={garbage}
-							format={formatBytes}
-							icon={<Eraser />}
-							hint={
-								needsVacuum > 0
-									? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
-									: `${formatPercent(ratio(garbage, stored))} of stored bytes`
-							}
-						/>
-						<StatTile
-							label="Needs attention"
-							value={attention}
-							icon={attention > 0 ? <TriangleAlert /> : <Lock />}
-							hint={`${readOnly} read-only`}
-						/>
-					</Tiles>
+					</Band>
 				</Reveal>
 			) : (
-				!error && <TilesSkeleton />
+				!error && <HeroSkeleton />
 			)}
-			<div className="mt-6">
-				<VolumeTable
-					volumes={volumes}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					{...(filter ? { initialFilter: filter } : {})}
-				/>
-			</div>
+			<VolumeTable
+				volumes={volumes}
+				isLoading={isPending}
+				error={error}
+				onRetry={() => refetch()}
+				{...(filter ? { initialFilter: filter } : {})}
+			/>
 		</>
 	);
 }

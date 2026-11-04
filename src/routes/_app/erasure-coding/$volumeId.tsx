@@ -1,20 +1,19 @@
 import type { EcPlacement } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Blocks, FileStack, HardDrive, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Blocks } from "lucide-react";
 import { useMemo } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
+	AuroraCard,
 	EmptyState,
 	ErrorState,
 	PageHeader,
-	Panel,
 	Reveal,
-	SkeletonBlock,
-	StatTile,
+	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
+import { Band, PageSkeleton, SectionTitle } from "@/components/kelp/storage/common.tsx";
 import { ecHealth, shardCounts } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ServerLegend, ShardMap, serverFill, shardRanges } from "@/components/kelp/storage/shard-map.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
@@ -40,7 +39,7 @@ function placementColumns(palette: Map<string, number>): Array<Column<EcPlacemen
 					<div>
 						<p className="font-mono">{row.original.server}</p>
 						<p className="text-muted-foreground text-xs">
-							{row.original.dataCenter} / {row.original.rack} · {row.original.diskType} #{row.original.diskId}
+							{row.original.dataCenter} / {row.original.rack}, {row.original.diskType} #{row.original.diskId}
 						</p>
 					</div>
 				</div>
@@ -75,14 +74,7 @@ function EcVolumePage() {
 	const palette = useMemo(() => serverPalette([...counts.keys()]), [counts]);
 
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data) {
-		return (
-			<>
-				<SkeletonBlock className="mt-2 mb-6 h-8 w-48" />
-				<TilesSkeleton />
-			</>
-		);
-	}
+	if (!data) return <PageSkeleton />;
 	if (!ec) {
 		const plain = data.volumes.some((v) => v.id === Number(volumeId));
 		return (
@@ -125,7 +117,7 @@ function EcVolumePage() {
 							<Link
 								to="/collections/$name"
 								params={{ name: collectionParam(ec.collection) }}
-								className="font-medium text-foreground hover:underline"
+								className="font-medium text-foreground underline decoration-foreground/20 underline-offset-4 hover:decoration-foreground"
 							>
 								{collectionLabel(ec.collection)}
 							</Link>{" "}
@@ -135,7 +127,7 @@ function EcVolumePage() {
 				}
 			/>
 			{ec.missingShards.length > 0 && (
-				<Alert variant="destructive" className="mb-6">
+				<Alert variant="destructive" className="mb-8 rounded-2xl">
 					<AlertTitle>
 						{ec.missingShards.length} {ec.missingShards.length === 1 ? "shard is" : "shards are"} missing
 					</AlertTitle>
@@ -147,48 +139,16 @@ function EcVolumePage() {
 				</Alert>
 			)}
 			<Reveal>
-				<Tiles>
-					<StatTile label="Stored" value={ec.size} format={formatBytes} icon={<HardDrive />} />
-					<StatTile
-						label="Shards present"
-						value={ec.presentShards.length}
-						icon={<ShieldCheck />}
-						hint={`of ${ec.totalShards}`}
-					/>
-					{ec.fileCount > 0 || ec.deleteCount > 0 ? (
-						<StatTile
-							label="Files"
-							value={ec.fileCount}
-							icon={<FileStack />}
-							hint={`${formatCount(ec.deleteCount)} deleted`}
-						/>
-					) : (
-						<StatTile
-							label="Files"
-							value={0}
-							format={() => "—"}
-							icon={<FileStack />}
-							hint="SeaweedFS does not count files in encoded volumes"
-						/>
-					)}
-					<StatTile
-						label="Servers"
-						value={ec.placements.length}
-						icon={<Blocks />}
-						hint={ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires"}
-					/>
-				</Tiles>
-			</Reveal>
-			<div className="mt-6 space-y-6">
-				<Panel
-					title="Shard map"
-					description={
-						ec.dataShards > 0
-							? `${ec.dataShards} data shards and ${ec.parityShards} parity shards. Hover a shard to see where it lives.`
-							: `${ec.totalShards} shards. Hover a shard to see where it lives.`
-					}
-				>
-					<div className="space-y-5 overflow-x-auto">
+				<AuroraCard className="p-7 sm:p-9">
+					<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+						<h2 className="font-medium text-[15px]">Shard map</h2>
+						<p className="text-[13px] text-foreground/70">
+							{ec.dataShards > 0
+								? `${ec.dataShards} data shards and ${ec.parityShards} parity shards. Hover a shard to see where it lives.`
+								: `${ec.totalShards} shards. Hover a shard to see where it lives.`}
+						</p>
+					</div>
+					<div className="mt-10 space-y-8 overflow-x-auto">
 						<ShardMap ec={ec} palette={palette} size="lg" />
 						<ServerLegend
 							palette={palette}
@@ -197,16 +157,38 @@ function EcVolumePage() {
 							showParity={ec.dataShards > 0}
 						/>
 					</div>
-				</Panel>
-				<Panel title="Servers">
-					<DataTable
-						data={ec.placements}
-						columns={placementColumns(palette)}
-						getRowId={(p) => `${p.server}-${p.diskId}`}
-						empty={null}
+				</AuroraCard>
+				<Band>
+					<StatBand
+						stats={[
+							{ label: "Stored", value: ec.size, format: formatBytes },
+							{ label: "Shards present", value: ec.presentShards.length, hint: `of ${ec.totalShards}` },
+							ec.fileCount > 0 || ec.deleteCount > 0
+								? { label: "Files", value: ec.fileCount, hint: `${formatCount(ec.deleteCount)} deleted` }
+								: {
+										label: "Files",
+										value: 0,
+										format: () => "—",
+										hint: "SeaweedFS does not count files in encoded volumes",
+									},
+							{
+								label: "Servers",
+								value: ec.placements.length,
+								hint: ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires",
+							},
+						]}
 					/>
-				</Panel>
-			</div>
+				</Band>
+			</Reveal>
+			<section>
+				<SectionTitle title="Servers" description="Where each shard is stored." />
+				<DataTable
+					data={ec.placements}
+					columns={placementColumns(palette)}
+					getRowId={(p) => `${p.server}-${p.diskId}`}
+					empty={null}
+				/>
+			</section>
 		</>
 	);
 }

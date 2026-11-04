@@ -1,22 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Blocks, FileStack, HardDrive, Layers, Trash2 } from "lucide-react";
+import { ArrowLeft, Layers, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
-import {
-	EmptyState,
-	ErrorState,
-	PageHeader,
-	Panel,
-	Reveal,
-	SkeletonBlock,
-	StatTile,
-} from "@/components/kelp/page.tsx";
+import { AuroraCard, EmptyState, ErrorState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Tiles, TilesSkeleton } from "@/components/kelp/storage/common.tsx";
+import { Band, PageSkeleton, SectionTitle } from "@/components/kelp/storage/common.tsx";
 import { EcVolumeList } from "@/components/kelp/storage/ec-volume-list.tsx";
+import { ShareBar } from "@/components/kelp/storage/visuals.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { Button } from "@/components/ui/button";
-import { formatBytes, formatCount } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import {
@@ -44,7 +37,7 @@ function DeleteCollection({ name }: { name: string }) {
 	return (
 		<ConfirmDialog
 			trigger={
-				<Button size="sm" variant="destructive">
+				<Button variant="destructive">
 					<Trash2 />
 					Delete collection
 				</Button>
@@ -66,14 +59,7 @@ function CollectionPage() {
 	const { data, error, refetch } = useQuery(storageQueries.inventory());
 
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data) {
-		return (
-			<>
-				<SkeletonBlock className="mt-2 mb-6 h-8 w-48" />
-				<TilesSkeleton />
-			</>
-		);
-	}
+	if (!data) return <PageSkeleton />;
 	const collection = data.collections.find((c) => c.name === name);
 	if (!collection) {
 		return (
@@ -93,13 +79,16 @@ function CollectionPage() {
 	const volumes = data.volumes.filter((v) => v.collection === name);
 	const ecVolumes = data.ecVolumes.filter((v) => v.collection === name);
 
+	const clusterBytes = data.collections.reduce((sum, c) => sum + c.size, 0);
+	const share = ratio(collection.size, clusterBytes);
+
 	return (
 		<>
 			<PageHeader
 				title={collectionLabel(name)}
 				description={
 					name
-						? `${collection.servers.length} ${collection.servers.length === 1 ? "server" : "servers"} hold this collection.`
+						? `${collection.servers.length} ${collection.servers.length === 1 ? "server holds" : "servers hold"} this collection.`
 						: "Data written without a collection lands here. It cannot be deleted as a whole."
 				}
 				actions={
@@ -112,28 +101,44 @@ function CollectionPage() {
 				}
 			/>
 			<Reveal>
-				<Tiles>
-					<StatTile label="Stored" value={collection.size} format={formatBytes} icon={<HardDrive />} />
-					<StatTile
-						label="Files"
-						value={collection.fileCount}
-						icon={<FileStack />}
-						hint={`${formatCount(collection.deleteCount)} deleted`}
+				<AuroraCard className="p-7 sm:p-9">
+					<div className="flex items-center justify-between text-[13px] text-foreground/70">
+						<span>Share of the cluster</span>
+						<span>{formatBytes(clusterBytes)} stored in total</span>
+					</div>
+					<p className="mt-10 flex flex-wrap items-baseline gap-x-3">
+						<span className="font-[450] text-6xl leading-none tracking-[-0.045em]">
+							{formatPercent(share)}
+						</span>
+						<span className="text-foreground/70">of every stored byte lives here</span>
+					</p>
+					<ShareBar fraction={share} />
+				</AuroraCard>
+				<Band>
+					<StatBand
+						stats={[
+							{ label: "Stored", value: collection.size, format: formatBytes },
+							{
+								label: "Files",
+								value: collection.fileCount,
+								hint: `${formatCount(collection.deleteCount)} deleted`,
+							},
+							{ label: "Volumes", value: collection.volumeCount },
+							{ label: "Erasure coded", value: collection.ecVolumeCount, hint: "volumes" },
+						]}
 					/>
-					<StatTile label="Volumes" value={collection.volumeCount} icon={<HardDrive />} />
-					<StatTile label="Erasure coded" value={collection.ecVolumeCount} icon={<Blocks />} hint="volumes" />
-				</Tiles>
+				</Band>
 			</Reveal>
-			<div className="mt-6 space-y-6">
-				<Panel title="Volumes">
-					<VolumeTable volumes={volumes} showCollection={false} />
-				</Panel>
-				{ecVolumes.length > 0 && (
-					<Panel title="Erasure-coded volumes">
-						<EcVolumeList ecVolumes={ecVolumes} showCollection={false} />
-					</Panel>
-				)}
-			</div>
+			<section>
+				<SectionTitle title="Volumes" />
+				<VolumeTable volumes={volumes} showCollection={false} />
+			</section>
+			{ecVolumes.length > 0 && (
+				<section className="mt-16">
+					<SectionTitle title="Erasure-coded volumes" />
+					<EcVolumeList ecVolumes={ecVolumes} showCollection={false} />
+				</section>
+			)}
 		</>
 	);
 }

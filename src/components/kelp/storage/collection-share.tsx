@@ -7,7 +7,7 @@ import { collectionLabel } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
 
 const FILLS = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4"];
-const OTHER = "bg-muted-foreground/40";
+const OTHER = "bg-foreground/30";
 
 export interface ShareSegment {
 	key: string;
@@ -51,12 +51,12 @@ export function CollectionShare({ collections }: { collections: StorageCollectio
 	const reduced = usePrefersReducedMotion();
 	const segments = shareSegments(collections);
 	if (segments.length === 0) {
-		return <p className="text-muted-foreground text-sm">Nothing stored yet.</p>;
+		return <p className="text-foreground/70 text-sm">Nothing stored yet.</p>;
 	}
 	return (
 		<div>
 			<div
-				className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full"
+				className="flex h-4 w-full gap-[2px] overflow-hidden rounded-full"
 				role="img"
 				aria-label="Share of stored bytes by collection"
 			>
@@ -82,12 +82,12 @@ export function CollectionShare({ collections }: { collections: StorageCollectio
 					</Tooltip>
 				))}
 			</div>
-			<ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+			<ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
 				{segments.map((segment) => (
 					<li key={segment.key} className="flex items-center gap-2">
 						<span className={cn("size-2.5 rounded-[3px]", segment.fill)} />
 						<span>{segment.label}</span>
-						<span className="text-muted-foreground tabular">{formatPercent(segment.fraction)}</span>
+						<span className="text-foreground/60 tabular">{formatPercent(segment.fraction)}</span>
 					</li>
 				))}
 			</ul>
