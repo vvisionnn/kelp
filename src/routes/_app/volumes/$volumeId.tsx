@@ -2,19 +2,20 @@ import type { StorageVolume, VolumeReplica } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Eraser, HardDrive, Lock, LockOpen } from "lucide-react";
-import type { ReactNode } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
 	EmptyState,
 	ErrorState,
-	Metric,
+	InfoList,
 	PageHeader,
 	Reveal,
+	Section,
+	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
 import { describeReplication } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Facts, PageSkeleton, SectionTitle } from "@/components/kelp/storage/common.tsx";
+import { PageSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
 import { FillGauge } from "@/components/kelp/storage/visuals.tsx";
 import { useVolumeActions } from "@/components/kelp/storage/volume-actions.ts";
 import { Button } from "@/components/ui/button";
@@ -192,7 +193,7 @@ function VolumePage() {
 							<Link
 								to="/collections/$name"
 								params={{ name: collectionParam(volume.collection) }}
-								className="font-medium text-foreground underline decoration-foreground/20 underline-offset-4 hover:decoration-foreground"
+								className="text-primary hover:underline"
 							>
 								{collectionLabel(volume.collection)}
 							</Link>{" "}
@@ -202,89 +203,62 @@ function VolumePage() {
 				}
 				actions={canWrite && <VolumeActions volume={volume} />}
 			/>
-			<Reveal className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-				<AuroraCard className="p-7 sm:p-9">
-					<div className="flex items-center justify-between text-[13px] text-foreground/70">
-						<span>Fill</span>
-						<span>
-							{formatPercent(volume.fullness)} of {formatBytes(data.volumeSizeLimitBytes)}
-						</span>
-					</div>
-					<p className="mt-10 font-[450] text-6xl leading-none tracking-[-0.045em]">
-						{formatBytes(volume.size)}
-					</p>
-					<div className="mt-8">
-						<FillGauge size={volume.size} deleted={volume.deletedBytes} limit={data.volumeSizeLimitBytes} />
-					</div>
-				</AuroraCard>
-				<dl className="grid grid-cols-2 content-between gap-x-6 gap-y-8 rounded-2xl bg-card p-7 sm:p-9">
-					<Figure
-						label="Files"
-						value={<Metric value={volume.fileCount} />}
-						hint={`${formatCount(volume.deleteCount)} deleted`}
-					/>
-					<Figure
-						label="Reclaimable"
-						value={formatBytes(volume.deletedBytes)}
-						hint={`${formatPercent(volume.garbageRatio)} garbage`}
-					/>
-					<Figure
-						label="Copies"
-						value={<Metric value={volume.replicas.length} />}
-						hint={`${volume.expectedReplicas} expected`}
-					/>
-					<Figure
-						label="Compactions"
-						value={<Metric value={volume.replicas[0]?.compactRevision ?? 0} />}
-						hint="Vacuums so far"
-					/>
-				</dl>
-			</Reveal>
-			<div className="mt-10">
-				<Facts
-					items={[
-						[
-							"Replication",
-							<span key="r" title={describeReplication(volume.replication)}>
-								<span className="font-mono">{volume.replication}</span>
-								<span className="block text-muted-foreground text-xs">
-									{describeReplication(volume.replication)}
-								</span>
-							</span>,
-						],
-						["Time to live", volume.ttl || "Keep forever"],
-						["Disk type", volume.diskType],
-						["Format", `Version ${volume.version}`],
-						["Last write", formatDateTime(volume.modifiedAt)],
-						["Remote tier", volume.replicas.find((r) => r.remoteStorage)?.remoteStorage || "None"],
+			<Reveal>
+				<StatBand
+					stats={[
+						{ label: "Files", value: volume.fileCount, hint: `${formatCount(volume.deleteCount)} deleted` },
+						{
+							label: "Reclaimable",
+							value: volume.deletedBytes,
+							format: formatBytes,
+							hint: `${formatPercent(volume.garbageRatio)} garbage`,
+						},
+						{ label: "Copies", value: volume.replicas.length, hint: `${volume.expectedReplicas} expected` },
+						{ label: "Compactions", value: volume.replicas[0]?.compactRevision ?? 0, hint: "Vacuums so far" },
 					]}
 				/>
+			</Reveal>
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section title="Fill" className="mt-0 min-w-0 lg:col-span-8">
+					<AuroraCard className="p-4">
+						<SheetCaption title={<span className="metric text-[20px]">{formatBytes(volume.size)}</span>}>
+							{formatPercent(volume.fullness)} of the {formatBytes(data.volumeSizeLimitBytes)} limit
+						</SheetCaption>
+						<div className="mt-3">
+							<FillGauge size={volume.size} deleted={volume.deletedBytes} limit={data.volumeSizeLimitBytes} />
+						</div>
+					</AuroraCard>
+				</Section>
+				<Section title="Details" className="mt-0 lg:col-span-4">
+					<InfoList
+						items={[
+							{ label: "Replication", value: <span className="font-mono">{volume.replication}</span> },
+							{ label: "Time to live", value: volume.ttl || "Keep forever" },
+							{ label: "Disk type", value: volume.diskType },
+							{ label: "Format", value: `Version ${volume.version}` },
+							{ label: "Last write", value: formatDateTime(volume.modifiedAt) },
+							{
+								label: "Remote tier",
+								value: volume.replicas.find((r) => r.remoteStorage)?.remoteStorage || "None",
+							},
+						]}
+					/>
+					<p className="mt-2 px-4 text-[12px] text-muted-foreground">
+						{describeReplication(volume.replication)}
+					</p>
+				</Section>
 			</div>
-			<section className="mt-16">
-				<SectionTitle
-					title="Copies"
-					description="Each server holding this volume. Turn off writes on a copy to freeze it."
-				/>
+			<Section
+				title="Copies"
+				description="Each server holding this volume. Turn off writes on a copy to freeze it."
+			>
 				<DataTable
 					data={volume.replicas}
 					columns={replicaColumns(volume, canWrite)}
 					getRowId={(r) => `${r.server}-${r.diskId}`}
 					empty={null}
 				/>
-			</section>
+			</Section>
 		</>
-	);
-}
-
-/** A number in the facts card: label, big value, a line of context. */
-function Figure({ label, value, hint }: { label: string; value: ReactNode; hint: string }) {
-	return (
-		<div className="flex flex-col-reverse justify-end gap-2">
-			<dt className="text-[13px] text-muted-foreground">
-				{label}
-				<span className="block text-foreground/40">{hint}</span>
-			</dt>
-			<dd className="font-[450] text-[32px] leading-none tracking-[-0.03em]">{value}</dd>
-		</div>
 	);
 }

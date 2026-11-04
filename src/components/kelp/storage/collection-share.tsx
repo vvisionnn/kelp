@@ -6,8 +6,8 @@ import { formatBytes, formatPercent, ratio } from "@/lib/format.ts";
 import { collectionLabel } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
 
-const FILLS = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4"];
-const OTHER = "bg-foreground/30";
+const FILLS = ["bg-data-1", "bg-data-2", "bg-data-3", "bg-data-4"];
+const OTHER = "bg-[rgb(120_120_128/0.45)]";
 
 export interface ShareSegment {
 	key: string;
@@ -51,16 +51,16 @@ export function CollectionShare({ collections }: { collections: StorageCollectio
 	const reduced = usePrefersReducedMotion();
 	const segments = shareSegments(collections);
 	if (segments.length === 0) {
-		return <p className="text-foreground/70 text-sm">Nothing stored yet.</p>;
+		return <p className="text-[13px] text-muted-foreground">Nothing stored yet.</p>;
 	}
 	return (
 		<div>
 			<div
-				className="flex h-4 w-full gap-[2px] overflow-hidden rounded-full"
+				className="flex h-2.5 w-full gap-[2px] overflow-hidden rounded-full"
 				role="img"
 				aria-label="Share of stored bytes by collection"
 			>
-				{segments.map((segment, index) => (
+				{segments.map((segment) => (
 					<Tooltip key={segment.key}>
 						<TooltipTrigger
 							render={
@@ -69,10 +69,10 @@ export function CollectionShare({ collections }: { collections: StorageCollectio
 										"block h-full min-w-1 first:rounded-l-full last:rounded-r-full",
 										segment.fill,
 									)}
-									initial={reduced ? false : { flexGrow: 0 }}
+									initial={false}
 									animate={{ flexGrow: segment.fraction }}
 									style={{ flexBasis: 0 }}
-									transition={{ duration: 0.7, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+									transition={reduced ? { duration: 0 } : { duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
 								/>
 							}
 						/>
@@ -82,12 +82,12 @@ export function CollectionShare({ collections }: { collections: StorageCollectio
 					</Tooltip>
 				))}
 			</div>
-			<ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[13px]">
+			<ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[12px]">
 				{segments.map((segment) => (
-					<li key={segment.key} className="flex items-center gap-2">
-						<span className={cn("size-2.5 rounded-[3px]", segment.fill)} />
+					<li key={segment.key} className="flex items-center gap-1.5">
+						<span className={cn("size-2 rounded-[2px]", segment.fill)} />
 						<span>{segment.label}</span>
-						<span className="text-foreground/60 tabular">{formatPercent(segment.fraction)}</span>
+						<span className="text-muted-foreground tabular">{formatPercent(segment.fraction)}</span>
 					</li>
 				))}
 			</ul>

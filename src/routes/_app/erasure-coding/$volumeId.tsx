@@ -10,10 +10,11 @@ import {
 	ErrorState,
 	PageHeader,
 	Reveal,
+	Section,
 	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { Band, PageSkeleton, SectionTitle } from "@/components/kelp/storage/common.tsx";
+import { PageSkeleton } from "@/components/kelp/storage/common.tsx";
 import { ecHealth, shardCounts } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ServerLegend, ShardMap, serverFill, shardRanges } from "@/components/kelp/storage/shard-map.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
@@ -117,7 +118,7 @@ function EcVolumePage() {
 							<Link
 								to="/collections/$name"
 								params={{ name: collectionParam(ec.collection) }}
-								className="font-medium text-foreground underline decoration-foreground/20 underline-offset-4 hover:decoration-foreground"
+								className="text-primary hover:underline"
 							>
 								{collectionLabel(ec.collection)}
 							</Link>{" "}
@@ -127,7 +128,7 @@ function EcVolumePage() {
 				}
 			/>
 			{ec.missingShards.length > 0 && (
-				<Alert variant="destructive" className="mb-8 rounded-2xl">
+				<Alert variant="destructive" className="mb-6 rounded-xl">
 					<AlertTitle>
 						{ec.missingShards.length} {ec.missingShards.length === 1 ? "shard is" : "shards are"} missing
 					</AlertTitle>
@@ -139,56 +140,52 @@ function EcVolumePage() {
 				</Alert>
 			)}
 			<Reveal>
-				<AuroraCard className="p-7 sm:p-9">
-					<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-						<h2 className="font-medium text-[15px]">Shard map</h2>
-						<p className="text-[13px] text-foreground/70">
-							{ec.dataShards > 0
-								? `${ec.dataShards} data shards and ${ec.parityShards} parity shards. Hover a shard to see where it lives.`
-								: `${ec.totalShards} shards. Hover a shard to see where it lives.`}
-						</p>
-					</div>
-					<div className="mt-10 space-y-8 overflow-x-auto">
-						<ShardMap ec={ec} palette={palette} size="lg" />
-						<ServerLegend
-							palette={palette}
-							counts={counts}
-							showMissing={ec.missingShards.length > 0}
-							showParity={ec.dataShards > 0}
-						/>
-					</div>
-				</AuroraCard>
-				<Band>
-					<StatBand
-						stats={[
-							{ label: "Stored", value: ec.size, format: formatBytes },
-							{ label: "Shards present", value: ec.presentShards.length, hint: `of ${ec.totalShards}` },
-							ec.fileCount > 0 || ec.deleteCount > 0
-								? { label: "Files", value: ec.fileCount, hint: `${formatCount(ec.deleteCount)} deleted` }
-								: {
-										label: "Files",
-										value: 0,
-										format: () => "—",
-										hint: "SeaweedFS does not count files in encoded volumes",
-									},
-							{
-								label: "Servers",
-								value: ec.placements.length,
-								hint: ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires",
-							},
-						]}
-					/>
-				</Band>
+				<StatBand
+					stats={[
+						{ label: "Stored", value: ec.size, format: formatBytes },
+						{ label: "Shards present", value: ec.presentShards.length, hint: `of ${ec.totalShards}` },
+						ec.fileCount > 0 || ec.deleteCount > 0
+							? { label: "Files", value: ec.fileCount, hint: `${formatCount(ec.deleteCount)} deleted` }
+							: {
+									label: "Files",
+									value: 0,
+									format: () => "—",
+									hint: "SeaweedFS does not count files in encoded volumes",
+								},
+						{
+							label: "Servers",
+							value: ec.placements.length,
+							hint: ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires",
+						},
+					]}
+				/>
 			</Reveal>
-			<section>
-				<SectionTitle title="Servers" description="Where each shard is stored." />
+			<Section
+				title="Shard map"
+				description={
+					ec.dataShards > 0
+						? `${ec.dataShards} data shards and ${ec.parityShards} parity shards. Hover a shard to see where it lives.`
+						: `${ec.totalShards} shards. Hover a shard to see where it lives.`
+				}
+			>
+				<AuroraCard className="space-y-4 overflow-x-auto p-4">
+					<ShardMap ec={ec} palette={palette} size="lg" />
+					<ServerLegend
+						palette={palette}
+						counts={counts}
+						showMissing={ec.missingShards.length > 0}
+						showParity={ec.dataShards > 0}
+					/>
+				</AuroraCard>
+			</Section>
+			<Section title="Servers" description="Where each shard is stored.">
 				<DataTable
 					data={ec.placements}
 					columns={placementColumns(palette)}
 					getRowId={(p) => `${p.server}-${p.diskId}`}
 					empty={null}
 				/>
-			</section>
+			</Section>
 		</>
 	);
 }

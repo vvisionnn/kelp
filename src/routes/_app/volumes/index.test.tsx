@@ -11,6 +11,12 @@ function rowFor(id: number) {
 	return link.closest("tr") as HTMLElement;
 }
 
+/** Picks a segment of a segmented control the way a pointer does: press on it, release on the track. */
+function pickSegment(segment: HTMLElement) {
+	fireEvent.pointerDown(segment, { pointerId: 1, button: 0 });
+	fireEvent.pointerUp(segment.closest("[role=radiogroup]") as HTMLElement, { pointerId: 1, button: 0 });
+}
+
 describe("volumes page", () => {
 	test("sizes up the fleet and lists every volume", async () => {
 		const inventory = await realInventory();
@@ -29,12 +35,12 @@ describe("volumes page", () => {
 		expect(within(rowFor(3)).getByText("Read-only")).toBeTruthy();
 		expect(within(rowFor(2)).getByText("Needs vacuum")).toBeTruthy();
 
-		fireEvent.click(screen.getByRole("button", { name: "Needs vacuum" }));
+		pickSegment(screen.getByRole("radio", { name: "Needs vacuum" }));
 		expect(screen.queryByRole("link", { name: "3" })).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "Read-only" }));
+		pickSegment(screen.getByRole("radio", { name: "Read-only" }));
 		expect(screen.getByRole("link", { name: "3" })).toBeTruthy();
 		expect(screen.queryByRole("link", { name: "2" })).toBeNull();
-		fireEvent.click(screen.getByRole("button", { name: "All" }));
+		pickSegment(screen.getByRole("radio", { name: "All" }));
 		expect(screen.getByRole("link", { name: "6" })).toBeTruthy();
 
 		fireEvent.click(rowFor(6));
@@ -104,9 +110,9 @@ describe("volumes page", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "Vacuum cluster" }));
 		const dialog = await screen.findByRole("dialog");
 		expect(within(dialog).getByText("1 volume qualify, about 5 MiB to reclaim.")).toBeTruthy();
-		fireEvent.click(within(dialog).getByRole("button", { name: "50%" }));
+		pickSegment(within(dialog).getByRole("radio", { name: "50%" }));
 		expect(within(dialog).getByText("1 volume qualify, about 5 MiB to reclaim.")).toBeTruthy();
-		fireEvent.click(within(dialog).getByRole("button", { name: "1%" }));
+		pickSegment(within(dialog).getByRole("radio", { name: "1%" }));
 		fireEvent.click(within(dialog).getByRole("button", { name: "Vacuum cluster" }));
 		expect(await screen.findByText("Cluster vacuumed")).toBeTruthy();
 		expect(app.api.last("POST", "/storage/vacuum")?.body).toEqual({ garbageThreshold: 0.01 });

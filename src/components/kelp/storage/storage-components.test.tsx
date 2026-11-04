@@ -56,9 +56,9 @@ describe("storage helpers", () => {
 	test("server colors are stable and fold past five", () => {
 		const palette = serverPalette(["f", "b", "a", "e", "d", "c", "a"]);
 		expect([...palette.keys()]).toEqual(["a", "b", "c", "d", "e", "f"]);
-		expect(serverFill(palette, "a")).toBe("bg-chart-1");
-		expect(serverFill(palette, "f")).toBe("bg-muted-foreground/45");
-		expect(serverFill(palette, "unknown")).toBe("bg-muted-foreground/45");
+		expect(serverFill(palette, "a")).toBe("bg-data-1");
+		expect(serverFill(palette, "f")).toBe("bg-[rgb(120_120_128/0.45)]");
+		expect(serverFill(palette, "unknown")).toBe("bg-[rgb(120_120_128/0.45)]");
 	});
 
 	test("shard helpers", () => {
@@ -73,7 +73,7 @@ describe("storage helpers", () => {
 	test("share segments keep colors by name and fold the rest into Other", () => {
 		const segments = shareSegments(busyInventory().collections);
 		expect(segments).toHaveLength(5);
-		expect(segments.at(-1)).toMatchObject({ key: "~other", fill: "bg-foreground/30" });
+		expect(segments.at(-1)).toMatchObject({ key: "~other", fill: "bg-[rgb(120_120_128/0.45)]" });
 		expect(new Set(segments.slice(0, 4).map((s) => s.fill)).size).toBe(4);
 		expect(shareSegments([])).toEqual([]);
 	});

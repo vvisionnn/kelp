@@ -29,6 +29,11 @@ export const Route = createFileRoute("/_app/cluster")({
 	component: ClusterPage,
 });
 
+/** Tabs drawn as a segmented control (DESIGN.md), scrolling sideways on narrow screens. */
+const SEGMENTED_TABS = "mb-4 h-8 max-w-full justify-start overflow-x-auto rounded-lg bg-secondary p-0.5";
+const SEGMENT =
+	"h-7 flex-none rounded-md px-3 text-[13px] text-foreground/80 data-active:bg-[var(--thumb)] data-active:text-foreground data-active:shadow-[0_1px_3px_rgb(0_0_0/0.12)]";
+
 function ClusterPage() {
 	const { tab = "masters" } = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
@@ -36,17 +41,33 @@ function ClusterPage() {
 		<>
 			<PageHeader title="Nodes" description="Every process that makes up your SeaweedFS cluster." />
 			<Reveal>
-				<TopologyMap />
 				<NodeCounts />
+				<TopologyMap />
 			</Reveal>
-			<Tabs value={tab} onValueChange={(value) => navigate({ search: { tab: value as Tab } })}>
-				<TabsList variant="line" className="mb-6 max-w-full justify-start overflow-x-auto">
-					<TabsTrigger value="masters">Masters</TabsTrigger>
-					<TabsTrigger value="volume-servers">Volume servers</TabsTrigger>
-					<TabsTrigger value="filers">Filers</TabsTrigger>
-					<TabsTrigger value="s3">S3 gateways</TabsTrigger>
-					<TabsTrigger value="brokers">Message brokers</TabsTrigger>
-					<TabsTrigger value="mounts">Mounts</TabsTrigger>
+			<Tabs
+				value={tab}
+				onValueChange={(value) => navigate({ search: { tab: value as Tab } })}
+				className="mt-8"
+			>
+				<TabsList className={SEGMENTED_TABS}>
+					<TabsTrigger className={SEGMENT} value="masters">
+						Masters
+					</TabsTrigger>
+					<TabsTrigger className={SEGMENT} value="volume-servers">
+						Volume servers
+					</TabsTrigger>
+					<TabsTrigger className={SEGMENT} value="filers">
+						Filers
+					</TabsTrigger>
+					<TabsTrigger className={SEGMENT} value="s3">
+						S3 gateways
+					</TabsTrigger>
+					<TabsTrigger className={SEGMENT} value="brokers">
+						Message brokers
+					</TabsTrigger>
+					<TabsTrigger className={SEGMENT} value="mounts">
+						Mounts
+					</TabsTrigger>
 				</TabsList>
 				<TabsContent value="masters">
 					<MastersTab />
@@ -75,71 +96,69 @@ function ClusterPage() {
 	);
 }
 
-/** How many of each process the cluster runs, as the page's stat band. */
+/** How many of each process the cluster runs, as a row of widgets. */
 function NodeCounts() {
 	const { data } = useQuery(queries.overview());
-	if (!data) return <div className="my-10" />;
+	if (!data) return <SkeletonBlock className="h-[88px] rounded-xl" />;
 	return (
-		<div className="hairline-t hairline-b my-10 py-8">
-			<StatBand
-				stats={[
-					{ label: "Masters", value: data.masters.length },
-					{ label: "Volume servers", value: data.volumeServers.length },
-					{ label: "Filers", value: data.filers.length },
-					{ label: "S3 gateways", value: data.s3Gateways.length },
-					{ label: "Message brokers", value: data.brokers.length },
-					{ label: "Mounts", value: data.totalMountClients },
-				]}
-			/>
-		</div>
+		<StatBand
+			className="sm:grid-cols-3 lg:grid-cols-6"
+			stats={[
+				{ label: "Masters", value: data.masters.length },
+				{ label: "Volume servers", value: data.volumeServers.length },
+				{ label: "Filers", value: data.filers.length },
+				{ label: "S3 gateways", value: data.s3Gateways.length },
+				{ label: "Message brokers", value: data.brokers.length },
+				{ label: "Mounts", value: data.totalMountClients },
+			]}
+		/>
 	);
 }
 
 /**
- * The cluster's shape on its aurora: data centers side by side, racks inside them, and every volume
- * server as a glass tile with its live fill level.
+ * The cluster's shape: data centers side by side, racks inside them, and every volume server as a
+ * row with its live fill level.
  */
 export function TopologyMap() {
 	const { data, isPending, error } = useQuery(queries.topology());
-	if (isPending) return <SkeletonBlock className="h-64 rounded-2xl" />;
+	if (isPending) return <SkeletonBlock className="mt-3 h-44 rounded-xl" />;
 	if (error) return null;
 	const racks = data.reduce((sum, dc) => sum + dc.racks.length, 0);
 	return (
-		<AuroraCard className="p-7 sm:p-9">
-			<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 text-[13px] text-foreground/70">
-				<h2>Topology</h2>
-				<p>
+		<AuroraCard className="mt-3 p-4">
+			<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+				<h2 className="font-semibold text-[13px]">Topology</h2>
+				<p className="text-[12px] text-muted-foreground">
 					{data.length} {data.length === 1 ? "data center" : "data centers"}, {racks}{" "}
 					{racks === 1 ? "rack" : "racks"}
 				</p>
 			</div>
-			<div className="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+			<div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 				{data.map((dc: TopologyDataCenter) => (
-					<section key={dc.id}>
-						<h3 className="font-[450] text-2xl tracking-[-0.02em]">{dc.id}</h3>
-						<p className="text-[13px] text-foreground/70">
-							{dc.racks.length} {dc.racks.length === 1 ? "rack" : "racks"}
-						</p>
-						<div className="mt-5 space-y-5">
+					<section key={dc.id} className="min-w-0">
+						<h3 className="font-medium text-[13px]">{dc.id}</h3>
+						<div className="mt-2 space-y-3">
 							{dc.racks.map((rack) => (
 								<div key={rack.id}>
-									<p className="mb-2 text-[13px] text-foreground/70">{rack.id}</p>
-									<ul className="space-y-2">
+									<p className="mb-1 text-[12px] text-muted-foreground">{rack.id}</p>
+									<ul className="space-y-1">
 										{rack.nodes.map((node) => (
-											<li key={node.id} className="rounded-xl bg-background/55 px-4 py-3 backdrop-blur-md">
-												<div className="flex items-center justify-between gap-2 text-sm">
-													<span className="flex min-w-0 items-center gap-2">
-														<Server className="size-3.5 shrink-0 text-foreground/60" />
+											<li key={node.id} className="rounded-lg bg-raised px-3 py-2">
+												<div className="flex items-center justify-between gap-2 text-[13px]">
+													<span className="flex min-w-0 items-center gap-1.5">
+														<Server className="size-3.5 shrink-0 text-muted-foreground" />
 														<span className="truncate font-mono">{node.address}</span>
 													</span>
-													<span className="shrink-0 text-[13px] text-foreground/70 tabular">
+													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
 														{formatCount(node.volumes)} volumes
 													</span>
 												</div>
-												<CapacityBar used={node.diskUsage} total={node.diskCapacity} className="mt-3" />
-												<p className="mt-1.5 text-right text-foreground/60 text-xs tabular">
-													{formatBytes(node.diskUsage)} of {formatBytes(node.diskCapacity)}
-												</p>
+												<div className="mt-2 flex items-center gap-3">
+													<CapacityBar used={node.diskUsage} total={node.diskCapacity} />
+													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
+														{formatBytes(node.diskUsage)} of {formatBytes(node.diskCapacity)}
+													</span>
+												</div>
 											</li>
 										))}
 									</ul>
@@ -158,7 +177,7 @@ function MastersTab() {
 	return (
 		<div className="space-y-3">
 			{data && (
-				<p className="text-[15px] text-muted-foreground">
+				<p className="text-[13px] text-muted-foreground">
 					Leader <span className="font-mono text-foreground">{data.leader}</span>. Highest volume id{" "}
 					{formatCount(data.maxVolumeId)}.
 				</p>
@@ -206,7 +225,7 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 		cell: ({ row }) => (
 			<div>
 				<p className="font-mono">{row.original.address}</p>
-				<p className="text-muted-foreground text-xs">
+				<p className="text-[12px] text-muted-foreground">
 					{row.original.dataCenter} / {row.original.rack}
 				</p>
 			</div>
@@ -234,7 +253,7 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 		cell: ({ row }) => (
 			<div className="w-40">
 				<CapacityBar used={row.original.diskUsage} total={row.original.diskCapacity} />
-				<p className="mt-1 text-muted-foreground text-xs tabular">
+				<p className="mt-1 text-[12px] text-muted-foreground tabular">
 					{formatBytes(row.original.diskUsage)} / {formatBytes(row.original.diskCapacity)}
 				</p>
 			</div>
@@ -244,13 +263,15 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 	{
 		accessorKey: "version",
 		header: "Version",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.version.split(" ")[0] || "—"}</span>,
+		cell: ({ row }) => (
+			<span className="font-mono text-[12px]">{row.original.version.split(" ")[0] || "—"}</span>
+		),
 	},
 	{
 		accessorKey: "lastHeartbeat",
 		header: "Heartbeat",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.lastHeartbeat)}</span>
+			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.lastHeartbeat)}</span>
 		),
 	},
 ];
@@ -299,7 +320,7 @@ const nodeColumns: Array<Column<ClusterNode>> = [
 		accessorKey: "createdAt",
 		header: "Joined",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.createdAt)}</span>
+			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.createdAt)}</span>
 		),
 	},
 ];
@@ -346,13 +367,13 @@ const mountColumns: Array<Column<MountClient>> = [
 	{
 		accessorKey: "filer",
 		header: "Filer",
-		cell: ({ row }) => <span className="font-mono text-xs">{row.original.filer}</span>,
+		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.filer}</span>,
 	},
 	{
 		accessorKey: "connectedAt",
 		header: "Connected",
 		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.connectedAt)}</span>
+			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.connectedAt)}</span>
 		),
 	},
 ];

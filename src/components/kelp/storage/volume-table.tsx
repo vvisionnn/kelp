@@ -2,6 +2,7 @@ import type { StorageVolume } from "@shared/storage.ts";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eraser, HardDrive, Lock, LockOpen, MoreHorizontal } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, StatusDot } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
@@ -13,12 +14,10 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatBytes, formatCount, formatPercent, formatRelative } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
-import { PRESSED } from "./common.tsx";
 import { useVolumeActions } from "./volume-actions.ts";
 
 export type VolumeFilter = "all" | "attention" | "read-only" | "vacuum";
@@ -244,18 +243,15 @@ export function VolumeTable({
 			onRowClick={(v) => navigate({ to: "/volumes/$volumeId", params: { volumeId: String(v.id) } })}
 			toolbar={
 				<>
-					<ToggleGroup
-						size="sm"
-						value={[filter]}
-						onValueChange={(value) => setFilter((value[0] as VolumeFilter | undefined) ?? "all")}
-						aria-label="Filter volumes"
-					>
-						{FILTERS.map((f) => (
-							<ToggleGroupItem key={f.value} value={f.value} className={PRESSED}>
-								{f.label}
-							</ToggleGroupItem>
-						))}
-					</ToggleGroup>
+					<div className="max-w-[calc(100vw-2rem)] overflow-x-auto lg:max-w-none">
+						<Segmented
+							label="Filter volumes"
+							items={FILTERS}
+							value={filter}
+							onChange={setFilter}
+							className="w-max"
+						/>
+					</div>
 					{toolbar}
 				</>
 			}

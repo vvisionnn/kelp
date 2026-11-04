@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Layers } from "lucide-react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { AuroraCard, EmptyState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { AuroraCard, EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
 import { CollectionShare } from "@/components/kelp/storage/collection-share.tsx";
+import { HeroSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -79,11 +80,11 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 					</Badge>
 				))}
 				{row.original.diskTypes.map((d) => (
-					<Badge key={d} variant="area">
+					<Badge key={d} variant="secondary">
 						{d}
 					</Badge>
 				))}
-				<span className="text-muted-foreground text-xs">
+				<span className="text-[12px] text-muted-foreground">
 					{row.original.servers.length} {row.original.servers.length === 1 ? "server" : "servers"}
 				</span>
 			</div>
@@ -102,36 +103,34 @@ function CollectionsPage() {
 		<>
 			<PageHeader
 				title="Collections"
-				description="Collections group volumes so their data can be sized, placed and deleted together. Every S3 bucket stores into its own collection."
+				description="Groups of volumes sized, placed and deleted together. Every S3 bucket stores into its own."
 				actions={canWrite && <GrowVolumesDialog inventory={data} />}
 			/>
 			{data ? (
 				<Reveal>
-					<AuroraCard className="p-7 sm:p-9">
-						<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-							<h2 className="text-[13px] text-foreground/70">Where the bytes are</h2>
-							<p className="text-[13px] text-foreground/70">
-								Stored bytes by collection, including erasure-coded data
-							</p>
-						</div>
-						<p className="mt-10 flex flex-wrap items-baseline gap-x-3">
-							<span className="font-[450] text-5xl leading-none tracking-[-0.04em]">
-								{formatBytes(total)}
-							</span>
-							<span className="text-foreground/70">
-								in {formatCount(data.collections.length)}{" "}
-								{data.collections.length === 1 ? "collection" : "collections"}, {formatCount(files)} files
-							</span>
-						</p>
-						<div className="mt-8">
+					<StatBand
+						stats={[
+							{ label: "Collections", value: data.collections.length },
+							{ label: "Stored", value: total, format: formatBytes, hint: "Including erasure-coded data" },
+							{ label: "Files", value: files },
+							{
+								label: "Volumes",
+								value: data.collections.reduce((sum, c) => sum + c.volumeCount, 0),
+								hint: `${formatCount(data.collections.reduce((sum, c) => sum + c.ecVolumeCount, 0))} erasure coded`,
+							},
+						]}
+					/>
+					<AuroraCard className="mt-3 p-4">
+						<SheetCaption title="Where the bytes are">Stored bytes by collection</SheetCaption>
+						<div className="mt-3">
 							<CollectionShare collections={data.collections} />
 						</div>
 					</AuroraCard>
 				</Reveal>
 			) : (
-				!error && <SkeletonBlock className="h-64 rounded-2xl" />
+				!error && <HeroSkeleton />
 			)}
-			<div className="mt-12">
+			<div className="mt-8">
 				<DataTable
 					data={data?.collections}
 					columns={collectionColumns}

@@ -1,6 +1,4 @@
 import type { EcVolume } from "@shared/storage.ts";
-import { motion } from "motion/react";
-import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatBytes } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
@@ -10,8 +8,8 @@ export const PARITY_TEXTURE =
 	"bg-[image:repeating-linear-gradient(135deg,transparent_0_3px,color-mix(in_oklab,var(--card)_55%,transparent)_3px_5px)]";
 
 /** Categorical fills in fixed order; servers beyond five share a neutral "other" fill. */
-const SERVER_FILLS = ["bg-chart-1", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"];
-const OTHER_FILL = "bg-muted-foreground/45";
+const SERVER_FILLS = ["bg-data-1", "bg-data-2", "bg-data-3", "bg-data-4", "bg-data-5"];
+const OTHER_FILL = "bg-[rgb(120_120_128/0.45)]";
 
 export function serverFill(palette: Map<string, number>, server: string): string {
 	const index = palette.get(server);
@@ -45,7 +43,6 @@ export function ShardMap({
 	palette: Map<string, number>;
 	size?: "sm" | "lg";
 }) {
-	const reduced = usePrefersReducedMotion();
 	const cells = shardCells(ec);
 	const groups =
 		ec.dataShards > 0
@@ -54,18 +51,18 @@ export function ShardMap({
 					{ label: "Parity", cells: cells.slice(ec.dataShards) },
 				]
 			: [{ label: "Shards", cells }];
-	const cell = size === "lg" ? "size-6 rounded sm:size-9 sm:rounded-md" : "size-3.5 rounded-[3px]";
+	const cell = size === "lg" ? "size-6 rounded-[5px] sm:size-7" : "size-3.5 rounded-[3px]";
 
 	return (
 		<div className={cn("flex items-end", size === "lg" ? "flex-wrap gap-4" : "gap-2")}>
 			{groups.map((group, groupIndex) => (
 				<div key={group.label}>
-					{size === "lg" && <p className="mb-1.5 text-muted-foreground text-xs">{group.label}</p>}
+					{size === "lg" && <p className="mb-1.5 text-[12px] text-muted-foreground">{group.label}</p>}
 					<ul
 						className={cn("flex", size === "lg" ? "gap-1 sm:gap-1.5" : "gap-0.5")}
 						aria-label={`${group.label} shards of volume ${ec.id}`}
 					>
-						{group.cells.map((shard, index) => {
+						{group.cells.map((shard) => {
 							const missing = shard.holders.length === 0;
 							const label = missing
 								? `Shard ${shard.id}: missing`
@@ -75,17 +72,9 @@ export function ShardMap({
 									<Tooltip>
 										<TooltipTrigger
 											render={
-												<motion.span
+												<span
 													role="img"
 													aria-label={label}
-													initial={reduced ? false : { opacity: 0, scale: 0.4 }}
-													animate={{ opacity: 1, scale: 1 }}
-													transition={{
-														delay: reduced ? 0 : (groupIndex * group.cells.length + index) * 0.025,
-														type: "spring",
-														stiffness: 420,
-														damping: 26,
-													}}
 													className={cn(
 														"relative block",
 														cell,
@@ -98,7 +87,7 @@ export function ShardMap({
 													{shard.holders.length > 1 && (
 														<span className="absolute -top-1 -right-1 size-2 rounded-full bg-warning ring-2 ring-card" />
 													)}
-												</motion.span>
+												</span>
 											}
 										/>
 										<TooltipContent>
@@ -114,7 +103,9 @@ export function ShardMap({
 											)}
 										</TooltipContent>
 									</Tooltip>
-									{size === "lg" && <span className="text-muted-foreground text-xs tabular">{shard.id}</span>}
+									{size === "lg" && (
+										<span className="text-[11px] text-muted-foreground tabular">{shard.id}</span>
+									)}
 								</li>
 							);
 						})}
@@ -142,7 +133,7 @@ export function ServerLegend({
 	const others = servers.slice(SERVER_FILLS.length);
 	const otherCount = others.reduce((sum, s) => sum + (counts.get(s) ?? 0), 0);
 	return (
-		<ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Servers">
+		<ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]" aria-label="Servers">
 			{shown.map((server) => (
 				<li key={server} className="flex items-center gap-2">
 					<span className={cn("size-2.5 rounded-[3px]", serverFill(palette, server))} />
