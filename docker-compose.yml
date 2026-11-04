@@ -70,6 +70,16 @@ services:
       admin:
         condition: service_healthy
 
+  broker:
+    <<: *seaweedfs
+    # Optional message queue for Kelp's Messaging pages: `docker compose --profile messaging up -d`.
+    profiles: [messaging]
+    command: mq.broker -ip=broker -ip.bind=0.0.0.0 -port=17777 -master=seaweedfs:9333
+    networks: [control]
+    depends_on:
+      seaweedfs:
+        condition: service_healthy
+
   kelp:
     image: ghcr.io/vvisionnn/kelp:${KELP_VERSION:-latest}
     build: .

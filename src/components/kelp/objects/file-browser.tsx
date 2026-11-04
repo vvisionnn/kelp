@@ -288,7 +288,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 				}}
 				onDrop={onDrop}
 			>
-				<div className="grid grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-b bg-muted/40 px-2 py-2 text-muted-foreground text-xs">
+				<div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-b bg-muted/40 px-2 py-2 text-muted-foreground text-xs">
 					{canWrite ? (
 						<Checkbox
 							aria-label="Select all"
@@ -301,8 +301,8 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 						<span />
 					)}
 					<span>Name</span>
-					<span className="text-right">Size</span>
-					<span className="pl-4">Modified</span>
+					<span className="hidden text-right sm:block">Size</span>
+					<span className="hidden pl-4 sm:block">Modified</span>
 					<span />
 				</div>
 
@@ -339,7 +339,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 									<li
 										key={entry.path}
 										className={cn(
-											"absolute inset-x-0 grid grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-b px-2 text-sm transition-colors hover:bg-muted/40",
+											"absolute inset-x-0 grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-b px-2 text-sm transition-colors hover:bg-muted/40",
 											selected.has(entry.path) && "bg-primary/5",
 										)}
 										style={{ height: ROW_HEIGHT, transform: `translateY(${item.start}px)` }}
@@ -376,10 +376,10 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 												</span>
 											)}
 										</button>
-										<span className="text-right text-muted-foreground text-xs tabular">
+										<span className="hidden text-right text-muted-foreground text-xs tabular sm:block">
 											{entry.isDirectory ? "" : formatBytes(entry.size)}
 										</span>
-										<span className="truncate pl-4 text-muted-foreground text-xs">
+										<span className="hidden truncate pl-4 text-muted-foreground text-xs sm:block">
 											{formatRelative(entry.modifiedAt)}
 										</span>
 										<EntryMenu
