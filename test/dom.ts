@@ -10,11 +10,14 @@ Element.prototype.animate = undefined as unknown as Element["animate"];
 
 const { afterEach } = await import("bun:test");
 const { cleanup } = await import("@testing-library/react");
+const { toast } = await import("sonner");
 
 const realFetch = globalThis.fetch;
 
 afterEach(() => {
 	cleanup();
+	// Sonner keeps toasts in a module-level store; a new Toaster would re-show the last test's.
+	toast.dismiss();
 	globalThis.fetch = realFetch;
 	localStorage.clear();
 	document.documentElement.className = "";
