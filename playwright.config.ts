@@ -3,10 +3,10 @@ import { kelpEnv, stackPorts } from "./scripts/stack-lib.ts";
 
 /**
  * End-to-end tests against a real SeaweedFS started from the native `weed` binary (no Docker).
- * The stack runs on shifted ports so it can live beside a development stack.
+ * The stack runs on shifted ports (KELP_E2E_OFFSET, KELP_E2E_PORT) so several can run side by side.
  */
-const ports = stackPorts(100);
-const KELP_PORT = 3100;
+const ports = stackPorts(Number(process.env.KELP_E2E_OFFSET ?? 100));
+const KELP_PORT = Number(process.env.KELP_E2E_PORT ?? 3100);
 export const E2E_ADMIN = { username: "admin", password: "e2e-admin-password" };
 export const E2E_VIEWER = { username: "viewer", password: "e2e-viewer-password" };
 
@@ -34,7 +34,7 @@ export default defineConfig({
 	],
 	webServer: [
 		{
-			command: `bun scripts/stack.ts --data .tmp/e2e/stack --fresh --offset 100`,
+			command: `bun scripts/stack.ts --data .tmp/e2e/stack --fresh --offset ${ports.master - 9333}`,
 			url: `http://127.0.0.1:${ports.admin}/health`,
 			timeout: 120_000,
 			reuseExistingServer: !process.env.CI,
