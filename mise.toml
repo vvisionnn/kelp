@@ -1,4 +1,6 @@
 [tools]
+"aqua:rhysd/actionlint" = "1.7.12"
+"aqua:koalaman/shellcheck" = "0.11.0"
 bun = "1.4.4"
 node = "24"
 "github:seaweedfs/seaweedfs" = { version = "4.52", bin = "weed" }
