@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ConfigField } from "../../shared/maintenance.ts";
+import { sentenceCase, validateRuntime, validateValue } from "../../shared/maintenance-rules.ts";
 import {
 	buildConfigUpdate,
 	decodeValue,
@@ -13,8 +14,6 @@ import {
 	mapProposal,
 	mapRuntime,
 	mapWorker,
-	validateRuntime,
-	validateValue,
 } from "./maintenance.ts";
 
 const fixture = (name: string) => Bun.file(`${import.meta.dir}/../../fixtures/admin/${name}.json`).json();
@@ -122,6 +121,12 @@ describe("values", () => {
 		expect(validateValue(select, "B")).toBe("Threshold must be one of Alpha");
 		expect(validateValue(select, "A")).toBeNull();
 		expect(validateValue(select, "")).toBeNull();
+	});
+
+	test("labels read in sentence case without breaking acronyms", () => {
+		expect(sentenceCase("Garbage Threshold")).toBe("Garbage threshold");
+		expect(sentenceCase("EC Shard Balance")).toBe("EC shard balance");
+		expect(sentenceCase("Use ALL_COLLECTIONS In S3")).toBe("Use ALL_COLLECTIONS in S3");
 	});
 
 	test("runtime validation keeps SeaweedFS from silently resetting values", () => {
@@ -268,7 +273,7 @@ describe("forms", () => {
 			buildConfigUpdate(descriptor, current, update);
 		expect(attempt({ worker: { nope: 1 } })).toEqual({ error: "Unknown setting nope" });
 		expect(attempt({ worker: { garbage_threshold: 5 } })).toEqual({
-			error: "Garbage Threshold must be at most 1",
+			error: "Garbage threshold must be at most 1",
 		});
 		expect(attempt({ admin: { volume_state: "X" } })).toHaveProperty("error");
 		expect(attempt({ runtime: { retryBackoffSeconds: 0 } })).toHaveProperty("error");

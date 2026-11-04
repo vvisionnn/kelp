@@ -42,7 +42,7 @@ describe("maintenance overview", () => {
 		expect(body.jobTypes).toHaveLength(7);
 		const vacuum = body.jobTypes.find((t: { jobType: string }) => t.jobType === "vacuum");
 		expect(vacuum).toMatchObject({
-			displayName: "Volume Vacuum",
+			displayName: "Volume vacuum",
 			lane: "default",
 			enabled: true,
 			detectorAvailable: true,
@@ -130,7 +130,7 @@ describe("jobs and activity", () => {
 describe("job type settings", () => {
 	test("reads the form and current values", async () => {
 		const { body } = await h.json("GET", "/maintenance/job-types/vacuum");
-		expect(body).toMatchObject({ jobType: "vacuum", displayName: "Volume Vacuum" });
+		expect(body).toMatchObject({ jobType: "vacuum", displayName: "Volume vacuum" });
 		expect(body.workerForm.sections[0].fields[0].name).toBe("garbage_threshold");
 		expect(typeof body.worker.garbage_threshold).toBe("number");
 		expect(body.runtime.detectionIntervalMinutes).toBeGreaterThan(0);

@@ -26,6 +26,7 @@ import type {
 	SchedulerSummary,
 	UpdateJobTypeConfig,
 } from "../../shared/maintenance.ts";
+import { sentenceCase, validateRuntime, validateValue } from "../../shared/maintenance-rules.ts";
 import { bool, list, num, obj, type Raw, str, strings, time } from "./raw.ts";
 
 const JOB_STATES = new Set<JobState>(["pending", "assigned", "running", "succeeded", "failed", "canceled"]);
@@ -171,7 +172,7 @@ export function mapWorker(raw: Raw): MaintenanceWorker {
 				const cap = obj(c);
 				return {
 					jobType: str(cap.job_type),
-					displayName: str(cap.display_name) || str(cap.job_type),
+					displayName: sentenceCase(str(cap.display_name) || str(cap.job_type)),
 					canDetect: bool(cap.can_detect),
 					canExecute: bool(cap.can_execute),
 					maxDetectionConcurrency: num(cap.max_detection_concurrency),
@@ -259,7 +260,7 @@ export function mapJobTypeSummaries(
 		const detection = detectionBy.get(jobType) ?? {};
 		return {
 			jobType,
-			displayName: str(t.display_name) || jobType,
+			displayName: sentenceCase(str(t.display_name) || jobType),
 			description: descriptions.get(jobType) ?? "",
 			weight: num(t.weight),
 			lane: str(state.lane),
@@ -384,7 +385,7 @@ export function mapField(raw: Raw): ConfigField {
 	const visibleField = str(raw.visible_when_field);
 	return {
 		name: str(raw.name),
-		label: str(raw.label) || str(raw.name),
+		label: sentenceCase(str(raw.label) || str(raw.name)),
 		description: str(raw.description),
 		help: str(raw.help_text),
 		placeholder: str(raw.placeholder),
@@ -397,7 +398,7 @@ export function mapField(raw: Raw): ConfigField {
 		max: bound(raw.max_value),
 		options: list(raw.options).map((o) => ({
 			value: str(o.value),
-			label: str(o.label) || str(o.value),
+			label: sentenceCase(str(o.label) || str(o.value)),
 			description: str(o.description),
 			disabled: bool(o.disabled),
 		})),
@@ -411,7 +412,7 @@ export function mapForm(raw: unknown): ConfigForm | null {
 	const sections = list(form.sections)
 		.map((s) => ({
 			id: str(s.section_id),
-			title: str(s.title),
+			title: sentenceCase(str(s.title)),
 			description: str(s.description),
 			fields: list(s.fields).map(mapField),
 		}))
@@ -474,42 +475,6 @@ export function encodeValue(field: ConfigField, value: ConfigValue): Raw {
 	}
 }
 
-/** Why `value` is not acceptable for `field`, in words a person can act on, or null. */
-export function validateValue(field: ConfigField, value: ConfigValue): string | null {
-	const name = field.label;
-	switch (field.type) {
-		case "bool":
-			return typeof value === "boolean" ? null : `${name} must be on or off`;
-		case "int":
-		case "double":
-		case "duration": {
-			if (value === null || value === "") return field.required ? `${name} is required` : null;
-			if (typeof value !== "number" || !Number.isFinite(value)) return `${name} must be a number`;
-			if (field.type !== "double" && !Number.isInteger(value)) return `${name} must be a whole number`;
-			if (field.min !== null && value < field.min) return `${name} must be at least ${field.min}`;
-			if (field.max !== null && value > field.max) return `${name} must be at most ${field.max}`;
-			return null;
-		}
-		case "list":
-			if (!Array.isArray(value) || value.some((v) => typeof v !== "string"))
-				return `${name} must be a list of text values`;
-			return field.required && value.length === 0 ? `${name} needs at least one value` : null;
-		default: {
-			if (typeof value !== "string") return `${name} must be text`;
-			if (field.required && value.trim() === "") return `${name} is required`;
-			if (
-				field.type === "enum" &&
-				field.options.length > 0 &&
-				value !== "" &&
-				!field.options.some((o) => o.value === value)
-			) {
-				return `${name} must be one of ${field.options.map((o) => o.label).join(", ")}`;
-			}
-			return null;
-		}
-	}
-}
-
 const RUNTIME_KEYS: Array<[keyof RuntimeSettings, string]> = [
 	["enabled", "enabled"],
 	["detectionIntervalMinutes", "detection_interval_minutes"],
@@ -528,35 +493,6 @@ export function mapRuntime(raw: unknown): RuntimeSettings {
 	return Object.fromEntries(
 		RUNTIME_KEYS.map(([key, wire]) => [key, key === "enabled" ? bool(r[wire]) : num(r[wire])]),
 	) as unknown as RuntimeSettings;
-}
-
-const RUNTIME_LABELS: Record<keyof RuntimeSettings, string> = {
-	enabled: "Enabled",
-	detectionIntervalMinutes: "Detection interval",
-	detectionTimeoutSeconds: "Detection timeout",
-	maxJobsPerDetection: "Jobs per detection",
-	globalExecutionConcurrency: "Cluster-wide concurrency",
-	perWorkerExecutionConcurrency: "Per-worker concurrency",
-	retryLimit: "Retry limit",
-	retryBackoffSeconds: "Retry backoff",
-	jobTypeMaxRuntimeSeconds: "Maximum runtime",
-	executionTimeoutSeconds: "Execution timeout",
-};
-
-/** SeaweedFS resets runtime values at or below zero to the defaults, so Kelp requires ≥ 1 (retries ≥ 0). */
-export function validateRuntime(runtime: Partial<RuntimeSettings>): string | null {
-	for (const [key, value] of Object.entries(runtime) as Array<[keyof RuntimeSettings, unknown]>) {
-		if (!(key in RUNTIME_LABELS)) return `Unknown scheduling setting ${key}`;
-		if (key === "enabled") {
-			if (typeof value !== "boolean") return "Enabled must be on or off";
-			continue;
-		}
-		const min = key === "retryLimit" ? 0 : 1;
-		if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > 2_147_483_647) {
-			return `${RUNTIME_LABELS[key]} must be a whole number of at least ${min}`;
-		}
-	}
-	return null;
 }
 
 export function mapJobTypeConfig(descriptor: Raw, config: Raw): JobTypeConfig {
@@ -578,7 +514,7 @@ export function mapJobTypeConfig(descriptor: Raw, config: Raw): JobTypeConfig {
 	};
 	return {
 		jobType: str(descriptor.job_type) || str(config.job_type),
-		displayName: str(descriptor.display_name) || str(descriptor.job_type),
+		displayName: sentenceCase(str(descriptor.display_name) || str(descriptor.job_type)),
 		description: str(descriptor.description),
 		descriptorVersion: num(descriptor.descriptor_version),
 		adminForm,

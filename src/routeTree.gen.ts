@@ -13,6 +13,11 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppMaintenanceIndexRouteImport } from './routes/_app/maintenance/index'
+import { Route as AppMaintenanceJobTypeRouteImport } from './routes/_app/maintenance/$jobType'
+import { Route as AppMaintenanceJobsIndexRouteImport } from './routes/_app/maintenance/jobs.index'
+import { Route as AppMaintenanceJobsJobIdRouteImport } from './routes/_app/maintenance/jobs.$jobId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,30 +38,96 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceIndexRoute = AppMaintenanceIndexRouteImport.update({
+  id: '/maintenance/',
+  path: '/maintenance/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceJobTypeRoute = AppMaintenanceJobTypeRouteImport.update({
+  id: '/maintenance/$jobType',
+  path: '/maintenance/$jobType',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceJobsIndexRoute = AppMaintenanceJobsIndexRouteImport.update({
+  id: '/maintenance/jobs/',
+  path: '/maintenance/jobs/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMaintenanceJobsJobIdRoute = AppMaintenanceJobsJobIdRouteImport.update({
+  id: '/maintenance/jobs/$jobId',
+  path: '/maintenance/jobs/$jobId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/settings': typeof AppSettingsRoute
+  '/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
+  '/maintenance/': typeof AppMaintenanceIndexRoute
+  '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
+  '/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
+  '/maintenance': typeof AppMaintenanceIndexRoute
+  '/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/maintenance/jobs': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
+  '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/maintenance/$jobType': typeof AppMaintenanceJobTypeRoute
+  '/_app/maintenance/': typeof AppMaintenanceIndexRoute
+  '/_app/maintenance/jobs/$jobId': typeof AppMaintenanceJobsJobIdRoute
+  '/_app/maintenance/jobs/': typeof AppMaintenanceJobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/cluster'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/cluster'
+    | '/settings'
+    | '/maintenance/$jobType'
+    | '/maintenance/'
+    | '/maintenance/jobs/$jobId'
+    | '/maintenance/jobs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/cluster' | '/'
-  id: '__root__' | '/_app' | '/login' | '/_app/cluster' | '/_app/'
+  to:
+    | '/login'
+    | '/cluster'
+    | '/settings'
+    | '/'
+    | '/maintenance/$jobType'
+    | '/maintenance'
+    | '/maintenance/jobs/$jobId'
+    | '/maintenance/jobs'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/cluster'
+    | '/_app/settings'
+    | '/_app/'
+    | '/_app/maintenance/$jobType'
+    | '/_app/maintenance/'
+    | '/_app/maintenance/jobs/$jobId'
+    | '/_app/maintenance/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,17 +165,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClusterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/': {
+      id: '/_app/maintenance/'
+      path: '/maintenance'
+      fullPath: '/maintenance/'
+      preLoaderRoute: typeof AppMaintenanceIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/$jobType': {
+      id: '/_app/maintenance/$jobType'
+      path: '/maintenance/$jobType'
+      fullPath: '/maintenance/$jobType'
+      preLoaderRoute: typeof AppMaintenanceJobTypeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/jobs/': {
+      id: '/_app/maintenance/jobs/'
+      path: '/maintenance/jobs'
+      fullPath: '/maintenance/jobs/'
+      preLoaderRoute: typeof AppMaintenanceJobsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/maintenance/jobs/$jobId': {
+      id: '/_app/maintenance/jobs/$jobId'
+      path: '/maintenance/jobs/$jobId'
+      fullPath: '/maintenance/jobs/$jobId'
+      preLoaderRoute: typeof AppMaintenanceJobsJobIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
+  AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppMaintenanceJobTypeRoute: typeof AppMaintenanceJobTypeRoute
+  AppMaintenanceIndexRoute: typeof AppMaintenanceIndexRoute
+  AppMaintenanceJobsJobIdRoute: typeof AppMaintenanceJobsJobIdRoute
+  AppMaintenanceJobsIndexRoute: typeof AppMaintenanceJobsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
+  AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
+  AppMaintenanceJobTypeRoute: AppMaintenanceJobTypeRoute,
+  AppMaintenanceIndexRoute: AppMaintenanceIndexRoute,
+  AppMaintenanceJobsJobIdRoute: AppMaintenanceJobsJobIdRoute,
+  AppMaintenanceJobsIndexRoute: AppMaintenanceJobsIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
