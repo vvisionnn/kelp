@@ -235,9 +235,12 @@ function DataTab({ detail }: { detail: TableDetail }) {
 	return (
 		<div className="grid items-start gap-4 xl:grid-cols-[20rem_1fr]">
 			<Panel title="Files" description="Live data files in the chosen snapshot.">
-				<label className="mb-3 grid gap-1 text-xs">
-					<span className="text-muted-foreground">Snapshot</span>
+				<div className="mb-3 grid gap-1 text-xs">
+					<label htmlFor="preview-snapshot" className="text-muted-foreground">
+						Snapshot
+					</label>
 					<select
+						id="preview-snapshot"
 						className="h-8 rounded-lg border border-input bg-transparent px-2 font-mono text-sm dark:bg-input/30"
 						value={snapshot ?? detail.iceberg?.currentSnapshotId ?? ""}
 						onChange={(e) => select({ snapshot: e.target.value, file: undefined })}
@@ -248,7 +251,7 @@ function DataTab({ detail }: { detail: TableDetail }) {
 							</option>
 						))}
 					</select>
-				</label>
+				</div>
 				{preview.isPending ? (
 					<SkeletonBlock className="h-40" />
 				) : preview.data ? (

@@ -99,6 +99,31 @@ describe("table bucket page", () => {
 		}
 	});
 
+	test("a namespace created after load can take a table right away", async () => {
+		const { detail } = await tablesApi();
+		let namespaces: typeof detail.namespaces = [];
+		renderApp("/tables/analytics", {
+			"GET /tables/buckets/analytics": () => ({ ...detail, tables: [], namespaces }),
+			"POST /tables/buckets/analytics/namespaces": () => {
+				namespaces = [{ name: "fresh", parts: ["fresh"], createdAt: null }];
+				return { name: "fresh" };
+			},
+		});
+		fireEvent.click(await screen.findByRole("button", { name: "Create namespace" }));
+		fireEvent.change(within(await screen.findByRole("dialog")).getByLabelText("Name"), {
+			target: { value: "fresh" },
+		});
+		fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Create namespace" }));
+		expect(await screen.findByRole("region", { name: "Namespace fresh" })).toBeTruthy();
+		await settle(300);
+		fireEvent.click(screen.getByRole("button", { name: "Create table" }));
+		const dialog = await screen.findByRole("dialog");
+		fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "events" } });
+		expect((within(dialog).getByRole("button", { name: "Create table" }) as HTMLButtonElement).disabled).toBe(
+			false,
+		);
+	});
+
 	test("an empty namespace can be deleted", async () => {
 		const { detail } = await tablesApi();
 		const app = renderApp("/tables/analytics", {

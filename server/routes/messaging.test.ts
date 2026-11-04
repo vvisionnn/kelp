@@ -47,6 +47,18 @@ describe("messaging overview", () => {
 		expect(body.topics).toHaveLength(2);
 	});
 
+	test("mid-election topic listing failures read as no topics yet", async () => {
+		h.grpc.brokerLeader = null;
+		h.grpc.listTopics = async () => {
+			throw new Error("lock broker_balancer not found");
+		};
+		const { status, body } = await h.json("GET", "/messaging");
+		expect(status).toBe(200);
+		expect(body).toMatchObject({ leader: null, topics: [] });
+		h.grpc.brokerLeader = "127.0.0.1:17777";
+		expect((await h.json("GET", "/messaging")).status).toBe(500);
+	});
+
 	test("keeps topics whose details fail, with the reason", async () => {
 		h.grpc.topics.push({ namespace: "ghost", name: "gone" });
 		h.admin.on("GET /api/mq/topics/ghost/gone", () => Response.json({ error: "boom" }, { status: 500 }));

@@ -102,21 +102,7 @@ if (!filerJoined) {
 	stop(1);
 }
 
-start("admin", [
-	"admin",
-	`-port=${PORTS.admin}`,
-	`-master=127.0.0.1:${PORTS.master}`,
-	`-dataDir=${join(dataDir, "admin")}`,
-]);
-await ready("admin", `http://127.0.0.1:${PORTS.admin}/health`);
-
-start("worker", [
-	"worker",
-	`-admin=127.0.0.1:${PORTS.admin}`,
-	"-jobType=all",
-	`-workingDir=${join(dataDir, "worker")}`,
-]);
-
+// Start the broker early: its balancer election takes a while and overlaps admin startup.
 if (values.broker) {
 	start("broker", [
 		"mq.broker",
@@ -132,6 +118,21 @@ if (values.broker) {
 		stop(1);
 	}
 }
+
+start("admin", [
+	"admin",
+	`-port=${PORTS.admin}`,
+	`-master=127.0.0.1:${PORTS.master}`,
+	`-dataDir=${join(dataDir, "admin")}`,
+]);
+await ready("admin", `http://127.0.0.1:${PORTS.admin}/health`);
+
+start("worker", [
+	"worker",
+	`-admin=127.0.0.1:${PORTS.admin}`,
+	"-jobType=all",
+	`-workingDir=${join(dataDir, "worker")}`,
+]);
 
 console.log(
 	`[stack] ready: master :${PORTS.master}, filer :${PORTS.filer}, s3 :${PORTS.s3}, admin :${PORTS.admin}${values.broker ? `, broker :${PORTS.broker}` : ""} (data in ${dataDir})`,

@@ -9,7 +9,8 @@ test("overview reports a healthy single-node cluster", async ({ page }) => {
 test("nodes page lists every SeaweedFS process", async ({ page }) => {
 	await page.goto("/cluster");
 	await expect(page.getByText("Leader", { exact: true })).toBeVisible();
-	for (const tab of ["Volume servers", "Filers", "S3 gateways"]) {
+	// The e2e stack runs a message broker too (see `--broker` in playwright.config.ts).
+	for (const tab of ["Volume servers", "Filers", "S3 gateways", "Message brokers"]) {
 		await page.getByRole("tab", { name: tab }).click();
 		await expect(
 			page
@@ -18,8 +19,6 @@ test("nodes page lists every SeaweedFS process", async ({ page }) => {
 				.first(),
 		).toBeVisible();
 	}
-	await page.getByRole("tab", { name: "Message brokers" }).click();
-	await expect(page.getByText("No message brokers running")).toBeVisible();
 });
 
 test("theme choice persists across reloads", async ({ page }) => {

@@ -90,7 +90,11 @@ export function messagingRoutes({ admin, grpc }: Services) {
 		.get("/messaging", async (c) => {
 			const { nodes, leader, ask } = await brokers();
 			if (!ask) return c.json({ brokers: nodes, leader, topics: [] } satisfies MessagingOverview);
-			const names = await grpc.listTopics(ask);
+			// Mid-election a broker may refuse to list topics; report the election instead of failing.
+			const names = await grpc.listTopics(ask).catch((error) => {
+				if (leader) throw error;
+				return [];
+			});
 			const topics = await mapLimit(names, 6, async (t): Promise<TopicSummary> => {
 				try {
 					return mapTopicSummary(await admin.json<Raw>(topicPath(t.namespace, t.name)));

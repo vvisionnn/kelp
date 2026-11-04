@@ -5,13 +5,18 @@ import { api } from "./api.ts";
 
 const LIVE = 15_000;
 
+/** Brokers are up but none leads yet. */
+export const electing = (data: MessagingOverview | undefined) =>
+	Boolean(data?.brokers.length && !data.leader);
+
 /** Query definitions for messaging and S3 Tables pages. */
 export const streamsQueries = {
 	messaging: () =>
 		queryOptions({
 			queryKey: ["messaging"],
 			queryFn: () => api.get<MessagingOverview>("/messaging"),
-			refetchInterval: LIVE,
+			// While brokers elect a leader, check back quickly so the page settles within seconds.
+			refetchInterval: (query) => (electing(query.state.data) ? 2000 : LIVE),
 		}),
 	topic: (namespace: string, topic: string) =>
 		queryOptions({

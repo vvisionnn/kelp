@@ -7,14 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 
 interface Row {
-	id: number;
+	/** Saved rows are keyed by their tag key, so re-syncing never re-animates them. */
+	id: string;
 	key: string;
 	value: string;
 }
 
 let nextId = 0;
 const toRows = (tags: Record<string, string>): Row[] =>
-	Object.entries(tags).map(([key, value]) => ({ id: nextId++, key, value }));
+	Object.entries(tags).map(([key, value]) => ({ id: `saved:${key}`, key, value }));
 
 /** Rows -> tags, or the first problem with them. */
 export function tagsFromRows(rows: Array<{ key: string; value: string }>): {
@@ -71,7 +72,7 @@ export function TagsEditor({
 		);
 	}
 
-	const update = (id: number, patch: Partial<Row>) =>
+	const update = (id: string, patch: Partial<Row>) =>
 		setRows((all) => all.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
 	return (
@@ -137,7 +138,7 @@ export function TagsEditor({
 					type="button"
 					variant="ghost"
 					size="sm"
-					onClick={() => setRows((all) => [...all, { id: nextId++, key: "", value: "" }])}
+					onClick={() => setRows((all) => [...all, { id: `new:${nextId++}`, key: "", value: "" }])}
 				>
 					<Plus />
 					Add tag

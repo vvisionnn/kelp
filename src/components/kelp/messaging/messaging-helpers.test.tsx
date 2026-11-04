@@ -42,3 +42,14 @@ describe("partition ring", () => {
 		expect(colors.get("f")).toBe(colors.get("b"));
 	});
 });
+
+describe("election polling", () => {
+	test("only while brokers exist without a leader", async () => {
+		const { electing } = await import("@/lib/streams-queries.ts");
+		const broker = { address: "b:1", version: "", dataCenter: "", rack: "", createdAt: null };
+		expect(electing(undefined)).toBe(false);
+		expect(electing({ brokers: [], leader: null, topics: [] })).toBe(false);
+		expect(electing({ brokers: [broker], leader: null, topics: [] })).toBe(true);
+		expect(electing({ brokers: [broker], leader: "b:1", topics: [] })).toBe(false);
+	});
+});

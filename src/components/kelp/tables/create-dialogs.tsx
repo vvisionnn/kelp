@@ -225,7 +225,9 @@ export function columnsProblem(columns: Array<{ name: string }>): string | null 
 
 export function CreateTableDialog({ bucket, namespaces }: { bucket: string; namespaces: string[] }) {
 	const [open, setOpen] = useState(false);
-	const [namespace, setNamespace] = useState(namespaces[0] ?? "");
+	const [picked, setNamespace] = useState("");
+	// Namespaces can appear after the dialog mounts; fall back to the first one that exists.
+	const namespace = namespaces.includes(picked) ? picked : (namespaces[0] ?? "");
 	const [name, setName] = useState("");
 	const [columns, setColumns] = useState<ColumnDraft[]>(() => [
 		{ ...blankColumn(), name: "id", type: "long", required: true },
