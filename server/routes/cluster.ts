@@ -61,8 +61,17 @@ export function clusterRoutes({ admin, master, grpc, config }: Services) {
 			});
 		})
 		.get("/cluster/volume-servers", async (c) => {
-			const raw = await admin.json<Raw>("cluster/volumes");
-			return c.json({ volumeServers: list(raw.volume_servers).map(mapVolumeServer) });
+			// The volume list leaves `version` empty; the dashboard has it per address.
+			const [raw, dashboard] = await Promise.all([
+				admin.json<Raw>("cluster/volumes"),
+				admin.json<Raw>("admin"),
+			]);
+			const versions = new Map(list(dashboard.volume_servers).map((s) => [str(s.address), str(s.version)]));
+			const servers = list(raw.volume_servers).map((s) => ({
+				...s,
+				version: str(s.version) || versions.get(str(s.address)),
+			}));
+			return c.json({ volumeServers: servers.map(mapVolumeServer) });
 		})
 		.get("/cluster/topology", async (c) => {
 			const raw = await admin.json<Raw>("cluster/topology");

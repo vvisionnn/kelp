@@ -50,6 +50,11 @@ describe("cluster", () => {
 		expect(body.volumeServers[0]).toMatchObject({ address: "127.0.0.1:18080", volumes: 14 });
 	});
 
+	test("volume servers carry the version the dashboard knows", async () => {
+		const { body } = await h.json("GET", "/cluster/volume-servers");
+		expect(body.volumeServers[0].version).toBe("4.52 984eac6a790be89e2a11de175a7413e1e3e32dd3");
+	});
+
 	test("filers, S3 gateways and brokers come from the master", async () => {
 		expect((await h.json("GET", "/cluster/filers")).body).toEqual({ nodes: h.grpc.nodes.filer });
 		expect((await h.json("GET", "/cluster/s3")).body).toEqual({ nodes: h.grpc.nodes.s3 });

@@ -7,6 +7,7 @@ import type {
 	VersionGroup,
 	VolumeServer,
 } from "../../shared/api.ts";
+import { cleanVersion } from "../upstream/grpc.ts";
 import { bool, list, num, obj, type Raw, str, time } from "./raw.ts";
 
 export interface ClusterNodes {
@@ -23,7 +24,7 @@ export function mapVolumeServer(raw: Raw): VolumeServer {
 		publicUrl: str(raw.public_url) || address,
 		dataCenter: str(raw.datacenter),
 		rack: str(raw.rack),
-		version: str(raw.version),
+		version: cleanVersion(str(raw.version)),
 		volumes: num(raw.volumes),
 		maxVolumes: num(raw.max_volumes),
 		diskUsage: num(raw.disk_usage),

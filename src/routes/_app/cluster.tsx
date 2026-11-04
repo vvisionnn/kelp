@@ -210,9 +210,7 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 	{
 		accessorKey: "version",
 		header: "Version",
-		cell: ({ row }) => (
-			<span className="text-xs">{row.original.version.replace(/^\d+GB\s+/, "").split(" ")[0] || "—"}</span>
-		),
+		cell: ({ row }) => <span className="text-xs">{row.original.version.split(" ")[0] || "—"}</span>,
 	},
 	{
 		accessorKey: "lastHeartbeat",
