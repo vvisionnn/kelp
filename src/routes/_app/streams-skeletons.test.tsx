@@ -31,7 +31,7 @@ describe("loading states", () => {
 				"Loading topic",
 				"1890–2519",
 			],
-			["/tables", "GET /tables/buckets", tables.list, "Loading table buckets", "iceberg warehouse"],
+			["/tables", "GET /tables/buckets", tables.list, "Loading table buckets", "Connect a query engine"],
 			[
 				"/tables/analytics",
 				"GET /tables/buckets/analytics",

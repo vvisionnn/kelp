@@ -90,11 +90,10 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 					animate={{ opacity: 1, y: 0, scale: 1 }}
 					exit={{ opacity: 0, y: 16, scale: 0.98 }}
 					transition={{ type: "spring", stiffness: 380, damping: 32 }}
-					data-area="objects"
-					className="fixed right-4 bottom-4 z-40 w-80 overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-(--float-shadow)"
+					className="fixed right-4 bottom-4 z-40 w-80 overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-(--float-shadow)"
 				>
-					<header className="flex items-center justify-between gap-2 px-4 py-3 hairline-b">
-						<p className="font-medium text-sm">
+					<header className="flex h-11 items-center justify-between gap-2 border-border border-b px-4">
+						<p className="font-semibold text-[13px]">
 							{busy
 								? `Uploading ${finished} of ${uploads.length}`
 								: `${finished} of ${uploads.length} uploaded`}
@@ -105,9 +104,9 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 							</Button>
 						)}
 					</header>
-					<ul className="max-h-64 divide-y divide-hairline overflow-auto">
+					<ul className="max-h-64 divide-y divide-border overflow-auto">
 						{uploads.map((upload) => (
-							<motion.li key={upload.id} layout className="grid gap-1.5 px-4 py-2.5 text-sm">
+							<motion.li key={upload.id} layout className="grid gap-1.5 px-4 py-2.5 text-[13px]">
 								<div className="flex items-center justify-between gap-2">
 									<span className="truncate">{upload.name}</span>
 									{upload.status === "done" ? (
@@ -124,7 +123,7 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 									<p className="text-destructive text-xs">{upload.error}</p>
 								) : (
 									<div
-										className="h-1 overflow-hidden rounded-full bg-foreground/[0.08]"
+										className="h-1 overflow-hidden rounded-full bg-accent"
 										role="progressbar"
 										aria-label={`${upload.name} progress`}
 										aria-valuenow={Math.round(upload.progress * 100)}
@@ -135,7 +134,7 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 											className={
 												upload.status === "done"
 													? "h-full rounded-full bg-success"
-													: "h-full rounded-full bg-area"
+													: "h-full rounded-full bg-primary"
 											}
 											animate={{ width: `${upload.progress * 100}%` }}
 											transition={{ ease: "easeOut", duration: 0.2 }}

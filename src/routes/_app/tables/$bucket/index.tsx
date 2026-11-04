@@ -5,7 +5,6 @@ import { ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import {
-	AuroraCard,
 	EmptyState,
 	ErrorState,
 	PageHeader,
@@ -63,9 +62,9 @@ function BucketPage() {
 				}
 			/>
 			{isPending ? (
-				<div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]" role="status" aria-label="Loading table bucket">
-					<SkeletonBlock className="h-80 rounded-lg" />
-					<SkeletonBlock className="h-80 rounded-2xl" />
+				<div className="grid gap-x-6 gap-y-3 lg:grid-cols-12" role="status" aria-label="Loading table bucket">
+					<SkeletonBlock className="h-80 rounded-xl lg:col-span-8" />
+					<SkeletonBlock className="h-80 rounded-xl lg:col-span-4" />
 				</div>
 			) : error ? (
 				<ErrorState error={error} onRetry={() => refetch()} />
@@ -99,10 +98,10 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 	});
 
 	return (
-		<Reveal className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-			<div className="space-y-4">
+		<Reveal className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-12">
+			<div className="space-y-3 lg:col-span-8">
 				<StatBand
-					className="mb-8"
+					className="mb-6 lg:grid-cols-3"
 					stats={[
 						{ label: "Namespaces", value: detail.namespaces.length },
 						{ label: "Tables", value: detail.tables.length },
@@ -130,20 +129,20 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 					))
 				)}
 			</div>
-			<div className="space-y-4">
-				<AuroraCard className="p-7">
-					<span className="text-[13px] text-foreground/70">Warehouse</span>
-					<p className="mt-8 flex items-center gap-1 break-all font-mono text-2xl tracking-tight">
+			<div className="space-y-3 lg:col-span-4">
+				<section className="group-sheet p-4">
+					<p className="text-[13px] text-muted-foreground">Warehouse</p>
+					<p className="mt-1 flex items-center gap-1 break-all font-mono text-[15px]">
 						s3://{name}
 						<CopyButton value={`s3://${name}`} label="Copy warehouse" />
 					</p>
-					<dl className="mt-6 grid grid-cols-[4rem_1fr] gap-y-1.5 text-[13px]">
-						<dt className="text-foreground/65">Owner</dt>
+					<dl className="mt-3 grid grid-cols-[3.5rem_1fr] gap-y-1.5 border-border border-t pt-3 text-[12px]">
+						<dt className="text-muted-foreground">Owner</dt>
 						<dd>{detail.bucket.owner || "admin"}</dd>
-						<dt className="text-foreground/65">ARN</dt>
-						<dd className="break-all font-mono text-xs">{detail.bucket.arn}</dd>
+						<dt className="text-muted-foreground">ARN</dt>
+						<dd className="break-all font-mono">{detail.bucket.arn}</dd>
 					</dl>
-				</AuroraCard>
+				</section>
 				<Panel title="Tags">
 					<TagsEditor tags={detail.tags} canEdit={canWrite} onSave={(tags) => saveTags.mutateAsync(tags)} />
 				</Panel>
@@ -178,12 +177,12 @@ function NamespaceSection({
 		invalidate: [["tables", "bucket", bucket]],
 	});
 	return (
-		<section className="rounded-lg bg-card" aria-label={`Namespace ${namespace}`}>
-			<header className="flex items-center justify-between gap-3 px-6 pt-5 pb-4 hairline-b">
-				<h2 className="flex items-center gap-2.5 font-medium text-[15px]">
-					<FolderOpen className="size-4 text-area" />
+		<section className="group-sheet" aria-label={`Namespace ${namespace}`}>
+			<header className="flex h-11 items-center justify-between gap-3 border-border border-b px-4">
+				<h2 className="flex items-center gap-2 font-semibold text-[13px]">
+					<FolderOpen className="size-4 text-muted-foreground" />
 					<span className="font-mono">{namespace}</span>
-					<span className="text-[13px] text-muted-foreground tabular">
+					<span className="font-normal text-[12px] text-muted-foreground tabular">
 						{tables.length} {tables.length === 1 ? "table" : "tables"}
 					</span>
 				</h2>
@@ -203,22 +202,22 @@ function NamespaceSection({
 				)}
 			</header>
 			{tables.length ? (
-				<ul className="divide-y divide-hairline">
+				<ul className="divide-y divide-border">
 					{tables.map((table) => (
 						<li key={table.arn}>
 							<Link
 								to="/tables/$bucket/$namespace/$table"
 								params={{ bucket, namespace, table: table.name }}
-								className="group flex items-center gap-3 px-6 py-3.5 text-sm transition-colors last:rounded-b-lg hover:bg-raised"
+								className="group flex h-10 items-center gap-2.5 px-4 text-[13px] transition-colors hover:bg-raised/70"
 							>
-								<Table2 className="size-4 text-area" />
+								<Table2 className="size-4 text-muted-foreground" />
 								<span className="font-mono">{table.name}</span>
 								{table.metadataLocation ? (
 									<Badge variant="secondary">{table.format.toLowerCase()}</Badge>
 								) : (
 									<Badge variant="outline">schema only</Badge>
 								)}
-								<span className="ml-auto text-muted-foreground text-xs">
+								<span className="ml-auto text-[12px] text-muted-foreground">
 									Changed {formatRelative(table.modifiedAt)}
 								</span>
 								<ChevronRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
@@ -227,7 +226,7 @@ function NamespaceSection({
 					))}
 				</ul>
 			) : (
-				<p className="px-6 py-5 text-muted-foreground text-sm">No tables in this namespace yet.</p>
+				<p className="px-4 py-3 text-[13px] text-muted-foreground">No tables in this namespace yet.</p>
 			)}
 		</section>
 	);
@@ -244,7 +243,7 @@ function DeleteBucket({ bucket, empty }: { bucket: string; empty: boolean }) {
 	return (
 		<ConfirmDialog
 			trigger={
-				<Button variant="ghost" className="text-destructive">
+				<Button variant="destructive">
 					<Trash2 />
 					Delete bucket
 				</Button>

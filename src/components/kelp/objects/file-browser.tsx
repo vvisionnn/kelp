@@ -103,7 +103,7 @@ async function copyText(text: string, what: string) {
 	toast.success(`${what} copied`);
 }
 
-const ROW_HEIGHT = 52;
+const ROW_HEIGHT = 40;
 
 export interface FileBrowserProps {
 	/** The folder the browser cannot leave, e.g. `/buckets/media`. */
@@ -193,11 +193,11 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 	}
 
 	return (
-		<div className="grid grid-cols-[minmax(0,1fr)] gap-4">
+		<div className="grid grid-cols-[minmax(0,1fr)] gap-3">
 			<div className="flex flex-wrap items-center gap-2">
 				<Breadcrumbs crumbs={crumbsFor(root, path, rootLabel)} onNavigate={onNavigate} />
 				<div className="ml-auto flex flex-wrap items-center gap-2">
-					<InputGroup className="h-9 w-full rounded-full sm:w-56">
+					<InputGroup className="w-full sm:w-56">
 						<InputGroupAddon>
 							<Search />
 						</InputGroupAddon>
@@ -250,7 +250,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 						initial={{ opacity: 0, y: -4 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: -4 }}
-						className="flex flex-wrap items-center gap-2 rounded-full bg-secondary py-1.5 pr-1.5 pl-4 text-sm"
+						className="flex flex-wrap items-center gap-2 rounded-lg bg-primary/10 py-1.5 pr-1.5 pl-3 text-[13px]"
 					>
 						<span className="font-medium tabular">{selected.size} selected</span>
 						<div className="ml-auto flex gap-2">
@@ -277,7 +277,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 
 			{/* biome-ignore lint/a11y/noStaticElementInteractions: the drop zone mirrors the Upload button. */}
 			<div
-				className="relative overflow-hidden rounded-2xl bg-card"
+				className="group-sheet relative overflow-hidden"
 				onDragOver={(event) => {
 					if (!canWrite) return;
 					event.preventDefault();
@@ -288,7 +288,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 				}}
 				onDrop={onDrop}
 			>
-				<div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center px-3 pt-4 pb-2.5 text-[13px] text-muted-foreground hairline-b">
+				<div className="grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-border border-b px-3 h-9 font-medium text-[12px] text-muted-foreground">
 					{canWrite ? (
 						<Checkbox
 							aria-label="Select all"
@@ -339,8 +339,8 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 									<li
 										key={entry.path}
 										className={cn(
-											"absolute inset-x-0 grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center px-3 text-sm transition-colors hairline-b hover:bg-foreground/[0.03]",
-											selected.has(entry.path) && "bg-area/[0.08] hover:bg-area/10",
+											"absolute inset-x-0 grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-border border-b px-3 text-[13px] transition-colors hover:bg-raised/70",
+											selected.has(entry.path) && "bg-primary/8 hover:bg-primary/10",
 										)}
 										style={{ height: ROW_HEIGHT, transform: `translateY(${item.start}px)` }}
 									>
@@ -356,30 +356,25 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 										)}
 										<button
 											type="button"
-											className="flex min-w-0 items-center gap-3 rounded-md py-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+											className="flex min-w-0 items-center gap-2.5 rounded-md py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
 											onClick={() => open(entry)}
 										>
 											{entry.isDirectory ? (
-												<span
-													aria-hidden="true"
-													className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-area/15 text-area"
-												>
-													<Folder className="size-4 fill-current/20" />
-												</span>
+												<Folder aria-hidden="true" className="size-5 shrink-0 fill-sky-400/40 text-sky-500" />
 											) : (
 												<FileType type={getFileType(entry.name)} size="sm" aria-hidden="true" />
 											)}
 											<span className="truncate">{entry.name}</span>
 											{entry.ttlSeconds > 0 && (
-												<span className="shrink-0 rounded-full bg-warning/12 px-2 text-[11px] text-warning-foreground">
+												<span className="shrink-0 rounded-sm bg-warning/12 px-1.5 text-[11px] text-warning-foreground">
 													expires
 												</span>
 											)}
 										</button>
-										<span className="hidden text-right text-muted-foreground text-xs tabular sm:block">
+										<span className="hidden text-right text-[12px] text-muted-foreground tabular sm:block">
 											{entry.isDirectory ? "" : formatBytes(entry.size)}
 										</span>
-										<span className="hidden truncate pl-4 text-muted-foreground text-xs sm:block">
+										<span className="hidden truncate pl-4 text-[12px] text-muted-foreground sm:block">
 											{formatRelative(entry.modifiedAt)}
 										</span>
 										<EntryMenu
@@ -395,7 +390,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 							})}
 						</ul>
 						{listing.isFetchingNextPage && (
-							<p className="flex items-center justify-center gap-2 py-3 text-muted-foreground text-xs">
+							<p className="flex items-center justify-center gap-2 py-3 text-[12px] text-muted-foreground">
 								<Spinner /> Loading more
 							</p>
 						)}
@@ -408,14 +403,14 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
-							className="aurora pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl ring-2 ring-area/70 ring-inset [--aurora-base:color-mix(in_oklab,var(--card)_70%,transparent)]"
+							className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/5 ring-2 ring-primary ring-inset"
 						>
 							<motion.p
 								initial={{ y: 6 }}
 								animate={{ y: 0 }}
-								className="flex items-center gap-2 rounded-full bg-background/90 px-5 py-2.5 font-medium text-sm shadow-(--float-shadow) backdrop-blur"
+								className="flex items-center gap-2 rounded-lg bg-popover px-4 py-2 font-medium text-[13px] shadow-(--float-shadow)"
 							>
-								<Upload className="size-4 text-area" />
+								<Upload className="size-4 text-primary" />
 								Drop to upload to <span className="font-mono">{path}</span>
 							</motion.p>
 						</motion.div>
@@ -454,28 +449,28 @@ function Breadcrumbs({
 		<nav
 			ref={nav}
 			aria-label="Folder path"
-			className="flex h-9 min-w-0 max-w-full items-center gap-0.5 overflow-x-auto rounded-full bg-secondary p-1 text-[13px]"
+			className="flex h-8 min-w-0 max-w-full items-center gap-0.5 overflow-x-auto rounded-lg bg-secondary p-0.5 text-[13px]"
 		>
 			{crumbs.map((crumb, index) => {
 				const last = index === crumbs.length - 1;
 				return (
 					<span key={crumb.path} className="flex min-w-0 shrink-0 items-center gap-0.5">
-						{index > 0 && <ChevronRight className="size-3.5 shrink-0 text-foreground/35" />}
+						{index > 0 && <ChevronRight className="size-3.5 shrink-0 text-tertiary" />}
 						{last ? (
 							<span
 								aria-current="page"
-								className="flex h-7 max-w-64 items-center gap-1.5 truncate rounded-full bg-background px-3 font-medium shadow-xs dark:bg-accent"
+								className="flex h-7 max-w-64 items-center gap-1.5 truncate rounded-md bg-[var(--thumb)] px-2.5 font-medium shadow-[0_1px_3px_rgb(0_0_0/0.12)]"
 							>
-								{index === 0 && <FolderOpen className="size-3.5 shrink-0 text-area" />}
+								{index === 0 && <FolderOpen className="size-3.5 shrink-0 text-sky-500" />}
 								<span className="truncate">{crumb.label}</span>
 							</span>
 						) : (
 							<button
 								type="button"
-								className="flex h-7 max-w-48 items-center gap-1.5 truncate rounded-full px-3 text-foreground/65 transition-colors hover:bg-background/60 hover:text-foreground dark:hover:bg-accent/60"
+								className="flex h-7 max-w-48 items-center gap-1.5 truncate rounded-md px-2.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 								onClick={() => onNavigate(crumb.path)}
 							>
-								{index === 0 && <Folder className="size-3.5 shrink-0 text-area" />}
+								{index === 0 && <Folder className="size-3.5 shrink-0 text-sky-500" />}
 								<span className="truncate">{crumb.label}</span>
 							</button>
 						)}

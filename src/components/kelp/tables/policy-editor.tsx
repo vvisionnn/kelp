@@ -90,7 +90,7 @@ export function PolicyEditor({
 
 	if (!canEdit) {
 		return policy ? (
-			<pre className="max-h-80 overflow-auto rounded-lg bg-muted p-3 font-mono text-xs">
+			<pre className="max-h-80 overflow-auto rounded-lg bg-raised p-3 font-mono text-[12px]">
 				{prettyJson(policy)}
 			</pre>
 		) : (

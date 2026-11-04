@@ -472,7 +472,7 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 					description="Objects stay until someone deletes them."
 				/>
 			) : (
-				<ul className="grid gap-3">
+				<ul className="group-sheet divide-y divide-border">
 					<AnimatePresence initial={false}>
 						{items.map(({ key, rule }, index) => (
 							<motion.li
@@ -481,17 +481,20 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 								initial={{ opacity: 0, y: 6 }}
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0, x: -12 }}
-								className="flex flex-wrap items-start gap-4 rounded-lg bg-card p-5"
+								className="flex flex-wrap items-start gap-4 px-4 py-3"
 							>
 								<div className="grid min-w-0 flex-1 gap-1.5">
 									<div className="flex flex-wrap items-center gap-2">
-										<span className="font-medium text-[15px]">{rule.id || `Rule ${index + 1}`}</span>
-										<Badge variant={rule.enabled ? "area" : "outline"}>
+										<span className="font-semibold text-[13px]">{rule.id || `Rule ${index + 1}`}</span>
+										<Badge
+											variant={rule.enabled ? "secondary" : "outline"}
+											className={rule.enabled ? "bg-success/12 text-success-foreground" : undefined}
+										>
 											{rule.enabled ? "Active" : "Paused"}
 										</Badge>
 									</div>
-									<p className="text-muted-foreground text-sm">{describeScope(rule)}</p>
-									<ul className="grid gap-0.5 text-sm">
+									<p className="text-[12px] text-muted-foreground">{describeScope(rule)}</p>
+									<ul className="grid gap-0.5 text-[13px]">
 										{describeActions(rule).map((action) => (
 											<li key={action}>{action}</li>
 										))}
@@ -540,9 +543,9 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 						initial={{ opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0, y: 8 }}
-						className="sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-full bg-popover py-2 pr-2 pl-5 shadow-(--float-shadow)"
+						className="glass sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-xl py-2 pr-2 pl-4"
 					>
-						<span className="text-sm">You have unsaved rule changes.</span>
+						<span className="text-[13px]">You have unsaved rule changes.</span>
 						<div className="flex gap-2">
 							<Button variant="ghost" onClick={() => setItems(keyed(data ?? []))}>
 								Discard

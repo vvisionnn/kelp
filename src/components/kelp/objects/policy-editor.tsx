@@ -172,13 +172,13 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 			</div>
 
 			{data.invalidText && (
-				<p role="alert" className="rounded-md bg-warning/10 px-4 py-3 text-sm">
+				<p role="alert" className="rounded-lg bg-warning/10 px-4 py-2.5 text-[13px]">
 					SeaweedFS stored a policy it cannot read. Fix it below and save, or remove it.
 				</p>
 			)}
 
-			<div className="overflow-hidden rounded-lg bg-card">
-				<div className="flex items-center gap-2 px-5 pt-4 pb-3 text-[13px] text-muted-foreground hairline-b">
+			<div className="group-sheet overflow-hidden">
+				<div className="flex h-9 items-center gap-2 border-border border-b px-4 text-[12px] text-muted-foreground">
 					<FileJson className="size-3.5" />
 					<span className="font-mono">policy.json</span>
 				</div>
@@ -188,11 +188,11 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 					readOnly={!canWrite}
 					spellCheck={false}
 					placeholder={canWrite ? "Paste a policy, or start from a template." : ""}
-					className="min-h-80 resize-y rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed shadow-none [font-variant-ligatures:none] focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
+					className="min-h-80 resize-y rounded-none border-0 bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed shadow-none [font-variant-ligatures:none] dark:bg-transparent focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
 					onChange={(e) => setText(e.target.value)}
 				/>
 				{problem && (
-					<p role="alert" className="px-5 py-3 text-destructive text-xs hairline-t">
+					<p role="alert" className="border-border border-t px-4 py-2.5 text-[12px] text-destructive">
 						{problem}
 					</p>
 				)}
