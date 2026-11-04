@@ -45,6 +45,20 @@ describe("iam mappers", () => {
 				"Failed to delete policy: policy p is still attached to: group:g: policy is still attached",
 			),
 		).toBe("Policy p is still attached to group g. Detach it first.");
+		expect(
+			cleanIamError(
+				"Failed to delete group: cannot delete group g: group has 1 member(s): group is not empty",
+			),
+		).toBe("Group g still has 1 member. Remove them first.");
+		expect(cleanIamError("cannot delete group g: group has 3 member(s): group is not empty")).toBe(
+			"Group g still has 3 members. Remove them first.",
+		);
+		expect(cleanIamError("cannot delete group g: group has 1 attached policy(ies): group is not empty")).toBe(
+			"Group g still has 1 attached policy. Remove them first.",
+		);
+		expect(cleanIamError("cannot delete group g: group has 2 attached policy(ies): group is not empty")).toBe(
+			"Group g still has 2 attached policies. Remove them first.",
+		);
 		expect(cleanIamError("Policy with this name already exists")).toBe(
 			"Policy with this name already exists",
 		);

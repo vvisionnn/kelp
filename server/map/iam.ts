@@ -125,6 +125,20 @@ export function cleanIamError(message: string): string {
 		const holders = (attached[2] ?? "").split(/,\s*/).map((h) => h.replace(":", " "));
 		text = `Policy ${attached[1]} is still attached to ${holders.join(", ")}. Detach it first.`;
 	}
+	const notEmpty = text.match(
+		/^cannot delete group (\S+): group has (\d+) (member\(s\)|attached policy\(ies\)): group is not empty$/,
+	);
+	if (notEmpty) {
+		const count = Number(notEmpty[2]);
+		const noun = notEmpty[3]?.startsWith("member")
+			? count === 1
+				? "member"
+				: "members"
+			: count === 1
+				? "attached policy"
+				: "attached policies";
+		text = `Group ${notEmpty[1]} still has ${count} ${noun}. Remove them first.`;
+	}
 	text = text.replace(/: invalid input$/, "");
 	return text.charAt(0).toUpperCase() + text.slice(1);
 }
