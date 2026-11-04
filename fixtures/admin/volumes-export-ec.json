@@ -1,0 +1,180 @@
+{
+  "generated_at": "2026-11-04T14:12:03.153425Z",
+  "volume_size_limit_mb": 256,
+  "totals": {
+    "volume_count": 5,
+    "ec_shard_count": 1,
+    "total_size": 15640616,
+    "file_count": 8,
+    "deleted_file_count": 2,
+    "deleted_bytes": 120046
+  },
+  "duplicate_volume_ids": [],
+  "data_centers": [
+    {
+      "id": "DefaultDataCenter",
+      "racks": [
+        {
+          "id": "DefaultRack",
+          "nodes": [
+            {
+              "id": "127.0.0.1:8380",
+              "grpc_port": 18380,
+              "disks": [
+                {
+                  "disk_type": "hdd",
+                  "disk_id": 0,
+                  "volume_count": 5,
+                  "max_volume_count": 237,
+                  "active_volume_count": 5,
+                  "free_volume_count": 232,
+                  "remote_volume_count": 0,
+                  "volumes": [
+                    {
+                      "id": 1,
+                      "collection": "media",
+                      "size": 400208,
+                      "file_count": 3,
+                      "delete_count": 1,
+                      "deleted_byte_count": 80023,
+                      "garbage_ratio": 0.19995352416743292,
+                      "fullness_ratio": 0.0014908909797668457,
+                      "replica_placement": "000",
+                      "version": 3,
+                      "ttl": "",
+                      "read_only": false,
+                      "compact_revision": 0,
+                      "modified_at_second": 1793801505,
+                      "modified_at": "2026-11-04T14:11:45Z",
+                      "disk_type": "",
+                      "disk_id": 0
+                    },
+                    {
+                      "id": 2,
+                      "collection": "media",
+                      "size": 440208,
+                      "file_count": 3,
+                      "delete_count": 1,
+                      "deleted_byte_count": 40023,
+                      "garbage_ratio": 0.09091838403663723,
+                      "fullness_ratio": 0.0016399025917053223,
+                      "replica_placement": "000",
+                      "version": 3,
+                      "ttl": "",
+                      "read_only": false,
+                      "compact_revision": 0,
+                      "modified_at_second": 1793801505,
+                      "modified_at": "2026-11-04T14:11:45Z",
+                      "disk_type": "",
+                      "disk_id": 0
+                    },
+                    {
+                      "id": 3,
+                      "collection": "backups",
+                      "size": 8,
+                      "file_count": 0,
+                      "delete_count": 0,
+                      "deleted_byte_count": 0,
+                      "garbage_ratio": 0,
+                      "fullness_ratio": 2.9802322387695312e-8,
+                      "replica_placement": "000",
+                      "version": 3,
+                      "ttl": "",
+                      "read_only": false,
+                      "compact_revision": 0,
+                      "modified_at_second": 1793801504,
+                      "modified_at": "2026-11-04T14:11:44Z",
+                      "disk_type": "",
+                      "disk_id": 0
+                    },
+                    {
+                      "id": 4,
+                      "collection": "backups",
+                      "size": 8,
+                      "file_count": 0,
+                      "delete_count": 0,
+                      "deleted_byte_count": 0,
+                      "garbage_ratio": 0,
+                      "fullness_ratio": 2.9802322387695312e-8,
+                      "replica_placement": "000",
+                      "version": 3,
+                      "ttl": "",
+                      "read_only": false,
+                      "compact_revision": 0,
+                      "modified_at_second": 1793801504,
+                      "modified_at": "2026-11-04T14:11:44Z",
+                      "disk_type": "",
+                      "disk_id": 0
+                    },
+                    {
+                      "id": 6,
+                      "collection": "logs",
+                      "size": 120120,
+                      "file_count": 2,
+                      "delete_count": 0,
+                      "deleted_byte_count": 0,
+                      "garbage_ratio": 0,
+                      "fullness_ratio": 0.0004474818706512451,
+                      "replica_placement": "000",
+                      "version": 3,
+                      "ttl": "",
+                      "read_only": false,
+                      "compact_revision": 0,
+                      "modified_at_second": 1793801504,
+                      "modified_at": "2026-11-04T14:11:44Z",
+                      "disk_type": "",
+                      "disk_id": 0
+                    }
+                  ],
+                  "ec_shards": [
+                    {
+                      "id": 5,
+                      "collection": "logs",
+                      "shard_ids": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13
+                      ],
+                      "shard_sizes": [
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576,
+                        1048576
+                      ],
+                      "total_size": 14680064,
+                      "file_count": 0,
+                      "delete_count": 0,
+                      "disk_type": "",
+                      "disk_id": 0
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

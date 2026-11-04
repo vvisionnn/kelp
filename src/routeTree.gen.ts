@@ -13,6 +13,12 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
+import { Route as AppCollectionsNameRouteImport } from './routes/_app/collections/$name'
+import { Route as AppErasureCodingIndexRouteImport } from './routes/_app/erasure-coding/index'
+import { Route as AppErasureCodingVolumeIdRouteImport } from './routes/_app/erasure-coding/$volumeId'
+import { Route as AppVolumesIndexRouteImport } from './routes/_app/volumes/index'
+import { Route as AppVolumesVolumeIdRouteImport } from './routes/_app/volumes/$volumeId'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,16 +39,59 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCollectionsIndexRoute = AppCollectionsIndexRouteImport.update({
+  id: '/collections/',
+  path: '/collections/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCollectionsNameRoute = AppCollectionsNameRouteImport.update({
+  id: '/collections/$name',
+  path: '/collections/$name',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppErasureCodingIndexRoute = AppErasureCodingIndexRouteImport.update({
+  id: '/erasure-coding/',
+  path: '/erasure-coding/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppErasureCodingVolumeIdRoute =
+  AppErasureCodingVolumeIdRouteImport.update({
+    id: '/erasure-coding/$volumeId',
+    path: '/erasure-coding/$volumeId',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppVolumesIndexRoute = AppVolumesIndexRouteImport.update({
+  id: '/volumes/',
+  path: '/volumes/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppVolumesVolumeIdRoute = AppVolumesVolumeIdRouteImport.update({
+  id: '/volumes/$volumeId',
+  path: '/volumes/$volumeId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/collections/$name': typeof AppCollectionsNameRoute
+  '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/collections/': typeof AppCollectionsIndexRoute
+  '/erasure-coding/': typeof AppErasureCodingIndexRoute
+  '/volumes/': typeof AppVolumesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
   '/': typeof AppIndexRoute
+  '/collections/$name': typeof AppCollectionsNameRoute
+  '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/collections': typeof AppCollectionsIndexRoute
+  '/erasure-coding': typeof AppErasureCodingIndexRoute
+  '/volumes': typeof AppVolumesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,13 +99,48 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/collections/$name': typeof AppCollectionsNameRoute
+  '/_app/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
+  '/_app/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/_app/collections/': typeof AppCollectionsIndexRoute
+  '/_app/erasure-coding/': typeof AppErasureCodingIndexRoute
+  '/_app/volumes/': typeof AppVolumesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/cluster'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/cluster'
+    | '/collections/$name'
+    | '/erasure-coding/$volumeId'
+    | '/volumes/$volumeId'
+    | '/collections/'
+    | '/erasure-coding/'
+    | '/volumes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/cluster' | '/'
-  id: '__root__' | '/_app' | '/login' | '/_app/cluster' | '/_app/'
+  to:
+    | '/login'
+    | '/cluster'
+    | '/'
+    | '/collections/$name'
+    | '/erasure-coding/$volumeId'
+    | '/volumes/$volumeId'
+    | '/collections'
+    | '/erasure-coding'
+    | '/volumes'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/_app/cluster'
+    | '/_app/'
+    | '/_app/collections/$name'
+    | '/_app/erasure-coding/$volumeId'
+    | '/_app/volumes/$volumeId'
+    | '/_app/collections/'
+    | '/_app/erasure-coding/'
+    | '/_app/volumes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,17 +178,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClusterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/collections/': {
+      id: '/_app/collections/'
+      path: '/collections'
+      fullPath: '/collections/'
+      preLoaderRoute: typeof AppCollectionsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/collections/$name': {
+      id: '/_app/collections/$name'
+      path: '/collections/$name'
+      fullPath: '/collections/$name'
+      preLoaderRoute: typeof AppCollectionsNameRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/erasure-coding/': {
+      id: '/_app/erasure-coding/'
+      path: '/erasure-coding'
+      fullPath: '/erasure-coding/'
+      preLoaderRoute: typeof AppErasureCodingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/erasure-coding/$volumeId': {
+      id: '/_app/erasure-coding/$volumeId'
+      path: '/erasure-coding/$volumeId'
+      fullPath: '/erasure-coding/$volumeId'
+      preLoaderRoute: typeof AppErasureCodingVolumeIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/volumes/': {
+      id: '/_app/volumes/'
+      path: '/volumes'
+      fullPath: '/volumes/'
+      preLoaderRoute: typeof AppVolumesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/volumes/$volumeId': {
+      id: '/_app/volumes/$volumeId'
+      path: '/volumes/$volumeId'
+      fullPath: '/volumes/$volumeId'
+      preLoaderRoute: typeof AppVolumesVolumeIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCollectionsNameRoute: typeof AppCollectionsNameRoute
+  AppErasureCodingVolumeIdRoute: typeof AppErasureCodingVolumeIdRoute
+  AppVolumesVolumeIdRoute: typeof AppVolumesVolumeIdRoute
+  AppCollectionsIndexRoute: typeof AppCollectionsIndexRoute
+  AppErasureCodingIndexRoute: typeof AppErasureCodingIndexRoute
+  AppVolumesIndexRoute: typeof AppVolumesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCollectionsNameRoute: AppCollectionsNameRoute,
+  AppErasureCodingVolumeIdRoute: AppErasureCodingVolumeIdRoute,
+  AppVolumesVolumeIdRoute: AppVolumesVolumeIdRoute,
+  AppCollectionsIndexRoute: AppCollectionsIndexRoute,
+  AppErasureCodingIndexRoute: AppErasureCodingIndexRoute,
+  AppVolumesIndexRoute: AppVolumesIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
