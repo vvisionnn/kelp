@@ -13,7 +13,10 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppClusterRouteImport } from './routes/_app/cluster'
+import { Route as AppFilesRouteImport } from './routes/_app/files'
 import { Route as AppAccessServiceAccountsRouteImport } from './routes/_app/access/service-accounts'
+import { Route as AppBucketsIndexRouteImport } from './routes/_app/buckets/index'
+import { Route as AppBucketsBucketRouteImport } from './routes/_app/buckets/$bucket'
 import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
 import { Route as AppCollectionsNameRouteImport } from './routes/_app/collections/$name'
 import { Route as AppErasureCodingIndexRouteImport } from './routes/_app/erasure-coding/index'
@@ -47,12 +50,27 @@ const AppClusterRoute = AppClusterRouteImport.update({
   path: '/cluster',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFilesRoute = AppFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAccessServiceAccountsRoute =
   AppAccessServiceAccountsRouteImport.update({
     id: '/access/service-accounts',
     path: '/access/service-accounts',
     getParentRoute: () => AppRoute,
   } as any)
+const AppBucketsIndexRoute = AppBucketsIndexRouteImport.update({
+  id: '/buckets/',
+  path: '/buckets/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBucketsBucketRoute = AppBucketsBucketRouteImport.update({
+  id: '/buckets/$bucket',
+  path: '/buckets/$bucket',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCollectionsIndexRoute = AppCollectionsIndexRouteImport.update({
   id: '/collections/',
   path: '/collections/',
@@ -124,10 +142,13 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/files': typeof AppFilesRoute
   '/access/service-accounts': typeof AppAccessServiceAccountsRoute
+  '/buckets/$bucket': typeof AppBucketsBucketRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/buckets/': typeof AppBucketsIndexRoute
   '/collections/': typeof AppCollectionsIndexRoute
   '/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/volumes/': typeof AppVolumesIndexRoute
@@ -142,11 +163,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/cluster': typeof AppClusterRoute
+  '/files': typeof AppFilesRoute
   '/': typeof AppIndexRoute
   '/access/service-accounts': typeof AppAccessServiceAccountsRoute
+  '/buckets/$bucket': typeof AppBucketsBucketRoute
   '/collections/$name': typeof AppCollectionsNameRoute
   '/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/buckets': typeof AppBucketsIndexRoute
   '/collections': typeof AppCollectionsIndexRoute
   '/erasure-coding': typeof AppErasureCodingIndexRoute
   '/volumes': typeof AppVolumesIndexRoute
@@ -163,11 +187,14 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/cluster': typeof AppClusterRoute
+  '/_app/files': typeof AppFilesRoute
   '/_app/': typeof AppIndexRoute
   '/_app/access/service-accounts': typeof AppAccessServiceAccountsRoute
+  '/_app/buckets/$bucket': typeof AppBucketsBucketRoute
   '/_app/collections/$name': typeof AppCollectionsNameRoute
   '/_app/erasure-coding/$volumeId': typeof AppErasureCodingVolumeIdRoute
   '/_app/volumes/$volumeId': typeof AppVolumesVolumeIdRoute
+  '/_app/buckets/': typeof AppBucketsIndexRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
   '/_app/erasure-coding/': typeof AppErasureCodingIndexRoute
   '/_app/volumes/': typeof AppVolumesIndexRoute
@@ -185,10 +212,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/cluster'
+    | '/files'
     | '/access/service-accounts'
+    | '/buckets/$bucket'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
     | '/volumes/$volumeId'
+    | '/buckets/'
     | '/collections/'
     | '/erasure-coding/'
     | '/volumes/'
@@ -203,11 +233,14 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/cluster'
+    | '/files'
     | '/'
     | '/access/service-accounts'
+    | '/buckets/$bucket'
     | '/collections/$name'
     | '/erasure-coding/$volumeId'
     | '/volumes/$volumeId'
+    | '/buckets'
     | '/collections'
     | '/erasure-coding'
     | '/volumes'
@@ -223,11 +256,14 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/cluster'
+    | '/_app/files'
     | '/_app/'
     | '/_app/access/service-accounts'
+    | '/_app/buckets/$bucket'
     | '/_app/collections/$name'
     | '/_app/erasure-coding/$volumeId'
     | '/_app/volumes/$volumeId'
+    | '/_app/buckets/'
     | '/_app/collections/'
     | '/_app/erasure-coding/'
     | '/_app/volumes/'
@@ -275,11 +311,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClusterRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/files': {
+      id: '/_app/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof AppFilesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/access/service-accounts': {
       id: '/_app/access/service-accounts'
       path: '/access/service-accounts'
       fullPath: '/access/service-accounts'
       preLoaderRoute: typeof AppAccessServiceAccountsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/buckets/': {
+      id: '/_app/buckets/'
+      path: '/buckets'
+      fullPath: '/buckets/'
+      preLoaderRoute: typeof AppBucketsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/buckets/$bucket': {
+      id: '/_app/buckets/$bucket'
+      path: '/buckets/$bucket'
+      fullPath: '/buckets/$bucket'
+      preLoaderRoute: typeof AppBucketsBucketRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/collections/': {
@@ -378,11 +435,14 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppClusterRoute: typeof AppClusterRoute
+  AppFilesRoute: typeof AppFilesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAccessServiceAccountsRoute: typeof AppAccessServiceAccountsRoute
+  AppBucketsBucketRoute: typeof AppBucketsBucketRoute
   AppCollectionsNameRoute: typeof AppCollectionsNameRoute
   AppErasureCodingVolumeIdRoute: typeof AppErasureCodingVolumeIdRoute
   AppVolumesVolumeIdRoute: typeof AppVolumesVolumeIdRoute
+  AppBucketsIndexRoute: typeof AppBucketsIndexRoute
   AppCollectionsIndexRoute: typeof AppCollectionsIndexRoute
   AppErasureCodingIndexRoute: typeof AppErasureCodingIndexRoute
   AppVolumesIndexRoute: typeof AppVolumesIndexRoute
@@ -397,11 +457,14 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppClusterRoute: AppClusterRoute,
+  AppFilesRoute: AppFilesRoute,
   AppIndexRoute: AppIndexRoute,
   AppAccessServiceAccountsRoute: AppAccessServiceAccountsRoute,
+  AppBucketsBucketRoute: AppBucketsBucketRoute,
   AppCollectionsNameRoute: AppCollectionsNameRoute,
   AppErasureCodingVolumeIdRoute: AppErasureCodingVolumeIdRoute,
   AppVolumesVolumeIdRoute: AppVolumesVolumeIdRoute,
+  AppBucketsIndexRoute: AppBucketsIndexRoute,
   AppCollectionsIndexRoute: AppCollectionsIndexRoute,
   AppErasureCodingIndexRoute: AppErasureCodingIndexRoute,
   AppVolumesIndexRoute: AppVolumesIndexRoute,
