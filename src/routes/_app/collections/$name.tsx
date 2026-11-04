@@ -2,9 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Layers, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
-import { AuroraCard, EmptyState, ErrorState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import {
+	AuroraCard,
+	EmptyState,
+	ErrorState,
+	InfoList,
+	PageHeader,
+	Reveal,
+	Section,
+	StatBand,
+} from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Band, PageSkeleton, SectionTitle } from "@/components/kelp/storage/common.tsx";
+import { PageSkeleton } from "@/components/kelp/storage/common.tsx";
 import { EcVolumeList } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ShareBar } from "@/components/kelp/storage/visuals.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
@@ -101,43 +110,50 @@ function CollectionPage() {
 				}
 			/>
 			<Reveal>
-				<AuroraCard className="p-7 sm:p-9">
-					<div className="flex items-center justify-between text-[13px] text-foreground/70">
-						<span>Share of the cluster</span>
-						<span>{formatBytes(clusterBytes)} stored in total</span>
-					</div>
-					<p className="mt-10 flex flex-wrap items-baseline gap-x-3">
-						<span className="font-[450] text-6xl leading-none tracking-[-0.045em]">
-							{formatPercent(share)}
-						</span>
-						<span className="text-foreground/70">of every stored byte lives here</span>
-					</p>
-					<ShareBar fraction={share} />
-				</AuroraCard>
-				<Band>
-					<StatBand
-						stats={[
-							{ label: "Stored", value: collection.size, format: formatBytes },
+				<StatBand
+					stats={[
+						{ label: "Stored", value: collection.size, format: formatBytes },
+						{
+							label: "Files",
+							value: collection.fileCount,
+							hint: `${formatCount(collection.deleteCount)} deleted`,
+						},
+						{ label: "Volumes", value: collection.volumeCount },
+						{ label: "Erasure coded", value: collection.ecVolumeCount, hint: "volumes" },
+					]}
+				/>
+			</Reveal>
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section title="Share of the cluster" className="mt-0 lg:col-span-5">
+					<AuroraCard className="p-4">
+						<p className="metric font-semibold text-[28px] leading-8">{formatPercent(share)}</p>
+						<p className="text-[12px] text-muted-foreground">
+							of the {formatBytes(clusterBytes)} stored in the cluster
+						</p>
+						<ShareBar fraction={share} className="mt-3" />
+					</AuroraCard>
+				</Section>
+				<Section title="Details" className="mt-0 lg:col-span-7">
+					<InfoList
+						items={[
+							{ label: "Servers", value: formatCount(collection.servers.length) },
 							{
-								label: "Files",
-								value: collection.fileCount,
-								hint: `${formatCount(collection.deleteCount)} deleted`,
+								label: "Replication",
+								value: <span className="font-mono">{collection.replications.join(", ") || "None"}</span>,
 							},
-							{ label: "Volumes", value: collection.volumeCount },
-							{ label: "Erasure coded", value: collection.ecVolumeCount, hint: "volumes" },
+							{ label: "Disk types", value: collection.diskTypes.join(", ") || "None" },
+							{ label: "Reclaimable", value: formatBytes(collection.deletedBytes) },
 						]}
 					/>
-				</Band>
-			</Reveal>
-			<section>
-				<SectionTitle title="Volumes" />
+				</Section>
+			</div>
+			<Section title="Volumes">
 				<VolumeTable volumes={volumes} showCollection={false} />
-			</section>
+			</Section>
 			{ecVolumes.length > 0 && (
-				<section className="mt-16">
-					<SectionTitle title="Erasure-coded volumes" />
+				<Section title="Erasure-coded volumes">
 					<EcVolumeList ecVolumes={ecVolumes} showCollection={false} />
-				</section>
+				</Section>
 			)}
 		</>
 	);

@@ -1,6 +1,7 @@
 import type { GrowVolumesInput, StorageInventory } from "@shared/storage.ts";
 import { Eraser, Plus } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
+import { Segmented } from "@/components/kelp/controls.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -14,12 +15,9 @@ import {
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatBytes, formatPercent } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { storageApi, storageKey, VACUUM_THRESHOLD } from "@/lib/storage-queries.ts";
-import { cn } from "@/lib/utils";
-import { PRESSED } from "./common.tsx";
 
 /** Plain-language reading of a replication setting like "011". */
 export function describeReplication(replication: string): string {
@@ -240,24 +238,15 @@ export function VacuumClusterDialog({ inventory }: { inventory: StorageInventory
 					</DialogDescription>
 				</DialogHeader>
 				<div className="grid gap-2 py-2">
-					<p className="font-medium text-sm">Compact volumes with at least this much garbage</p>
-					<ToggleGroup
-						className="rounded-full bg-muted p-1"
-						value={[String(threshold)]}
-						onValueChange={(value) => value[0] && setThreshold(Number(value[0]))}
-						aria-label="Garbage threshold"
-					>
-						{THRESHOLDS.map((t) => (
-							<ToggleGroupItem
-								key={t}
-								value={String(t)}
-								className={cn(PRESSED, "flex-1 aria-pressed:bg-background aria-pressed:shadow-sm")}
-							>
-								{formatPercent(t)}
-							</ToggleGroupItem>
-						))}
-					</ToggleGroup>
-					<p className="text-muted-foreground text-sm" aria-live="polite">
+					<p className="font-medium text-[13px]">Compact volumes with at least this much garbage</p>
+					<Segmented
+						label="Garbage threshold"
+						items={THRESHOLDS.map((t) => ({ value: String(t), label: formatPercent(t) }))}
+						value={String(threshold)}
+						onChange={(value) => setThreshold(Number(value))}
+						className="w-full"
+					/>
+					<p className="text-[13px] text-muted-foreground" aria-live="polite">
 						{candidates.length === 0
 							? "No volume is over this threshold right now."
 							: `${candidates.length} ${candidates.length === 1 ? "volume" : "volumes"} qualify, about ${formatBytes(reclaim)} to reclaim.`}

@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { AuroraCard, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog, VacuumClusterDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { Band, HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import { HeroSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
 import { VolumeSkyline } from "@/components/kelp/storage/visuals.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
@@ -56,53 +56,47 @@ function VolumesPage() {
 			/>
 			{data ? (
 				<Reveal>
+					<StatBand
+						stats={[
+							{
+								label: "Volumes",
+								value: data.volumes.length,
+								hint: `${formatCount(freeSlots)} free slots`,
+							},
+							{ label: "Files", value: data.totals.files, hint: `in ${formatBytes(stored)}` },
+							{
+								label: "Reclaimable",
+								value: garbage,
+								format: formatBytes,
+								hint:
+									needsVacuum > 0
+										? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
+										: `${formatPercent(ratio(garbage, stored))} of stored bytes`,
+							},
+							{ label: "Needs attention", value: attention, hint: `${readOnly} read-only` },
+						]}
+					/>
 					{data.volumes.length > 0 && (
-						<AuroraCard className="p-7 sm:p-9">
-							<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-								<p className="flex items-baseline gap-3">
-									<span className="font-[450] text-5xl leading-none tracking-[-0.04em]">
-										{formatBytes(stored)}
-									</span>
-									<span className="text-foreground/70">stored across the fleet</span>
-								</p>
-								<p className="text-[13px] text-foreground/70">Each bar is one volume</p>
-							</div>
-							<VolumeSkyline volumes={data.volumes} limit={data.volumeSizeLimitBytes} className="mt-10" />
+						<AuroraCard className="mt-3 p-4">
+							<SheetCaption title="Fill by volume">
+								{formatBytes(stored)} stored, each bar is one volume
+							</SheetCaption>
+							<VolumeSkyline volumes={data.volumes} limit={data.volumeSizeLimitBytes} className="mt-3" />
 						</AuroraCard>
 					)}
-					<Band>
-						<StatBand
-							stats={[
-								{
-									label: "Volumes",
-									value: data.volumes.length,
-									hint: `${formatCount(freeSlots)} free slots`,
-								},
-								{ label: "Files", value: data.totals.files, hint: `in ${formatBytes(stored)}` },
-								{
-									label: "Reclaimable",
-									value: garbage,
-									format: formatBytes,
-									hint:
-										needsVacuum > 0
-											? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
-											: `${formatPercent(ratio(garbage, stored))} of stored bytes`,
-								},
-								{ label: "Needs attention", value: attention, hint: `${readOnly} read-only` },
-							]}
-						/>
-					</Band>
 				</Reveal>
 			) : (
 				!error && <HeroSkeleton />
 			)}
-			<VolumeTable
-				volumes={volumes}
-				isLoading={isPending}
-				error={error}
-				onRetry={() => refetch()}
-				{...(filter ? { initialFilter: filter } : {})}
-			/>
+			<div className="mt-8">
+				<VolumeTable
+					volumes={volumes}
+					isLoading={isPending}
+					error={error}
+					onRetry={() => refetch()}
+					{...(filter ? { initialFilter: filter } : {})}
+				/>
+			</div>
 		</>
 	);
 }
