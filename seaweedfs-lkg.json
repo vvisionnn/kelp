@@ -16,20 +16,14 @@
 			"result": "pass",
 			"e2e": "pass",
 			"compose": "pass",
-			"protoDrift": [
-				"filer.proto",
-				"volume_server.proto"
-			]
+			"protoDrift": ["filer.proto", "volume_server.proto"]
 		},
 		{
 			"version": "4.50",
 			"result": "pass",
 			"e2e": "pass",
 			"compose": "pass",
-			"protoDrift": [
-				"filer.proto",
-				"volume_server.proto"
-			]
+			"protoDrift": ["filer.proto", "volume_server.proto"]
 		}
 	]
 }

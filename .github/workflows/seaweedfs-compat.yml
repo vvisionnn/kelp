@@ -185,8 +185,10 @@ jobs:
           if [ "$APPLY" = "true" ]; then bun scripts/seaweedfs.ts decide --results .tmp/compat/results --apply
           else bun scripts/seaweedfs.ts decide --results .tmp/compat/results; fi
 
-      - name: Pins agree with the LKG file
-        run: bun test scripts/versions.test.ts
+      - name: Pins agree with the LKG file, and the files pass CI's lint
+        run: |
+          bun test scripts/versions.test.ts
+          bunx biome ci .
 
       - name: Commit
         if: steps.decide.outputs.changed == 'true' && github.ref == 'refs/heads/main' && inputs.promote != false
