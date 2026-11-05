@@ -77,6 +77,14 @@ await run(["bun", "scripts/seed.ts", "--offset", String(values.offset), "--kelp"
 	KELP_ADMIN_PASSWORD: credentials.admin,
 });
 
+// A light S3 workload so the live charts have traffic to show.
+children.push(
+	Bun.spawn(["bun", "scripts/traffic.ts", "--offset", String(values.offset)], {
+		stdout: "ignore",
+		stderr: "ignore",
+	}),
+);
+
 console.log(`
 Kelp is ready at ${url}
   admin  / ${credentials.admin}   (full control)
