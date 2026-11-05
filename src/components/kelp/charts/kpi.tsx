@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Metric } from "../page.tsx";
 import { Sparkline } from "./sparkline.tsx";
 import { useWidth } from "./use-width.ts";
 
 /**
- * A stat tile (dataviz contract): label, value with a lighter unit, an optional hint and an
+ * A stat tile (dataviz contract): label, value with a lighter unit (whole numbers roll their
+ * digits when they change), an optional hint and an
  * optional trend sparkline along the bottom in the tile's series color.
  */
 export function Kpi({
@@ -37,7 +39,7 @@ export function Kpi({
 					tone === "bad" && "text-destructive",
 				)}
 			>
-				{value}
+				{typeof value === "number" ? <Metric value={value} /> : value}
 				{unit && <span className="ml-1 font-medium text-[15px] text-muted-foreground">{unit}</span>}
 			</p>
 			{hint && <p className="truncate text-[12px] text-muted-foreground">{hint}</p>}
@@ -51,7 +53,14 @@ function KpiTrend({ values, color, label }: { values: Array<number | null>; colo
 	const [ref, width] = useWidth<HTMLDivElement>(160);
 	return (
 		<div ref={ref} className="mt-3 -mb-1 min-w-0 overflow-hidden">
-			<Sparkline values={values} color={color} width={width} height={28} label={label} className="max-w-full" />
+			<Sparkline
+				values={values}
+				color={color}
+				width={width}
+				height={28}
+				label={label}
+				className="max-w-full"
+			/>
 		</div>
 	);
 }
