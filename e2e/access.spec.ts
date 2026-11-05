@@ -117,9 +117,10 @@ test("duplicate users get a clear message", async ({ page }) => {
 
 test("viewers can read access settings but never see controls or secrets", async ({ viewerPage }) => {
 	await viewerPage.goto("/access/users");
-	await expect(viewerPage.getByText("kelp-dev")).toBeVisible();
+	const user = viewerPage.getByRole("link", { name: "kelp-dev", exact: true }).first();
+	await expect(user).toBeVisible();
 	await expect(viewerPage.getByRole("button", { name: "Create user" })).toHaveCount(0);
-	await viewerPage.getByText("kelp-dev").click();
+	await user.click();
 	await expect(viewerPage.getByText(/defined in the S3 config file/)).toBeVisible();
 	await expect(viewerPage.locator("body")).not.toContainText("kelp-dev-secret-key");
 	const response = await viewerPage.request.get("/api/iam/users");
