@@ -3,7 +3,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ScrollText, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
+import {
+	ageInDays,
+	groupAsIdentity,
+	ROTATE_AFTER_DAYS,
+	userAccess,
+} from "@/components/kelp/access/analysis.ts";
 import { Avatar, AvatarStack } from "@/components/kelp/access/identity.tsx";
+import { ReachGrid } from "@/components/kelp/access/insights.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import {
 	ErrorState,
@@ -124,6 +131,9 @@ function GroupPage() {
 		select: (l) => l.map((p) => p.name),
 	});
 
+	const everyone = useQuery(accessQueries.users()).data;
+	const allPolicies = useQuery(accessQueries.policies()).data;
+
 	const setEnabled = useAction({
 		run: (enabled: boolean) => api.put(`${base}/status`, { enabled }),
 		success: (_, enabled) => `Group ${name} ${enabled ? "enabled" : "disabled"}`,
@@ -211,8 +221,30 @@ function GroupPage() {
 					))
 				}
 			/>
-			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
-				<div className="grid min-w-0 gap-8 lg:col-span-8">
+			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12 [&>*]:min-w-0">
+				<div className="grid min-w-0 grid-cols-1 gap-8 lg:col-span-8">
+					{allPolicies && (
+						<Section
+							title="What this group grants"
+							description={
+								group.enabled
+									? "Every member gets this access, on top of their own."
+									: "The group is switched off, so it grants nothing right now."
+							}
+							className="mt-0 min-w-0"
+						>
+							<div className="group-sheet p-4">
+								<ReachGrid
+									grants={userAccess(groupAsIdentity(group), [], allPolicies)}
+									empty={
+										group.enabled
+											? "Its policies reach no bucket. Attach a policy to grant access."
+											: "Switch the group on to grant its policies again."
+									}
+								/>
+							</div>
+						</Section>
+					)}
 					<Section
 						title="Members"
 						description={`${group.members.length} ${group.members.length === 1 ? "user" : "users"}`}
@@ -254,42 +286,90 @@ function GroupPage() {
 						/>
 					</Section>
 				</div>
-				<Section title="Details" className="mt-0 min-w-0 lg:col-span-4">
-					<InfoList
-						items={[
-							{
-								label: canWrite ? <label htmlFor="group-enabled">Enabled</label> : "Status",
-								value: canWrite ? (
-									<Switch
-										id="group-enabled"
-										size="sm"
-										checked={group.enabled}
-										disabled={setEnabled.isPending}
-										onCheckedChange={(checked) => setEnabled.mutate(checked)}
-										className="align-middle"
-									/>
-								) : group.enabled ? (
-									"Enabled"
-								) : (
-									"Disabled"
-								),
-							},
-							{
-								label: "Members",
-								value:
-									group.members.length > 0 ? (
-										<span className="flex items-center justify-end gap-2">
-											<AvatarStack names={group.members} max={5} />
-											<span className="tabular">{group.members.length}</span>
-										</span>
+				<div className="grid min-w-0 gap-8 lg:col-span-4">
+					<Section title="Details" className="mt-0">
+						<InfoList
+							items={[
+								{
+									label: canWrite ? <label htmlFor="group-enabled">Enabled</label> : "Status",
+									value: canWrite ? (
+										<Switch
+											id="group-enabled"
+											size="sm"
+											checked={group.enabled}
+											disabled={setEnabled.isPending}
+											onCheckedChange={(checked) => setEnabled.mutate(checked)}
+											className="align-middle"
+										/>
+									) : group.enabled ? (
+										"Enabled"
 									) : (
-										<span className="tabular">0</span>
+										"Disabled"
 									),
-							},
-							{ label: "Policies granted", value: <span className="tabular">{group.policies.length}</span> },
-						]}
-					/>
-				</Section>
+								},
+								{
+									label: "Members",
+									value:
+										group.members.length > 0 ? (
+											<span className="flex items-center justify-end gap-2">
+												<AvatarStack names={group.members} max={5} />
+												<span className="tabular">{group.members.length}</span>
+											</span>
+										) : (
+											<span className="tabular">0</span>
+										),
+								},
+								{
+									label: "Policies granted",
+									value: <span className="tabular">{group.policies.length}</span>,
+								},
+							]}
+						/>
+					</Section>
+					{everyone && group.members.length > 0 && (
+						<Section
+							title="Members' keys"
+							description="Who in the group can sign, and how old their keys are."
+							className="mt-0"
+						>
+							<InfoList
+								items={group.members.map((member) => {
+									const keys = everyone.find((u) => u.username === member)?.accessKeys ?? [];
+									const active = keys.filter((k) => k.status === "Active");
+									const ages = active
+										.map((k) => ageInDays(k.createdAt))
+										.filter((a): a is number => a !== null);
+									const oldest = ages.length > 0 ? Math.max(...ages) : null;
+									return {
+										label: (
+											<Link
+												to="/access/users/$username"
+												params={{ username: member }}
+												className="flex items-center gap-2 text-foreground hover:underline"
+											>
+												<Avatar name={member} />
+												{member}
+											</Link>
+										),
+										value: (
+											<span
+												className={
+													oldest !== null && oldest >= ROTATE_AFTER_DAYS
+														? "text-warning"
+														: "text-muted-foreground"
+												}
+											>
+												{active.length === 0
+													? "No active key"
+													: `${active.length} ${active.length === 1 ? "key" : "keys"}, ${oldest ?? "?"} days`}
+											</span>
+										),
+									};
+								})}
+							/>
+						</Section>
+					)}
+				</div>
 			</Reveal>
 		</>
 	);

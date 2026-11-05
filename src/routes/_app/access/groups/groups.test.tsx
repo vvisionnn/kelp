@@ -1,28 +1,30 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
+import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
+import { groupStats } from "./index.tsx";
 
 describe("groups list", () => {
 	test("shows status, members and policies, and opens a group", async () => {
 		const { routes } = await accessApi();
 		const app = renderApp("/access/groups", routes);
 		expect(await screen.findByText("Disabled")).toBeTruthy();
-		fireEvent.click(screen.getByText("devs"));
+		fireEvent.click(within(dataTable()).getByText("devs"));
 		await waitFor(() => expect(app.router.state.location.pathname).toBe("/access/groups/devs"));
 	});
 
 	test("every column sorts and search filters", async () => {
 		const { routes } = await accessApi();
 		renderApp("/access/groups", routes);
-		await screen.findByText("devs");
+		await screen.findByText("Disabled");
 		for (const header of ["Group", "Status", "Members", "Policies"])
-			fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: header }));
+			fireEvent.click(within(dataTable()).getByRole("button", { name: header }));
 		fireEvent.change(screen.getByLabelText("Search groups, members or policies"), {
 			target: { value: "nobody" },
 		});
-		expect(screen.queryByText("devs")).toBeNull();
+		expect(within(dataTable()).queryByText("devs")).toBeNull();
 	});
 
 	test("creating a group opens it", async () => {
@@ -137,8 +139,59 @@ describe("group details", () => {
 		expect(await screen.findByText("Group not found")).toBeTruthy();
 		fail = false;
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-		expect(await screen.findByText("bob")).toBeTruthy();
+		expect((await screen.findAllByText("bob")).length).toBeGreaterThan(0);
 		expect(screen.queryByRole("switch")).toBeNull();
 		expect(screen.queryByRole("button", { name: "Remove bob" })).toBeNull();
+	});
+});
+
+describe("groups dashboard", () => {
+	test("charts what each group grants and how many members it has", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/groups", { ...routes, "GET /buckets": { buckets: [{ name: "media" }] } });
+		const grants = await screen.findByRole("table", { name: "Access by group and bucket" });
+		expect(within(grants).getByRole("link", { name: "devs" })).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Groups by members" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Users in no group" })).toBeTruthy();
+	});
+
+	test("a group page shows what it grants and its members' keys", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/groups/devs", routes);
+		expect(await screen.findByText("What this group grants")).toBeTruthy();
+		expect(screen.getByText("Members' keys")).toBeTruthy();
+	});
+});
+
+describe("group stats", () => {
+	test("count switched-off groups, memberships and users outside every group", () => {
+		const stats = groupStats(
+			[
+				{ name: "a", enabled: true, members: ["x", "y"], policies: ["p"] },
+				{ name: "b", enabled: false, members: ["x"], policies: [] },
+			],
+			[
+				{ username: "x", email: "", actions: [], policies: [], groups: [], accessKeys: [], isStatic: false },
+				{ username: "z", email: "", actions: [], policies: [], groups: [], accessKeys: [], isStatic: false },
+			],
+		);
+		expect(stats).toEqual({ groups: 2, off: 1, memberships: 3, outside: ["z"], attached: 1 });
+	});
+
+	test("the dashboard says when every group is on and everyone belongs to one", async () => {
+		const { routes, groups, users } = await accessApi();
+		const everyone = users.map((u) => u.username);
+		renderApp("/access/groups", {
+			...routes,
+			"GET /iam/groups": {
+				groups: [
+					{ ...groups[0], enabled: true, members: everyone },
+					{ ...groups[0], name: "small", enabled: true, members: [everyone[0]] },
+				],
+			},
+			"GET /buckets": { buckets: [] },
+		});
+		expect(await screen.findByText("All switched on")).toBeTruthy();
+		expect(screen.getByText("Everyone belongs to a group")).toBeTruthy();
 	});
 });

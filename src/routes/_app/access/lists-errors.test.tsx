@@ -25,7 +25,7 @@ describe("access lists recover from errors", () => {
 			expect(await screen.findByText("SeaweedFS admin reported a problem")).toBeTruthy();
 			fail = false;
 			fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-			expect(await screen.findByText(ready)).toBeTruthy();
+			expect((await screen.findAllByText(ready)).length).toBeGreaterThan(0);
 		});
 	}
 });

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
+import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
 
@@ -22,7 +23,7 @@ describe("policies list", () => {
 		expect(await screen.findByText("2 users, 1 group")).toBeTruthy();
 		expect(screen.getByText("1 user")).toBeTruthy();
 		expect(screen.getByText("2 groups")).toBeTruthy();
-		fireEvent.click(screen.getByText("ro"));
+		fireEvent.click(within(dataTable()).getByText("ro"));
 		await waitFor(() => expect(app.router.state.location.pathname).toBe("/access/policies/ro"));
 		expect(await screen.findByText("Used by: 2 users, 1 group")).toBeTruthy();
 	});
@@ -32,9 +33,9 @@ describe("policies list", () => {
 		renderApp("/access/policies", routes);
 		await screen.findByText("2 users, 1 group");
 		for (const header of ["Policy", "Statements", "Used by", "Updated"])
-			fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: header }));
+			fireEvent.click(within(dataTable()).getByRole("button", { name: header }));
 		fireEvent.change(screen.getByLabelText("Search policies"), { target: { value: "devs" } });
-		expect(screen.getByText("ro")).toBeTruthy();
+		expect(within(dataTable()).getByText("ro")).toBeTruthy();
 	});
 
 	test("empty list, and viewers cannot create", async () => {
@@ -182,5 +183,46 @@ describe("policy editor", () => {
 		await waitFor(() => expect(editor().disabled).toBe(true));
 		expect(screen.queryByRole("button", { name: "Save policy" })).toBeNull();
 		expect(screen.queryByText("Principals")).toBeNull();
+	});
+});
+
+describe("policies dashboard", () => {
+	test("charts what policies grant, who they reach and which actions they allow", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/policies", {
+			...routes,
+			"GET /buckets": { buckets: [{ name: "media" }] },
+		});
+		const grants = await screen.findByRole("table", { name: "Access by policy and bucket" });
+		expect(within(grants).getByRole("link", { name: "ro" })).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Policies by users reached" })).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Actions by policies that allow them" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Not attached" })).toBeTruthy();
+	});
+
+	test("a policy page summarizes reach and grants above the document", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/policies/ro", routes);
+		expect(await screen.findByText("What it grants")).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Users reached" }).textContent).toMatch(/\d/);
+		expect(screen.getByRole("table", { name: "Access by bucket and capability" })).toBeTruthy();
+	});
+
+	test("denies are listed under the grants", async () => {
+		const { routes, policies } = await accessApi();
+		const deny = {
+			...policies[0],
+			name: "deny",
+			document: {
+				Version: "2012-10-17",
+				Statement: [
+					{ Effect: "Allow", Action: "s3:*", Resource: "*" },
+					{ Effect: "Deny", Action: "s3:DeleteObject", Resource: "arn:aws:s3:::media/*" },
+				],
+			},
+		};
+		renderApp("/access/policies/deny", { ...routes, "GET /iam/policies/deny": { policy: deny } });
+		expect(await screen.findByText("Denies media.")).toBeTruthy();
+		expect(screen.getByText("All buckets")).toBeTruthy();
 	});
 });

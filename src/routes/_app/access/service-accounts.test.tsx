@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { accessApi } from "../../../../test/access-fixtures.ts";
+import { dataTable } from "../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { choose } from "../../../../test/select.ts";
 import { settle } from "../../../../test/settle.ts";
@@ -126,7 +127,7 @@ describe("service accounts", () => {
 		renderApp("/access/service-accounts", routes);
 		await screen.findByText("nightly backups");
 		for (const header of ["Service account", "Acts as", "Access key", "Status", "Expires"])
-			fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: header }));
+			fireEvent.click(within(dataTable()).getByRole("button", { name: header }));
 		expect(screen.getByText("ci runner")).toBeTruthy();
 		fireEvent.change(screen.getByLabelText("Search accounts, users or keys"), { target: { value: "alice" } });
 		expect(screen.queryByText("nightly backups")).toBeNull();
@@ -140,8 +141,9 @@ describe("service accounts", () => {
 				serviceAccounts: [{ ...serviceAccounts[0], expiresAt: "2020-01-01T00:00:00.000Z", description: "" }],
 			},
 		});
-		expect(await screen.findByText(/^Expired/)).toBeTruthy();
+		expect(await within(await waitFor(dataTable)).findByText(/^Expired/)).toBeTruthy();
 		expect(screen.getByText("No description")).toBeTruthy();
+		expect(within(screen.getByRole("region", { name: "Already expired" })).getByText("1")).toBeTruthy();
 	});
 });
 

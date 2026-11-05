@@ -10,13 +10,15 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Bot, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { z } from "zod";
+import { expiryTimeline } from "@/components/kelp/access/analysis.ts";
 import { KeyStatusBadge } from "@/components/kelp/access/badges.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
+import { BarList, Columns, dataColor, Kpi, Ring } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, InfoList, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import { EmptyState, InfoList, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -456,6 +458,97 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 	);
 }
 
+/** Signing, paused and expired accounts, plus when the rest run out. */
+function AccountsDashboard({ accounts, now = Date.now() }: { accounts: ServiceAccount[]; now?: number }) {
+	const stats = accountStats(accounts, now);
+	const value = (label: string) => stats.find((s) => s.label === label)?.value ?? 0;
+	const expired = value("Already expired");
+	const signing = value("Can sign");
+	const paused = accounts.length - signing - expired;
+	const timeline = expiryTimeline(accounts, now);
+	const owners = new Map<string, number>();
+	for (const a of accounts) owners.set(a.parentUser, (owners.get(a.parentUser) ?? 0) + 1);
+	const soon = value("Expire within 30 days");
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+				<Kpi
+					label="Service accounts"
+					value={String(accounts.length)}
+					hint={`For ${owners.size} ${owners.size === 1 ? "user" : "users"}`}
+				/>
+				<Kpi
+					label="Can sign"
+					value={String(signing)}
+					hint={paused > 0 ? `${paused} paused` : "None paused"}
+				/>
+				<Kpi
+					label="Expire within 30 days"
+					value={String(soon)}
+					hint={soon > 0 ? "Renew or replace them" : "Nothing runs out soon"}
+					{...(soon > 0 ? { tone: "warn" as const } : {})}
+				/>
+				<Kpi label="Never expire" value={String(timeline.never)} hint="Long-lived keys; review them" />
+				<Kpi
+					label="Already expired"
+					value={String(expired)}
+					hint={expired > 0 ? "They no longer sign; delete them" : "None"}
+					{...(expired > 0 ? { tone: "bad" as const } : {})}
+				/>
+			</div>
+			<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+				<Panel
+					title="When they expire"
+					description={`Over the next twelve months${timeline.later > 0 ? `, plus ${timeline.later} later` : ""}; ${timeline.never} never expire`}
+					className="min-w-0 xl:col-span-8"
+				>
+					<Columns
+						label="Service accounts expiring per month"
+						height={180}
+						columns={timeline.months}
+						color={dataColor(1)}
+					/>
+				</Panel>
+				<div className="grid min-w-0 gap-3 xl:col-span-4">
+					<Panel title="Status">
+						<Ring
+							label="Service accounts by status"
+							size={124}
+							thickness={14}
+							slices={[
+								{ label: "Can sign", value: signing, color: dataColor(0), display: String(signing) },
+								{ label: "Paused", value: paused, color: dataColor(4), display: String(paused) },
+								{ label: "Expired", value: expired, color: dataColor(1), display: String(expired) },
+							]}
+							center={
+								<>
+									<span className="font-rounded font-semibold text-[22px] leading-7">{accounts.length}</span>
+									<span className="text-[12px] text-muted-foreground">accounts</span>
+								</>
+							}
+						/>
+					</Panel>
+					<Panel title="Accounts per user">
+						<BarList
+							label="Service accounts per user"
+							color={dataColor(0)}
+							items={[...owners.entries()]
+								.sort((a, b) => b[1] - a[1])
+								.slice(0, 5)
+								.map(([user, count]) => ({
+									key: user,
+									label: user,
+									value: count,
+									display: String(count),
+								}))}
+						/>
+					</Panel>
+				</div>
+			</div>
+		</>
+	);
+}
+
 function ServiceAccountsPage() {
 	const { account: selectedId } = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
@@ -472,8 +565,8 @@ function ServiceAccountsPage() {
 				actions={canWrite && <CreateServiceAccountDialog />}
 			/>
 			{data && data.length > 0 && (
-				<Reveal className="mb-6">
-					<StatBand stats={accountStats(data)} />
+				<Reveal className="mb-8">
+					<AccountsDashboard accounts={data} />
 				</Reveal>
 			)}
 			<Reveal delay={0.05}>

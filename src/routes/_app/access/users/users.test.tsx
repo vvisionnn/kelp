@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
+import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
 import { settle } from "../../../../../test/settle.ts";
@@ -29,7 +30,7 @@ describe("users list", () => {
 		renderApp("/access/users", routes);
 		await screen.findByText("bob@example.com");
 		for (const header of ["User", "Access keys", "Permissions", "Policies", "Groups"])
-			fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: header }));
+			fireEvent.click(within(dataTable()).getByRole("button", { name: header }));
 		expect(screen.getByText("bob@example.com")).toBeTruthy();
 	});
 
@@ -261,5 +262,72 @@ describe("user details", () => {
 		fail = false;
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 		expect(await screen.findByText("No access keys")).toBeTruthy();
+	});
+});
+
+describe("users dashboard", () => {
+	test("shows who can reach what, how users get access and what needs attention", async () => {
+		const { routes, users } = await accessApi();
+		const stale = new Date(Date.now() - 200 * 86_400_000).toISOString();
+		renderApp("/access/users", {
+			...routes,
+			"GET /iam/users": {
+				users: [
+					...users,
+					{ ...users[0], username: "keyless", accessKeys: [] },
+					{
+						...users[2],
+						username: "root",
+						isStatic: false,
+						accessKeys: [{ accessKey: "OLD", status: "Active", createdAt: stale }],
+					},
+				],
+			},
+			"GET /buckets": { buckets: [{ name: "media" }, { name: "logs" }] },
+		});
+		const matrix = await screen.findByRole("table", { name: "Access by user and bucket" });
+		expect(within(matrix).getByRole("link", { name: "bob" })).toBeTruthy();
+		expect(
+			within(matrix).getAllByRole("img", { name: /kelp-dev: Full control on media \(all buckets\)/ }),
+		).toHaveLength(1);
+		expect(screen.getByRole("img", { name: "Users by how they get access" })).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Users who can reach each bucket" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Access keys by age" })).toBeTruthy();
+		expect(screen.getByText("root has full control with a 200-day-old key")).toBeTruthy();
+		expect(screen.getByText("keyless has no access keys")).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Keys to rotate" }).textContent).toContain("1");
+	});
+
+	test("long attention lists are cut short", async () => {
+		const { routes, users } = await accessApi();
+		const many = Array.from({ length: 8 }, (_, i) => ({
+			...users[0],
+			username: `quiet-${i}`,
+			accessKeys: [],
+		}));
+		renderApp("/access/users", {
+			...routes,
+			"GET /iam/users": { users: many },
+			"GET /buckets": { buckets: [] },
+		});
+		expect(await screen.findByText("And 2 more.")).toBeTruthy();
+	});
+});
+
+describe("user reach", () => {
+	test("a user's page shows what they can reach and how old their keys are", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/users/bob", routes);
+		expect(await screen.findByText("What bob can reach")).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Buckets reached" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Oldest active key" })).toBeTruthy();
+	});
+
+	test("an admin reaches every bucket", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/users/kelp-dev", routes);
+		const reached = await screen.findByRole("region", { name: "Buckets reached" });
+		expect(reached.textContent).toContain("All");
+		expect(reached.textContent).toContain("Full control on every bucket");
 	});
 });

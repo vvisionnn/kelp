@@ -1,11 +1,14 @@
-import type { IamGroup } from "@shared/iam.ts";
+import type { IamGroup, IamPolicy, IamUser } from "@shared/iam.ts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, UsersRound } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { accessMatrix, groupAsIdentity } from "@/components/kelp/access/analysis.ts";
 import { NameList } from "@/components/kelp/access/badges.tsx";
+import { AccessMatrixView } from "@/components/kelp/access/insights.tsx";
+import { BarList, dataColor, Kpi } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Reveal, StatBand, StatusDot } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel, Reveal, StatusDot } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,6 +25,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
+import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/groups/")({
@@ -126,19 +130,95 @@ function CreateGroupDialog() {
 }
 
 /** Headline numbers for the groups page. */
-export function groupStats(groups: IamGroup[]) {
-	return [
-		{ label: "Groups", value: groups.length },
-		{ label: "Switched off", value: groups.filter((group) => !group.enabled).length },
-		{ label: "Memberships", value: groups.reduce((sum, group) => sum + group.members.length, 0) },
-		{ label: "Policies attached", value: groups.reduce((sum, group) => sum + group.policies.length, 0) },
-	];
+export function groupStats(groups: IamGroup[], users: IamUser[]) {
+	const members = new Set(groups.flatMap((group) => group.members));
+	return {
+		groups: groups.length,
+		off: groups.filter((group) => !group.enabled).length,
+		memberships: groups.reduce((sum, group) => sum + group.members.length, 0),
+		outside: users.filter((user) => !members.has(user.username)).map((user) => user.username),
+		attached: groups.reduce((sum, group) => sum + group.policies.length, 0),
+	};
+}
+
+function GroupsDashboard({
+	groups,
+	users,
+	policies,
+	buckets,
+}: {
+	groups: IamGroup[];
+	users: IamUser[];
+	policies: IamPolicy[];
+	buckets: string[];
+}) {
+	const stats = groupStats(groups, users);
+	const matrix = accessMatrix(groups.map(groupAsIdentity), [], policies, buckets);
+	const shared = new Set(
+		matrix.rows.flatMap((row) =>
+			Object.entries(row.cells)
+				.filter(([, c]) => c.level)
+				.map(([b]) => b),
+		),
+	);
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<Kpi
+					label="Groups"
+					value={String(stats.groups)}
+					hint={stats.off > 0 ? `${stats.off} switched off` : "All switched on"}
+				/>
+				<Kpi
+					label="Memberships"
+					value={String(stats.memberships)}
+					hint={`${stats.attached} policies attached`}
+				/>
+				<Kpi
+					label="Users in no group"
+					value={String(stats.outside.length)}
+					hint={stats.outside.length > 0 ? stats.outside.join(", ") : "Everyone belongs to a group"}
+				/>
+				<Kpi label="Buckets shared" value={String(shared.size)} hint="Reached through a group policy" />
+			</div>
+			<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+				<Panel
+					title="What each group grants"
+					description="The strongest access a group's policies give its members, per bucket"
+					className="min-w-0 xl:col-span-8"
+				>
+					<AccessMatrixView matrix={matrix} rows="group" />
+				</Panel>
+				<Panel title="Members per group" className="xl:col-span-4">
+					<BarList
+						label="Groups by members"
+						color={dataColor(0)}
+						items={[...groups]
+							.sort((a, b) => b.members.length - a.members.length)
+							.map((group) => ({
+								key: group.name,
+								label: (
+									<Link to="/access/groups/$name" params={{ name: group.name }} className="hover:underline">
+										{group.name}
+									</Link>
+								),
+								value: group.members.length,
+								display: `${group.members.length} ${group.members.length === 1 ? "member" : "members"}`,
+							}))}
+					/>
+				</Panel>
+			</div>
+		</>
+	);
 }
 
 function GroupsPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
 	const { data, isPending, error, refetch } = useQuery(accessQueries.groups());
+	const users = useQuery(accessQueries.users()).data;
+	const policies = useQuery(accessQueries.policies()).data;
+	const buckets = useQuery(objectQueries.buckets()).data;
 	return (
 		<>
 			<PageHeader
@@ -146,9 +226,14 @@ function GroupsPage() {
 				description="Share policies across users. A disabled group grants nothing."
 				actions={canWrite && <CreateGroupDialog />}
 			/>
-			{data && data.length > 0 && (
-				<Reveal className="mb-6">
-					<StatBand stats={groupStats(data)} />
+			{data && data.length > 0 && users && policies && (
+				<Reveal className="mb-8">
+					<GroupsDashboard
+						groups={data}
+						users={users}
+						policies={policies}
+						buckets={(buckets ?? []).map((b) => b.name)}
+					/>
 				</Reveal>
 			)}
 			<Reveal delay={0.05}>
