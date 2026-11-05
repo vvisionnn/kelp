@@ -15,7 +15,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/vvisionnn/kelp?color=0e7a6d" alt="MIT license"></a>
 </p>
 
-![Kelp overview in the light theme](docs/screenshots/overview.png)
+![Kelp overview: live S3 traffic, latency, capacity and the busiest buckets](docs/screenshots/overview.png)
 
 Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: an Apple-grade dashboard design of its own (see [DESIGN.md](DESIGN.md)), sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
 
@@ -34,16 +34,16 @@ Kelp manages a SeaweedFS cluster without changing it. It drives the native admin
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/volumes.png" alt="Volumes in the dark theme"></td>
-    <td><img src="docs/screenshots/erasure-coding.png" alt="Shard map of an erasure-coded volume"></td>
+    <td><img src="docs/screenshots/volumes.png" alt="Volumes: fill, traffic and garbage at a glance"></td>
+    <td><img src="docs/screenshots/erasure-coding.png" alt="Erasure coding: shards per server and space saved"></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/files.png" alt="File browser with an image preview, light theme"></td>
-    <td><img src="docs/screenshots/table.png" alt="Iceberg table schema"></td>
+    <td><img src="docs/screenshots/buckets.png" alt="Buckets: traffic per bucket, quotas and object sizes"></td>
+    <td><img src="docs/screenshots/table.png" alt="An Iceberg table: records over time and recent commits"></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/maintenance.png" alt="Maintenance job types"></td>
-    <td><img src="docs/screenshots/user.png" alt="A user's keys, groups and policies, dark theme"></td>
+    <td><img src="docs/screenshots/maintenance.png" alt="Maintenance: checks, outcomes and where worker time goes"></td>
+    <td><img src="docs/screenshots/users.png" alt="Users: who can reach which bucket, and keys to rotate"></td>
   </tr>
 </table>
 
