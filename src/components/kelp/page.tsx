@@ -102,7 +102,7 @@ export function Panel({
 	return (
 		<section
 			aria-labelledby={title ? titleId : undefined}
-			className={cn("group-sheet text-card-foreground", className)}
+			className={cn("group-sheet min-w-0 text-card-foreground", className)}
 		>
 			{(title || actions) && (
 				<header className="flex items-start justify-between gap-3 px-4 pt-3.5">
