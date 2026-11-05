@@ -8,7 +8,7 @@
 # in this setup, so it stays on the internal network and only Kelp talks to it.
 
 x-seaweedfs: &seaweedfs
-  image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.52}
+  image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION:-4.51}
   restart: unless-stopped
 
 services:
