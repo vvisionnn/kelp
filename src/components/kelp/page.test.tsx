@@ -67,7 +67,7 @@ describe("page primitives", () => {
 		);
 		const meters = screen.getAllByRole("meter");
 		expect(meters.map((m) => m.getAttribute("aria-valuenow"))).toEqual(["10", "85", "99", "0"]);
-		expect(meters[0]?.firstElementChild?.className).toContain("bg-primary");
+		expect(meters[0]?.firstElementChild?.className).toContain("spectrum");
 		expect(meters[1]?.firstElementChild?.className).toContain("bg-warning");
 		expect(meters[2]?.firstElementChild?.className).toContain("bg-destructive");
 	});

@@ -8,16 +8,17 @@ Kelp is the console an operator keeps open next to a SeaweedFS cluster. This fil
 
 Two influences, used as concepts and never copied:
 
-- **Monochrome with meaning** (from x.ai): the chrome is black, white and greys; color appears only where it carries information.
-- **Apple-grade craft** (from the Human Interface Guidelines and the Liquid Glass language): navigation floats on a glass layer above the content, controls are compact rounded rectangles in dense areas, hierarchy comes from type and spacing rather than boxes, and motion answers what the person did.
+- **x.ai's color thinking**: the chrome is black, white and greys, actions are monochrome (ink on light, white on dark), and color comes from one place: the spectrum family (indigo, violet, pink, orange, amber). Kelp uses it for data and for the few brand moments, never for decoration.
+- **Desktop craft**: navigation floats on a glass layer above the content, dense controls are compact rounded rectangles, hierarchy comes from type and spacing rather than boxes, and motion answers what the person did.
 
 ### Key Characteristics
 
-- A floating glass sidebar, inset from the window edge, with System Settings style colored icon tiles. This is the main place color lives.
+- A floating glass sidebar with quiet monochrome line icons. The current page gets a soft fill and a thin spectrum bar on its leading edge, the one touch of brand color in the chrome.
 - A sticky glass toolbar per page: title on the left, search and page actions on the right. Content scrolls beneath both glass layers.
 - Inset grouped sections (white sheets on a soft grey canvas in light, raised greys on near-black in dark), with hairline separators between rows.
 - Dense, legible tables: 40px rows, 13px text, tabular numerals, units in secondary ink.
-- Numbers in SF Pro Rounded where the platform has it, so metrics read like Apple widgets.
+- Charts everywhere data has a shape: live traffic, latency, growth, shares and distributions, drawn in the data palette with a crosshair and a data table behind every chart.
+- Numbers in a rounded face where the platform has one, units set lighter.
 - No decorative gradients, glows or ambient animation inside the app. The sign-in page is the one place for atmosphere.
 
 ## 2. Color Palette & Roles
@@ -35,43 +36,20 @@ Colors are named by role. Light and dark are designed separately, not inverted.
 | Tertiary label  | `--tertiary`         | rgb(60 60 67 / .36)    | rgb(235 235 245 / .32) | Placeholders, disabled text, units               |
 | Separator       | `--border`           | rgb(0 0 0 / .08)       | rgb(255 255 255 / .08) | Row hairlines, group outlines                    |
 | Fill            | `--accent`           | rgb(120 120 128 / .12) | rgb(120 120 128 / .24) | Selected sidebar row, hovered controls           |
-| Accent (Tide)   | `--primary`          | #0A66E8                | #3D8BFF                | Primary buttons, links, focus, selection         |
+| Ink (primary)   | `--primary`          | #1D1D1F                | #F5F5F7                | Primary buttons, selected menu rows, switches on |
 | Destructive     | `--destructive`      | #E5352B                | #FF5A50                | Delete and irreversible actions                  |
 
 ### Primary
 
-**Tide** is Kelp's one interaction color: a clear, slightly deep blue. It marks what you can do (primary buttons, links, toggles that are on, focus rings, the current selection in tables) and nothing else. It is never used for decoration or for data.
+**Ink** is Kelp's action color, as on x.ai: primary buttons are near-black with white text in light mode and near-white with black text in dark mode. Highlighted menu rows, switches that are on and selected segments invert the same way. Links are ink with an underline on hover. Focus is a 2px ring of ink at 55% opacity.
 
-### Interactive
+### The spectrum
 
-- Primary button: Tide fill, white label.
-- Secondary button: Fill (translucent grey) with label ink.
-- Plain button: label ink, Fill on hover.
-- Focus: 2px Tide ring at 2px offset (`--ring`).
+`--spectrum` is x.ai's gradient: indigo #6366F1, violet #A855F7, pink #EC4899, orange #F97316, amber #EAB308. It appears in exactly three places: the current page's bar in the sidebar, capacity meters below the warning threshold, and the sign-in screen. Nowhere else, so it keeps meaning "Kelp".
 
-### Identity tiles
+### Icons
 
-Each page in the sidebar has a colored rounded-square tile with a white glyph, the way macOS System Settings does. The tile color identifies the page and repeats wherever that page is referenced (command menu, page header). Tile colors never encode state.
-
-| Page             | Tile    |
-| ---------------- | ------- |
-| Overview         | #3A3A3C |
-| Nodes            | #5E5CE6 |
-| Volumes          | #0A84FF |
-| Collections      | #30B0C7 |
-| Erasure coding   | #BF5AF2 |
-| Buckets          | #FF9F0A |
-| Files            | #5AC8FA |
-| Tables           | #FFB800 |
-| Users            | #FF375F |
-| Groups           | #A2845E |
-| Service accounts | #7D7AFF |
-| Policies         | #8E8E93 |
-| Maintenance      | #636366 |
-| Messaging        | #30D158 |
-| Settings         | #8E8E93 |
-
-Tiles have a soft top-light gradient (white at 22% fading to transparent) and a 0.5px inner edge, like an app icon.
+Navigation icons are 16px line icons at 1.75 stroke in secondary ink; the current page's icon turns to label ink. No colored icon tiles: they read as a phone home screen, not a desktop console.
 
 ### Status (reserved)
 
@@ -80,7 +58,7 @@ Tiles have a soft top-light gradient (white at 22% fading to transparent) and a 
 | Good     | #248A3D | #30D158 | a dot or check, and a word    |
 | Warning  | #C93400 | #FF9F0A | a triangle or dot, and a word |
 | Critical | #D70015 | #FF453A | an octagon or dot, and a word |
-| Info     | Tide    | Tide    | an info glyph                 |
+| Info     | #5552E0 | #6D6AF2 | an info glyph                 |
 
 Status colors appear as small dots, glyphs and tinted pills (12% fill, full-strength text). Never as large fills.
 
@@ -88,10 +66,22 @@ Status colors appear as small dots, glyphs and tinted pills (12% fill, full-stre
 
 For charts and meters only, in this fixed order (validated for color-vision deficiency on both surfaces):
 
-- Light: #2563C9, #C8452E, #0E8A79, #7D55C7, #9A7012
-- Dark: #2F86E0, #D9573F, #1FA591, #9D74E0, #B98B2A
+Drawn from the spectrum family, with a teal added so neighbors stay apart for color-blind readers:
 
-Capacity meters use Tide below 80%, Warning from 80% and Critical from 95%, always with the percentage in text beside them.
+- Light: indigo #5552E0, orange #C2541A, teal #00897A, violet #9A45C2, amber #8F6D10
+- Dark: indigo #6D6AF2, orange #D96A2B, teal #1F9D8F, violet #B65FD8, amber #B08A24
+
+Series take colors in this order and keep them when filters change; a sixth series folds into "Other". Capacity meters fill with the spectrum below 80%, Warning from 80% and Critical from 95%, always with the percentage in text beside them.
+
+### Charts
+
+- Time series share one range control (15m, 1h, 6h, 24h) in the page header; it scopes every chart on the page.
+- Lines are 2px; areas are a 10% wash; stacked areas use the data palette with a 1px surface seam.
+- Hairline horizontal gridlines only, compact tick labels (1.2K, 34K), clock times on the x axis.
+- A crosshair snaps to the nearest sample and lists every series, value first. The chart is focusable and the arrow keys walk the samples.
+- Two or more series always have a legend; one series is named by the panel title.
+- Every chart carries a screen-reader table of its data.
+- Stat tiles: label, value with a lighter unit, optional hint, optional 12-point sparkline.
 
 ### Surface & Overlay
 
@@ -108,11 +98,11 @@ Capacity meters use Tide below 80%, Warning from 80% and Critical from 95%, alwa
 
 ### Light Mode
 
-Soft grey canvas (#F5F5F7), white sheets, near-black label (#1D1D1F). Separators are 8% black. Glass is bright and frosted. Tide is #0A66E8.
+Soft grey canvas (#F5F5F7), white sheets, near-black label (#1D1D1F). Separators are 8% black. Glass is bright and frosted. Actions are near-black ink.
 
 ### Dark Mode
 
-Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, so depth reads as lighter-is-closer. Labels are #F5F5F7, separators 8% white. Glass is smoky. Tide lifts to #3D8BFF to hold contrast.
+Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, so depth reads as lighter-is-closer. Labels are #F5F5F7, separators 8% white. Glass is smoky. Actions invert to near-white.
 
 ## 3. Typography Rules
 
@@ -150,10 +140,10 @@ Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, s
 
 - Sizes: small 28px (toolbars, rows), regular 32px (default), large 40px (sign-in, empty states).
 - Shape: rounded rectangle, 8px radius. Capsules only for the sign-in button and status pills.
-- Primary: Tide fill, white text, 500 weight. Hover darkens. Press scales to 0.98.
+- Primary: ink fill (near-black in light, near-white in dark) with inverted text, 500 weight. Hover lifts brightness. Press scales to 0.98.
 - Secondary: Fill background, label text. Plain: transparent, Fill on hover.
 - Destructive: red text on Fill; in confirmations a red fill. Deleting a populated resource uses hold-to-confirm (React Bits HoldButton).
-- Links: Tide text, no underline until hover.
+- Links: ink text, underline on hover.
 
 ### Cards and Containers
 
@@ -163,22 +153,22 @@ Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, s
 
 ### Inputs and Interactive Controls
 
-- Text fields: 32px, 8px radius, Raised fill with a faint edge; on focus a Tide ring. Search fields carry a magnifier glyph and a ⌘K hint.
+- Text fields: 32px, 8px radius, Raised fill with a faint edge; on focus an ink ring at 30%. Search fields carry a magnifier glyph and a ⌘K hint.
 - Segmented control: Raised track, white (light) or #636366 (dark) thumb with a soft shadow; the thumb springs between segments (React Bits RubberSegment). Used for filters and view switches.
-- Switch: iOS proportions, Tide when on.
-- Checkbox: 16px, 4px radius, Tide fill when checked.
-- Select and menus: popover surface, 6px radius items, Tide fill on the highlighted item with white text.
+- Switch: ink when on, thumb inverted.
+- Checkbox: 16px, 4px radius, ink fill when checked.
+- Select and menus: popover surface, 6px radius items, ink fill on the highlighted item with inverted text.
 
 ### Navigation
 
-- **Sidebar**: floats 8px from the window edges, 248px wide, 16px radius, glass. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 20px identity tile, 13px label, 32px row, 8px radius. The selected row gets the Fill background and a 600-weight label. Bottom: the account button.
+- **Sidebar**: floats 8px from the window edges, 248px wide, 16px radius, glass. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 16px line icon in secondary ink, 13px label, 32px row, 8px radius. The current row gets the Fill background, label-ink icon and text, and a 3px spectrum bar on its leading edge that springs between rows. Bottom: the account button.
 - **Toolbar**: 52px, sticky, glass. Leading: sidebar button (compact widths), back button on detail pages ("‹ Volumes"), and the page title once the page header scrolls away. Trailing: search field.
-- **Page header**: 26px bold title with the page's identity tile, a one-line description in secondary ink, and page actions at the trailing edge.
+- **Page header**: 26px semibold title, a one-line description in secondary ink, and page actions (including the time range when the page has charts) at the trailing edge.
 
 ### Tables
 
 - No header band. Column headers are footnote size in secondary ink with sort glyphs.
-- Rows are 40px, separated by hairlines; hover uses Raised; selected rows use Tide at 10%.
+- Rows are 40px, separated by hairlines; hover uses Raised; selected rows use ink at 6%.
 - Numbers right-aligned, tabular. Identifiers in mono. Empty cells show an en dash in tertiary ink.
 - A table lives inside a Group; its toolbar (search, segmented filter, actions) sits above it, outside the group.
 
@@ -194,9 +184,9 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 
 ### Distinctive Components
 
-- **Identity tiles** in the sidebar, page headers and command menu.
+- **Spectrum bar** marking the current page in the sidebar.
 - **Rolling metrics**: values change with React Bits Counter digit rolls when data refreshes.
-- **Capacity meter**: 6px track in Fill, value in Tide/Warning/Critical with the percent beside it.
+- **Capacity meter**: 6px track in Fill, value in spectrum/Warning/Critical with the percent beside it.
 - **Hold to delete**: destructive actions on populated resources fill as you hold, so nothing important is lost to a misclick.
 
 ## 5. Layout Principles
@@ -240,7 +230,7 @@ Concentric with the window: sidebar 16, groups and widgets 12, controls and side
 
 - Put the answer first: health, capacity and problems at the top of the page.
 - Group related settings and facts into inset groups with titles outside.
-- Use identity tiles to connect a page with every reference to it.
+- Give every number with a history a trend, and every share a chart.
 - Keep numbers tabular, right-aligned and with lighter units.
 - Animate in response to actions: selection, opening, confirming, refreshing.
 
@@ -248,7 +238,7 @@ Concentric with the window: sidebar 16, groups and widgets 12, controls and side
 
 - No landing-page patterns: hero headlines, marketing copy, giant stat bands, bento grids of links, decorative gradients.
 - No glass on content, no nested cards, no borders and shadows stacked on the same element.
-- No color for decoration; Tide is only for interaction, status colors only for state.
+- No color for decoration; the spectrum is only for the sidebar marker, meters and sign-in; status colors only for state.
 - No ambient or looping animation inside the app.
 - No all-caps labels or letter-spaced eyebrows.
 
@@ -276,21 +266,21 @@ Tables keep identity and status columns and drop secondary columns first; side c
 
 - Canvas #F5F5F7 / #0E0E10, Sheet #FFFFFF / #1C1C1E, Raised #F2F2F5 / #2C2C2E
 - Label #1D1D1F / #F5F5F7, Secondary #6E6E73 / #98989F
-- Tide #0A66E8 / #3D8BFF
+- Ink #1D1D1F / #F5F5F7, spectrum #6366F1 → #A855F7 → #EC4899 → #F97316 → #EAB308
 - Good #248A3D / #30D158, Warning #C93400 / #FF9F0A, Critical #D70015 / #FF453A
 
 ### Quick Summary
 
-Apple-grade operations dashboard: floating glass sidebar with colored identity tiles, sticky glass toolbar, inset grouped sheets on a soft canvas, dense 40px tables, 13–14px system type with rounded tabular numerals, one blue interaction color, status colors only for state.
+Big-screen operations dashboard: floating glass sidebar with quiet line icons and a spectrum marker, sticky glass toolbar, stat tiles with sparklines, live charts in the data palette, inset grouped sheets on a soft canvas, dense 40px tables, monochrome ink actions, status colors only for state.
 
 ### Example Component Prompts
 
 - "A widget: Sheet, 12px radius, 16px padding. Top row: a glyph and 'Disk capacity' in 13px secondary. Value '168 GiB' in 28px rounded semibold with 'of 228 GiB' in secondary. A 6px capacity meter below with '74%' at the right."
-- "A list page: page header with tile, 26px bold title, one-line description and a 32px primary button; a row with a search field and a segmented filter; then a Group containing a table with 40px rows."
+- "A list page: page header with a 26px semibold title, one-line description and a 32px primary button; a row with a search field and a segmented filter; then a Group containing a table with 40px rows."
 
 ### Ready-to-Use Prompt
 
-"Build this screen in the Kelp design system: Apple-grade dashboard, not a landing page. Floating glass sidebar and toolbar, inset grouped sheets, compact rounded-rectangle controls, Tide blue for interaction only, status colors only for state, system font with rounded tabular metrics, no decorative gradients."
+"Build this screen in the Kelp design system: a big-screen operations dashboard, not a landing page. Stat tiles with sparklines and live charts in the data palette, inset grouped sheets, compact rounded-rectangle controls, monochrome ink actions, the spectrum only for meters, status colors only for state, no decorative gradients."
 
 ### Iteration Guide
 
@@ -317,4 +307,4 @@ Apple-grade operations dashboard: floating glass sidebar with colored identity t
 ## Optional Appendix: Evidence Notes
 
 - From x.ai: the restraint of a monochrome chrome with color reserved for meaning, and quiet, confident numbers. Its marketing patterns (hero headlines, mesh-gradient cards, bento links) were deliberately left behind; they belong on a landing page, not in a console.
-- From Apple's Human Interface Guidelines (Materials, Sidebars) and WWDC25 "Get to know the new design system": navigation on a floating glass layer above content; capsules for standout actions while dense desktop controls stay rounded rectangles; concentric radii; System Settings identity tiles; SF Pro Rounded for widget numerals.
+- From Apple's Human Interface Guidelines (Materials, Sidebars) and WWDC25 "Get to know the new design system": navigation on a floating glass layer above content; capsules for standout actions while dense desktop controls stay rounded rectangles; concentric radii; rounded numerals for metrics. Colored icon tiles were tried and dropped: they read as mobile, not desktop.

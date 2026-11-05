@@ -245,7 +245,7 @@ export function AuroraCard({ children, className }: { children: ReactNode; class
 /** Used/total bar. Turns amber past 80% and red past 95%, always with a text value beside it. */
 export function CapacityBar({ used, total, className }: { used: number; total: number; className?: string }) {
 	const fraction = ratio(used, total);
-	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "bg-primary";
+	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "spectrum";
 	return (
 		// biome-ignore lint/a11y/useSemanticElements: a native <meter> cannot animate its fill.
 		<div
