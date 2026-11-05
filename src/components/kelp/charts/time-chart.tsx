@@ -259,20 +259,25 @@ export function TimeChart({
 					))}
 				</div>
 			)}
-			{clipped && (
-				<p className="absolute top-0 right-2 text-[11px] text-tertiary">
-					Peaks above {format(y.domain()[1] as number)} are cut off
-				</p>
-			)}
-			{series.length > 1 && (
-				<Legend
-					className="mt-2 pl-11"
-					items={series.map((s) => ({
-						label: s.label,
-						color: s.color,
-						shape: mode === "line" ? "line" : "swatch",
-					}))}
-				/>
+			{(series.length > 1 || clipped) && (
+				<div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pl-11">
+					{series.length > 1 ? (
+						<Legend
+							items={series.map((s) => ({
+								label: s.label,
+								color: s.color,
+								shape: mode === "line" ? "line" : "swatch",
+							}))}
+						/>
+					) : (
+						<span />
+					)}
+					{clipped && (
+						<p className="text-[11px] text-tertiary">
+							Peaks above {format(y.domain()[1] as number)} are cut off
+						</p>
+					)}
+				</div>
 			)}
 			<div className="sr-only">
 				<table>
