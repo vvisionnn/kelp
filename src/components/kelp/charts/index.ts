@@ -1,6 +1,6 @@
 export { BarList, type BarListItem } from "./bar-list.tsx";
 export { type Column, Columns } from "./columns.tsx";
-export { clock, compact, millis, perSecond } from "./format.ts";
+export { clock, clockSeconds, compact, millis, perSecond } from "./format.ts";
 export { Kpi, splitUnit } from "./kpi.tsx";
 export { Legend, type LegendItem } from "./legend.tsx";
 export { Ring, type RingSlice } from "./ring.tsx";

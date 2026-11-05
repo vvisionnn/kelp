@@ -133,7 +133,7 @@ function Headline({ data, telemetry }: { data: Overview; telemetry: Telemetry | 
 			<Kpi
 				label="S3 latency, p95"
 				{...(latestP95 === null ? { value: "–" } : splitUnit(millis(latestP95)))}
-				hint={latestP95 === null ? "No requests in the last interval" : "95% of requests are faster"}
+				hint={latestP95 === null ? "No requests in the last interval" : "Slowest 5% take longer"}
 				trend={p95}
 				color={dataColor(3)}
 			/>

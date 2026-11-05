@@ -2,7 +2,7 @@ import { scaleLinear, scaleTime } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
 import { type KeyboardEvent, type PointerEvent, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { clock, compact } from "./format.ts";
+import { clock, clockSeconds, compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
 
@@ -85,6 +85,9 @@ export function TimeChart({
 		.range([innerHeight, 0]);
 	const yTicks = y.ticks(4);
 	const xTicks = x.ticks(Math.max(2, Math.min(6, Math.floor(innerWidth / 110))));
+	// Ticks closer than a minute apart need seconds, or the labels repeat.
+	const withSeconds =
+		xTicks.length > 1 && (xTicks[1] as Date).getTime() - (xTicks[0] as Date).getTime() < 60_000;
 
 	const linePath = (values: Array<number | null>) =>
 		line<number | null>()
@@ -160,7 +163,7 @@ export function TimeChart({
 							textAnchor="middle"
 							className="fill-muted-foreground text-[11px] tabular"
 						>
-							{clock(tick.getTime(), spanDays >= 1)}
+							{withSeconds ? clockSeconds(tick.getTime()) : clock(tick.getTime(), spanDays >= 1)}
 						</text>
 					))}
 					{stacked

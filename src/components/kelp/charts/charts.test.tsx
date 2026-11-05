@@ -5,6 +5,7 @@ import {
 	BarList,
 	Columns,
 	clock,
+	clockSeconds,
 	compact,
 	dataColor,
 	hasSeries,
@@ -37,6 +38,7 @@ describe("chart formatters", () => {
 		expect([millis(4.25), millis(320), millis(1400)]).toEqual(["4.3 ms", "320 ms", "1.4 s"]);
 		expect(clock(times[0] as number)).toMatch(/^\d\d:\d\d$/);
 		expect(clock(times[0] as number, true)).toMatch(/^Nov 5 \d\d:\d\d$/);
+		expect(clockSeconds(times[1] as number)).toMatch(/^\d\d:\d\d:15$/);
 	});
 
 	test("units split away from numbers for stat tiles", () => {

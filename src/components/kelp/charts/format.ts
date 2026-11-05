@@ -30,3 +30,8 @@ export function clock(t: number, withDay = false): string {
 	const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 	return withDay ? `${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${time}` : time;
 }
+
+/** A clock time with seconds, for axes spanning only a few minutes: "14:05:30". */
+export function clockSeconds(t: number): string {
+	return new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
