@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { JobRun, MaintenanceActivity, MaintenanceJob } from "@shared/maintenance.ts";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { StackedColumns } from "../charts/stacked-columns.tsx";
 import {
 	ChecksChart,
 	DurationCompare,
@@ -10,7 +11,6 @@ import {
 	stageTimes,
 	WorkerTime,
 } from "./insights.tsx";
-import { StackedColumns } from "./stacked-columns.tsx";
 import {
 	hourly,
 	isCheck,

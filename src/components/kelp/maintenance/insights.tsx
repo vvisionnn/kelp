@@ -1,7 +1,7 @@
 import type { MaintenanceActivity, MaintenanceJob } from "@shared/maintenance.ts";
 import { BarList, clock } from "@/components/kelp/charts/index.ts";
+import { StackedColumns, type StackSeries } from "../charts/stacked-columns.tsx";
 import { formatDuration, humanize } from "./parts.tsx";
-import { StackedColumns, type StackSeries } from "./stacked-columns.tsx";
 import { type HourBucket, hourly, timeByType } from "./stats.ts";
 
 export const OUTCOME_SERIES: StackSeries[] = [

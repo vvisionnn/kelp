@@ -5,6 +5,7 @@ export { Kpi, splitUnit } from "./kpi.tsx";
 export { Legend, type LegendItem } from "./legend.tsx";
 export { Ring, type RingSlice } from "./ring.tsx";
 export { Sparkline } from "./sparkline.tsx";
+export { type StackColumn, StackedColumns, type StackSeries } from "./stacked-columns.tsx";
 export { dataColor, hasSeries, latencySeries, latest, RANGES, trafficByType, useRange } from "./telemetry.ts";
 export { TimeChart, type TimeSeries } from "./time-chart.tsx";
 export { useWidth } from "./use-width.ts";

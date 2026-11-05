@@ -1,7 +1,9 @@
 import { scaleBand, scaleLinear } from "d3-scale";
 import { useState } from "react";
-import { compact, Legend, useWidth } from "@/components/kelp/charts/index.ts";
 import { cn } from "@/lib/utils";
+import { compact } from "./format.ts";
+import { Legend } from "./legend.tsx";
+import { useWidth } from "./use-width.ts";
 
 export interface StackSeries {
 	key: string;

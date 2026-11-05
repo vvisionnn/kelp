@@ -5,6 +5,7 @@ import { History, ListChecks, Play, RefreshCw, ScanSearch } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { clock, Kpi } from "@/components/kelp/charts/index.ts";
+import { StackedColumns } from "@/components/kelp/charts/stacked-columns.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { ChecksChart, lastDay } from "@/components/kelp/maintenance/insights.tsx";
@@ -19,7 +20,6 @@ import {
 	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { SettingsForm } from "@/components/kelp/maintenance/settings-form.tsx";
-import { StackedColumns } from "@/components/kelp/maintenance/stacked-columns.tsx";
 import { runStats } from "@/components/kelp/maintenance/stats.ts";
 import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";

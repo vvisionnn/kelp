@@ -50,8 +50,8 @@ export function Kpi({
 function KpiTrend({ values, color, label }: { values: Array<number | null>; color: string; label: string }) {
 	const [ref, width] = useWidth<HTMLDivElement>(160);
 	return (
-		<div ref={ref} className="mt-3 -mb-1">
-			<Sparkline values={values} color={color} width={width} height={28} label={label} />
+		<div ref={ref} className="mt-3 -mb-1 min-w-0 overflow-hidden">
+			<Sparkline values={values} color={color} width={width} height={28} label={label} className="max-w-full" />
 		</div>
 	);
 }
