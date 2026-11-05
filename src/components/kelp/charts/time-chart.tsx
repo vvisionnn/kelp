@@ -252,27 +252,29 @@ export function TimeChart({
 					}))}
 				/>
 			)}
-			<table className="sr-only">
-				<caption>{label}</caption>
-				<thead>
-					<tr>
-						<th>Time</th>
-						{series.map((s) => (
-							<th key={s.label}>{s.label}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{times.map((t, i) => (
-						<tr key={t}>
-							<td>{clock(t, true)}</td>
+			<div className="sr-only">
+				<table>
+					<caption>{label}</caption>
+					<thead>
+						<tr>
+							<th>Time</th>
 							{series.map((s) => (
-								<td key={s.label}>{s.values[i] === null ? "–" : format(s.values[i] as number)}</td>
+								<th key={s.label}>{s.label}</th>
 							))}
 						</tr>
-					))}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{times.map((t, i) => (
+							<tr key={t}>
+								<td>{clock(t, true)}</td>
+								{series.map((s) => (
+									<td key={s.label}>{s.values[i] === null ? "–" : format(s.values[i] as number)}</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }

@@ -162,27 +162,29 @@ export function StackedColumns({
 			{series.length > 1 && max > 0 && (
 				<Legend className="mt-2 pl-9" items={series.map((s) => ({ label: s.label, color: s.color }))} />
 			)}
-			<table className="sr-only">
-				<caption>{label}</caption>
-				<thead>
-					<tr>
-						<th>Period</th>
-						{series.map((s) => (
-							<th key={s.key}>{s.label}</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{columns.map((column) => (
-						<tr key={column.key ?? column.label}>
-							<td>{column.label}</td>
+			<div className="sr-only">
+				<table>
+					<caption>{label}</caption>
+					<thead>
+						<tr>
+							<th>Period</th>
 							{series.map((s) => (
-								<td key={s.key}>{format(column.values[s.key] ?? 0)}</td>
+								<th key={s.key}>{s.label}</th>
 							))}
 						</tr>
-					))}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						{columns.map((column) => (
+							<tr key={column.key ?? column.label}>
+								<td>{column.label}</td>
+								{series.map((s) => (
+									<td key={s.key}>{format(column.values[s.key] ?? 0)}</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
 		</div>
 	);
 }
