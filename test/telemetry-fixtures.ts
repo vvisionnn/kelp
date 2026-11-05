@@ -53,9 +53,9 @@ export function makeTelemetry(count = 12, end = Date.parse("2026-11-05T12:00:00Z
 		],
 		objectSizes: [
 			{ le: 1024, count: 20 },
-			{ le: 1024 ** 2, count: 300 },
-			{ le: 64 * 1024 ** 2, count: 355 },
-			{ le: Number.POSITIVE_INFINITY, count: 357 },
+			{ le: 1024 ** 2, count: 280 },
+			{ le: 64 * 1024 ** 2, count: 55 },
+			{ le: -1, count: 2 },
 		],
 		disks: [{ path: "/data", usedBytes: 170e9, totalBytes: 228e9 }],
 		unreachable: [],

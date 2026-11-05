@@ -69,7 +69,10 @@ export interface Telemetry {
 	inventory: InventoryPoint[];
 	/** S3 traffic per bucket over the range, busiest first. */
 	buckets: BucketTraffic[];
-	/** Distribution of object sizes written since the filer started (cumulative histogram). */
+	/**
+	 * Objects written since the filer started, counted per size bucket (not cumulative). `le` is the
+	 * bucket's upper bound in bytes; the open-ended last bucket has `le: -1`.
+	 */
 	objectSizes: Array<{ le: number; count: number }>;
 	/** Disk usage per volume server disk, from the volume servers' own report. */
 	disks: Array<{ path: string; usedBytes: number; totalBytes: number }>;

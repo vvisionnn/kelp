@@ -56,17 +56,19 @@ describe("overview page", () => {
 		expect(screen.queryByRole("radiogroup", { name: "Time range" })).toBeNull();
 	});
 
-	test("size columns turn a cumulative histogram into counts per bucket", () => {
+	test("size columns label each bucket, with the open-ended one last", () => {
 		expect(
 			sizeColumns([
+				{ le: 1048576, count: 3 },
+				{ le: -1, count: 1 },
 				{ le: 1024, count: 2 },
-				{ le: 1048576, count: 5 },
-				{ le: Number.POSITIVE_INFINITY, count: 6 },
 			]),
 		).toEqual([
 			{ label: "≤1KiB", value: 2 },
 			{ label: "≤1MiB", value: 3 },
+			{ label: ">1MiB", value: 1 },
 		]);
+		expect(sizeColumns([])).toEqual([]);
 	});
 
 	test("lists versions when nodes disagree", async () => {

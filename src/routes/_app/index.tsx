@@ -325,13 +325,14 @@ function storeSeries(telemetry: Telemetry) {
 	return series;
 }
 
-/** Turns a cumulative size histogram into per-bucket counts with readable labels. */
+/** Size buckets as labelled columns; the open-ended last bucket reads "larger". */
 export function sizeColumns(buckets: Telemetry["objectSizes"]) {
-	const finite = buckets.filter((b) => Number.isFinite(b.le)).sort((a, b) => a.le - b.le);
-	return finite.map((b, i) => ({
-		label: `≤${formatBytes(b.le).replace(" ", "")}`,
-		value: Math.max(0, b.count - (finite[i - 1]?.count ?? 0)),
-	}));
+	const finite = buckets.filter((b) => b.le >= 0).sort((a, b) => a.le - b.le);
+	const columns = finite.map((b) => ({ label: `≤${formatBytes(b.le).replace(" ", "")}`, value: b.count }));
+	const rest = buckets.find((b) => b.le < 0);
+	const last = finite.at(-1);
+	if (rest && last) columns.push({ label: `>${formatBytes(last.le).replace(" ", "")}`, value: rest.count });
+	return columns;
 }
 
 function LiveBadge() {
