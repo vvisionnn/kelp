@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { fireEvent, screen } from "@testing-library/react";
 import { maintenanceApi } from "../../../test/maintenance-fixtures.ts";
 import { renderApp, viewerUser } from "../../../test/render-app.tsx";
+import { makeTelemetry } from "../../../test/telemetry-fixtures.ts";
 
 describe("settings page", () => {
 	test("theme cards change the theme", async () => {
@@ -76,5 +77,26 @@ describe("settings page", () => {
 		});
 		expect(await screen.findByText("SeaweedFS admin reported a problem")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+	});
+
+	test("live metrics say whether Kelp is sampling and which endpoints fail", async () => {
+		const { routes } = await maintenanceApi();
+		const telemetry = { ...makeTelemetry(), unreachable: ["http://10.0.0.9:9327/metrics"] };
+		const app = renderApp("/settings", { ...routes, "GET /telemetry": telemetry });
+		expect(await screen.findByText("Some endpoints are unreachable")).toBeTruthy();
+		expect(screen.getByText("http://10.0.0.9:9327/metrics")).toBeTruthy();
+		app.unmount();
+		renderApp("/settings", {
+			...routes,
+			"GET /telemetry": { ...makeTelemetry(), enabled: false, since: null },
+		});
+		expect(await screen.findByText(/Off. Set KELP_METRICS_URLS/)).toBeTruthy();
+		expect(screen.getByText("Not started")).toBeTruthy();
+	});
+
+	test("live metrics show the healthy state", async () => {
+		const { routes } = await maintenanceApi();
+		renderApp("/settings", { ...routes, "GET /telemetry": makeTelemetry() });
+		expect(await screen.findByText("Sampling")).toBeTruthy();
 	});
 });

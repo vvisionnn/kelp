@@ -4,8 +4,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { History, ListChecks, Play, RefreshCw, ScanSearch } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
+import { clock, Kpi } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { ChecksChart, lastDay } from "@/components/kelp/maintenance/insights.tsx";
 import {
 	ActivityFeed,
 	capitalize,
@@ -17,7 +19,9 @@ import {
 	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { SettingsForm } from "@/components/kelp/maintenance/settings-form.tsx";
-import { EmptyState, ErrorState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { StackedColumns } from "@/components/kelp/maintenance/stacked-columns.tsx";
+import { runStats } from "@/components/kelp/maintenance/stats.ts";
+import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
@@ -144,6 +148,7 @@ function JobTypePage() {
 					<ScheduleFact label="At once per worker" value={runtime.perWorkerExecutionConcurrency} />
 					<ScheduleFact label="Retries" value={runtime.retryLimit} />
 				</dl>
+				<Performance jobType={jobType} />
 			</Reveal>
 			<Tabs
 				value={tab}
@@ -447,6 +452,74 @@ function DetectionSheet({
 				)}
 			</SheetContent>
 		</Sheet>
+	);
+}
+
+/** How this job type has been doing: run outcomes and durations, and how often checks find work. */
+function Performance({ jobType }: { jobType: string }) {
+	const runs = useQuery(maintenanceQueries.runs(jobType));
+	const history = useQuery(maintenanceQueries.history(jobType));
+	const list = runs.data ?? [];
+	const stats = runStats(list);
+	const recent = [...list]
+		.filter((r) => r.completedAt)
+		.sort((a, b) => new Date(a.completedAt as string).getTime() - new Date(b.completedAt as string).getTime())
+		.slice(-30);
+	const buckets = lastDay(history.data?.jobs ?? [], history.data?.activities ?? []);
+	return (
+		<>
+			<div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<Kpi
+					label="Runs recorded"
+					value={String(stats.runs)}
+					hint={`${stats.succeeded} succeeded, ${stats.failed} failed`}
+				/>
+				<Kpi
+					label="Success rate"
+					{...(stats.successRate === null
+						? { value: "–" }
+						: { value: String(Math.round(stats.successRate * 100)), unit: "%" })}
+					hint={stats.successRate === null ? "No run has finished yet" : "Of runs in the history"}
+					{...(stats.successRate !== null && stats.successRate < 0.9 ? { tone: "warn" as const } : {})}
+				/>
+				<Kpi
+					label="Typical run"
+					value={stats.medianMs === null ? "–" : formatDuration(stats.medianMs)}
+					hint="Median duration"
+				/>
+				<Kpi
+					label="Longest run"
+					value={stats.longestMs === null ? "–" : formatDuration(stats.longestMs)}
+					hint="In the recorded history"
+				/>
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+				<Panel
+					title="Recent runs"
+					description="Duration of each run, oldest to newest"
+					className="xl:col-span-7"
+				>
+					<StackedColumns
+						label="Duration of recent runs by outcome"
+						empty="No run has finished yet."
+						height={160}
+						format={(ms) => (ms > 0 ? formatDuration(ms) : "0")}
+						series={[
+							{ key: "success", label: "Succeeded", color: "var(--success)" },
+							{ key: "error", label: "Failed", color: "var(--destructive)" },
+						]}
+						columns={recent.map((run) => ({
+							key: run.runId,
+							label: clock(new Date(run.completedAt as string).getTime()),
+							values: { [run.outcome === "success" ? "success" : "error"]: run.durationMs },
+						}))}
+					/>
+				</Panel>
+				<Panel title="Checks for work" description="Per hour, last 24 hours" className="xl:col-span-5">
+					<ChecksChart buckets={buckets} height={160} />
+				</Panel>
+			</div>
+		</>
 	);
 }
 

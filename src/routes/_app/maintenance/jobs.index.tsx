@@ -3,10 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ListChecks } from "lucide-react";
 import { z } from "zod";
+import { Kpi } from "@/components/kelp/charts/index.ts";
 import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { elapsed, humanize, JobStateBadge, JobTypeIcon } from "@/components/kelp/maintenance/parts.tsx";
-import { EmptyState, PageHeader, Reveal } from "@/components/kelp/page.tsx";
+import { lastDay, OutcomesChart } from "@/components/kelp/maintenance/insights.tsx";
+import {
+	elapsed,
+	formatDuration,
+	humanize,
+	JobStateBadge,
+	JobTypeIcon,
+} from "@/components/kelp/maintenance/parts.tsx";
+import { jobDuration, median, successRate } from "@/components/kelp/maintenance/stats.ts";
+import { EmptyState, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatRelative } from "@/lib/format.ts";
 import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
@@ -44,6 +53,11 @@ function JobsPage() {
 	const overview = useQuery(maintenanceQueries.overview());
 	const names = Object.fromEntries((overview.data?.jobTypes ?? []).map((t) => [t.jobType, t.displayName]));
 	const filtered = Boolean(search.jobType || search.state);
+	const history = useQuery(maintenanceQueries.history(search.jobType));
+	const buckets = lastDay(history.data?.jobs ?? [], history.data?.activities ?? []);
+	const durations = (history.data?.jobs ?? []).map(jobDuration).filter((ms): ms is number => ms !== null);
+	const typical = median(durations);
+	const rate = successRate(history.data?.jobs ?? []);
 
 	const columns: Array<Column<MaintenanceJob>> = [
 		{
@@ -51,7 +65,7 @@ function JobsPage() {
 			header: "Job",
 			cell: ({ row }) => (
 				<div className="flex min-w-0 items-center gap-2.5">
-					<span className="tile size-6 rounded-[6px] [--tile:#636366] [&_svg]:size-3.5">
+					<span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground [&_svg]:size-3.5">
 						<JobTypeIcon jobType={row.original.jobType} />
 					</span>
 					<div className="min-w-0">
@@ -123,6 +137,31 @@ function JobsPage() {
 				}
 			/>
 			<Reveal>
+				<div className="mb-6 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+					<Panel
+						title="Finished jobs"
+						description="Per hour by outcome, last 24 hours"
+						className="xl:col-span-8"
+					>
+						<OutcomesChart buckets={buckets} height={160} />
+					</Panel>
+					<div className="grid grid-cols-2 gap-3 xl:col-span-4 xl:grid-cols-1">
+						<Kpi
+							label="Success rate"
+							{...(rate === null ? { value: "–" } : { value: String(Math.round(rate * 100)), unit: "%" })}
+							hint={rate === null ? "No job has finished yet" : "Of finished jobs in this list"}
+						/>
+						<Kpi
+							label="Typical duration"
+							value={typical === null ? "–" : formatDuration(typical)}
+							hint={
+								durations.length > 0
+									? `Median of ${durations.length} finished ${durations.length === 1 ? "job" : "jobs"}`
+									: "No job has finished yet"
+							}
+						/>
+					</div>
+				</div>
 				<DataTable
 					data={jobs.data}
 					isLoading={jobs.isPending}

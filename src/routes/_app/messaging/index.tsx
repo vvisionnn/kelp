@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { MessagingInsights } from "@/components/kelp/messaging/insights.tsx";
 import {
 	draftFrom,
 	formatRetention,
@@ -20,7 +21,6 @@ import {
 	Reveal,
 	Section,
 	SkeletonBlock,
-	StatBand,
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,18 +82,7 @@ function MessagingPage() {
 			) : (
 				<>
 					<Reveal>
-						<StatBand
-							stats={[
-								{ label: "Topics", value: data.topics.length },
-								{ label: "Messages", value: data.topics.reduce((sum, t) => sum + t.messageCount, 0) },
-								{
-									label: "Stored",
-									value: data.topics.reduce((sum, t) => sum + t.totalSize, 0),
-									format: formatBytes,
-								},
-								{ label: "Brokers", value: data.brokers.length },
-							]}
-						/>
+						<MessagingInsights data={data} />
 					</Reveal>
 					<Section title="Topics">
 						<TopicsTable topics={data.topics} />

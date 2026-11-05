@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CircleStop } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
+import { DurationCompare, StageTimes } from "@/components/kelp/maintenance/insights.tsx";
 import {
 	ACTIVE_STATES,
 	capitalize,
@@ -16,6 +17,7 @@ import {
 	sourceLabel,
 	stateLabel,
 } from "@/components/kelp/maintenance/parts.tsx";
+import { jobDuration, runStats } from "@/components/kelp/maintenance/stats.ts";
 import { ErrorState, InfoList, PageHeader, Reveal, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
 import {
 	Timeline,
@@ -68,6 +70,7 @@ function JobPage() {
 	const { jobId } = Route.useParams();
 	const canWrite = useCanWrite();
 	const { data, error, isPending, refetch } = useQuery(maintenanceQueries.job(jobId));
+	const runs = useQuery({ ...maintenanceQueries.runs(data?.job.jobType ?? ""), enabled: Boolean(data) });
 	const expire = useAction({
 		run: () => maintenanceApi.expire(jobId),
 		success: (result) => (result.expired ? "Job expired" : "The job had already finished"),
@@ -167,7 +170,26 @@ function JobPage() {
 							</p>
 						)}
 						{job.detail && <p className="mt-1 text-[12px] text-muted-foreground">{job.detail}</p>}
+						{!active && (
+							<DurationCompare
+								ms={run?.durationMs ?? jobDuration(job) ?? 0}
+								medianMs={runStats(runs.data ?? []).medianMs}
+								runs={runs.data?.length ?? 0}
+							/>
+						)}
 					</section>
+
+					{steps.length > 2 && (
+						<Section
+							title="Where the time went"
+							description="The longest gaps between events"
+							className="mt-0"
+						>
+							<div className="group-sheet p-4">
+								<StageTimes steps={steps} />
+							</div>
+						</Section>
+					)}
 
 					<Section title="Timeline" description="What happened, oldest first" className="mt-0">
 						<div className="group-sheet p-4">

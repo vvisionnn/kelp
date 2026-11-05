@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { TopicInsights } from "@/components/kelp/messaging/insights.tsx";
 import { PartitionRing } from "@/components/kelp/messaging/partition-ring.tsx";
 import {
 	draftFrom,
@@ -78,9 +79,11 @@ function TopicPage() {
 
 function TopicBody({ topic }: { topic: TopicDetail }) {
 	const leaders = new Set(topic.partitions.map((p) => p.leader).filter(Boolean)).size;
+	const groups = new Set(topic.consumerGroupOffsets.map((o) => o.consumerGroup)).size;
 	return (
 		<Reveal>
-			<div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+			<TopicInsights topic={topic} />
+			<div className="mt-3 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<section aria-label="Key ring" className="group-sheet p-4 lg:col-span-7">
 					<p className="mb-3 text-[12px] text-muted-foreground">
 						Each partition owns a slice of the 2,520-slot key ring.
@@ -90,12 +93,15 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 				<InfoList
 					className="lg:col-span-5"
 					items={[
-						{ label: "Messages", value: <span className="tabular">{formatCount(topic.messageCount)}</span> },
-						{ label: "Stored", value: <span className="tabular">{formatBytes(topic.totalSize)}</span> },
-						{ label: "Partitions", value: <span className="tabular">{topic.partitions.length}</span> },
 						{ label: "Leading brokers", value: <span className="tabular">{leaders}</span> },
-						{ label: "Publishers", value: <span className="tabular">{topic.publishers.length}</span> },
-						{ label: "Subscribers", value: <span className="tabular">{topic.subscribers.length}</span> },
+						{ label: "Keeps messages", value: formatRetention(topic.retention) },
+						{
+							label: "Schema fields",
+							value: <span className="tabular">{topic.keySchema.length + topic.valueSchema.length}</span>,
+						},
+						{ label: "Consumer groups", value: <span className="tabular">{groups}</span> },
+						{ label: "Created", value: topic.createdAt ? formatRelative(topic.createdAt) : "Unknown" },
+						{ label: "Last updated", value: topic.lastUpdated ? formatRelative(topic.lastUpdated) : "Never" },
 					]}
 				/>
 			</div>

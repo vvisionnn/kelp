@@ -88,14 +88,11 @@ describe("maintenance overview page", () => {
 		expect(screen.getByText("Running Volume vacuum")).toBeTruthy();
 		expect(screen.getByText("Checking unknown_type")).toBeTruthy();
 		expect(screen.getByText("2 queued on this worker")).toBeTruthy();
-		const tiles = screen
-			.getAllByText(/^(Running now|Failed today|Finished today)$/)
-			.map((el) => el.parentElement?.parentElement?.textContent);
-		expect(tiles).toEqual([
-			expect.stringContaining("1"),
-			expect.stringContaining("1"),
-			expect.stringContaining("1"),
-		]);
+		const tile = (name: string) => screen.getByRole("region", { name }).textContent;
+		expect(tile("Running now")).toContain("12 queued on workers");
+		expect(tile("Finished, 24 hours")).toContain("1Jobs that completed");
+		expect(tile("Failed, 24 hours")).toContain("1Open a job to see why");
+		expect(tile("Success rate")).toContain("50%Of the last 2 finished jobs");
 	});
 
 	test("errors offer a retry", async () => {
