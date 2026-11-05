@@ -1,12 +1,23 @@
-import type { StorageCollection } from "@shared/storage.ts";
+import type { StorageCollection, StorageInventory } from "@shared/storage.ts";
+import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Layers } from "lucide-react";
+import {
+	BarList,
+	compact,
+	dataColor,
+	Kpi,
+	Ring,
+	splitUnit,
+	useRange,
+} from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { AuroraCard, EmptyState, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { CollectionShare } from "@/components/kelp/storage/collection-share.tsx";
-import { HeroSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
+import { HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import { averageObject, collectionBars, collectionSlices } from "@/components/kelp/storage/insights.ts";
+import { RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -96,36 +107,25 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 function CollectionsPage() {
 	const canWrite = useCanWrite();
 	const navigate = useNavigate();
+	const [range, setRange] = useRange();
 	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
-	const total = data?.collections.reduce((sum, c) => sum + c.size, 0) ?? 0;
-	const files = data?.collections.reduce((sum, c) => sum + c.fileCount, 0) ?? 0;
+	const telemetry = useTelemetry(range);
 	return (
 		<>
 			<PageHeader
 				title="Collections"
 				description="Groups of volumes sized, placed and deleted together. Every S3 bucket stores into its own."
-				actions={canWrite && <GrowVolumesDialog inventory={data} />}
+				actions={
+					<>
+						<RangeControl telemetry={telemetry} range={range} onChange={setRange} />
+						{canWrite && <GrowVolumesDialog inventory={data} />}
+					</>
+				}
 			/>
 			{data ? (
 				<Reveal>
-					<StatBand
-						stats={[
-							{ label: "Collections", value: data.collections.length },
-							{ label: "Stored", value: total, format: formatBytes, hint: "Including erasure-coded data" },
-							{ label: "Files", value: files },
-							{
-								label: "Volumes",
-								value: data.collections.reduce((sum, c) => sum + c.volumeCount, 0),
-								hint: `${formatCount(data.collections.reduce((sum, c) => sum + c.ecVolumeCount, 0))} erasure coded`,
-							},
-						]}
-					/>
-					<AuroraCard className="mt-3 p-4">
-						<SheetCaption title="Where the bytes are">Stored bytes by collection</SheetCaption>
-						<div className="mt-3">
-							<CollectionShare collections={data.collections} />
-						</div>
-					</AuroraCard>
+					<CollectionNumbers inventory={data} telemetry={telemetry} />
+					{data.collections.length > 0 && <CollectionCharts collections={data.collections} />}
 				</Reveal>
 			) : (
 				!error && <HeroSkeleton />
@@ -154,5 +154,101 @@ function CollectionsPage() {
 				/>
 			</div>
 		</>
+	);
+}
+
+/** The collections at a glance, with stored-bytes growth when Kelp samples it. */
+function CollectionNumbers({
+	inventory,
+	telemetry,
+}: {
+	inventory: StorageInventory;
+	telemetry: Telemetry | undefined;
+}) {
+	const collections = inventory.collections;
+	const total = collections.reduce((sum, c) => sum + c.size, 0);
+	const files = collections.reduce((sum, c) => sum + c.fileCount, 0);
+	const garbage = collections.reduce((sum, c) => sum + c.deletedBytes, 0);
+	const largest = [...collections].sort((a, b) => b.size - a.size)[0];
+	const growth = telemetry?.inventory ?? [];
+	return (
+		<div className="grid grid-cols-2 gap-3 max-sm:[&_section_svg]:hidden md:grid-cols-3 xl:grid-cols-6">
+			<Kpi
+				label="Collections"
+				value={formatCount(collections.length)}
+				hint={`${inventory.volumes.length} volumes in all`}
+			/>
+			<Kpi
+				label="Stored"
+				{...splitUnit(formatBytes(total))}
+				hint="With erasure-coded data"
+				trend={growth.map((p) => p.storedBytes)}
+				color={dataColor(2)}
+			/>
+			<Kpi
+				label="Files"
+				value={compact(files)}
+				hint={`${formatCount(files)} in all`}
+				trend={growth.map((p) => p.files)}
+			/>
+			<Kpi
+				label="Average object"
+				{...splitUnit(formatBytes(files > 0 ? total / files : 0))}
+				hint="Stored bytes per file"
+			/>
+			<Kpi
+				label="Largest"
+				value={largest ? formatPercent(ratio(largest.size, total)) : "–"}
+				hint={largest ? `${collectionLabel(largest.name)} holds it` : "No data yet"}
+			/>
+			<Kpi
+				label="Reclaimable"
+				{...splitUnit(formatBytes(garbage))}
+				hint={`${formatPercent(ratio(garbage, total))} of stored bytes`}
+			/>
+		</div>
+	);
+}
+
+/** Bytes, files and object sizes compared across collections. */
+function CollectionCharts({ collections }: { collections: StorageCollection[] }) {
+	const total = collections.reduce((sum, c) => sum + c.size, 0);
+	return (
+		<div className="mt-3 grid gap-3 xl:grid-cols-12">
+			<Panel
+				title="Stored bytes"
+				description="Share of the cluster by collection"
+				className="min-w-0 xl:col-span-5"
+			>
+				<Ring
+					label="Stored bytes by collection"
+					size={152}
+					thickness={14}
+					slices={collectionSlices(collections)}
+					center={
+						<>
+							<span className="font-rounded font-semibold text-[20px] leading-6">{formatBytes(total)}</span>
+							<span className="text-[12px] text-muted-foreground">
+								{formatCount(collections.length)} collections
+							</span>
+						</>
+					}
+				/>
+			</Panel>
+			<Panel title="Files" description="Objects stored, most first" className="min-w-0 xl:col-span-4">
+				<BarList
+					label="Files by collection"
+					color={dataColor(2)}
+					items={collectionBars(collections, (c) => c.fileCount, compact)}
+				/>
+			</Panel>
+			<Panel title="Object size" description="Average bytes per file" className="min-w-0 xl:col-span-3">
+				<BarList
+					label="Average object size by collection"
+					color={dataColor(3)}
+					items={collectionBars(collections, averageObject, formatBytes)}
+				/>
+			</Panel>
+		</div>
 	);
 }

@@ -1,19 +1,32 @@
 import type { ClusterNode, MountClient, TopologyDataCenter, VolumeServer } from "@shared/api.ts";
+import type { Telemetry, TelemetryPoint, TrafficSample } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Cable, Crown, Network, Server } from "lucide-react";
 import { z } from "zod";
+import {
+	dataColor,
+	latest,
+	millis,
+	perSecond,
+	Sparkline,
+	TimeChart,
+	type TimeSeries,
+	useRange,
+} from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
 	CapacityBar,
 	EmptyState,
 	PageHeader,
+	Panel,
 	Reveal,
 	SkeletonBlock,
 	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
+import { MetricsOffNote, RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
@@ -37,11 +50,18 @@ const SEGMENT =
 function ClusterPage() {
 	const { tab = "masters" } = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
+	const [range, setRange] = useRange();
+	const telemetry = useTelemetry(range);
 	return (
 		<>
-			<PageHeader title="Nodes" description="Every process that makes up your SeaweedFS cluster." />
+			<PageHeader
+				title="Nodes"
+				description="Every process that makes up your SeaweedFS cluster."
+				actions={<RangeControl telemetry={telemetry} range={range} onChange={setRange} />}
+			/>
 			<Reveal>
 				<NodeCounts />
+				<NodeActivity telemetry={telemetry} />
 				<TopologyMap />
 			</Reveal>
 			<Tabs
@@ -112,6 +132,133 @@ function NodeCounts() {
 				{ label: "Mounts", value: data.totalMountClients },
 			]}
 		/>
+	);
+}
+
+/** Request rates and latency per component, and what the SeaweedFS processes cost to run. */
+export function NodeActivity({ telemetry }: { telemetry: Telemetry | undefined }) {
+	const { data: overview } = useQuery(queries.overview());
+	const points = telemetry?.points ?? [];
+	const times = points.map((p) => p.t);
+	const cpu = points.map((p) => p.process.cpuPercent);
+	const memory = points.map((p) => p.process.memoryBytes);
+	const goroutines = points.map((p) => p.process.goroutines);
+	return (
+		<>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel title="Requests" description="Per second, by component" className="min-w-0 xl:col-span-8">
+					{telemetry?.enabled ? (
+						<TimeChart
+							times={times}
+							series={componentSeries(points, (t) => t.rps)}
+							height={200}
+							format={perSecond}
+							label="Requests per second by component"
+						/>
+					) : (
+						<MetricsOffNote />
+					)}
+				</Panel>
+				<Panel
+					title="Processes"
+					description="Summed over every SeaweedFS process"
+					className="min-w-0 xl:col-span-4"
+				>
+					<dl className="divide-y divide-border">
+						<ProcessStat
+							label="CPU"
+							value={`${Math.round(latest(cpu) ?? 0)}%`}
+							trend={cpu}
+							color={dataColor(1)}
+						/>
+						<ProcessStat
+							label="Memory"
+							value={formatBytes(latest(memory) ?? 0)}
+							trend={memory}
+							color={dataColor(3)}
+						/>
+						<ProcessStat
+							label="Goroutines"
+							value={formatCount(latest(goroutines) ?? 0)}
+							trend={goroutines}
+							color={dataColor(2)}
+						/>
+					</dl>
+				</Panel>
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel title="Latency" description="95th percentile, by component" className="min-w-0 xl:col-span-7">
+					{telemetry?.enabled ? (
+						<TimeChart
+							times={times}
+							series={componentSeries(points, (t) => t.p95)}
+							height={180}
+							format={millis}
+							label="95th percentile latency by component"
+						/>
+					) : (
+						<MetricsOffNote />
+					)}
+				</Panel>
+				<Panel
+					title="Volume slots"
+					description="Volumes each server holds, of its maximum"
+					className="min-w-0 xl:col-span-5"
+				>
+					{overview ? (
+						<ul aria-label="Volume slots by server" className="space-y-3">
+							{overview.volumeServers.map((server) => (
+								<li key={server.id} className="text-[13px]">
+									<div className="flex items-center justify-between gap-3">
+										<span className="truncate font-mono">{server.address}</span>
+										<span className="shrink-0 text-muted-foreground tabular">
+											{formatCount(server.volumes)} of {formatCount(server.maxVolumes)}
+										</span>
+									</div>
+									<CapacityBar used={server.volumes} total={server.maxVolumes} className="mt-1.5" />
+								</li>
+							))}
+						</ul>
+					) : (
+						<SkeletonBlock className="h-24" />
+					)}
+				</Panel>
+			</div>
+		</>
+	);
+}
+
+/** S3, filer and volume servers as three series of one measure, in fixed colors. */
+export function componentSeries(
+	points: TelemetryPoint[],
+	measure: (t: TrafficSample) => number | null,
+): TimeSeries[] {
+	return [
+		{ label: "S3", color: dataColor(0), values: points.map((p) => measure(p.s3)) },
+		{ label: "Filer", color: dataColor(1), values: points.map((p) => measure(p.filer)) },
+		{ label: "Volume servers", color: dataColor(2), values: points.map((p) => measure(p.volume)) },
+	];
+}
+
+function ProcessStat({
+	label,
+	value,
+	trend,
+	color,
+}: {
+	label: string;
+	value: string;
+	trend: number[];
+	color: string;
+}) {
+	return (
+		<div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+			<div>
+				<dt className="text-[13px] text-muted-foreground">{label}</dt>
+				<dd className="font-rounded font-semibold text-[20px] leading-6">{value}</dd>
+			</div>
+			<Sparkline values={trend} color={color} width={120} height={32} label={`${label} trend`} />
+		</div>
 	);
 }
 

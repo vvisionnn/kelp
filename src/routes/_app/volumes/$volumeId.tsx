@@ -2,6 +2,7 @@ import type { StorageVolume, VolumeReplica } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Eraser, HardDrive, Lock, LockOpen } from "lucide-react";
+import { BarList, dataColor } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
@@ -16,6 +17,7 @@ import {
 } from "@/components/kelp/page.tsx";
 import { describeReplication } from "@/components/kelp/storage/cluster-actions.tsx";
 import { PageSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
+import { fleetRank } from "@/components/kelp/storage/insights.ts";
 import { FillGauge } from "@/components/kelp/storage/visuals.tsx";
 import { useVolumeActions } from "@/components/kelp/storage/volume-actions.ts";
 import { Button } from "@/components/ui/button";
@@ -181,6 +183,7 @@ function VolumePage() {
 	}
 
 	const health = volumeHealth(volume);
+	const rank = fleetRank(volume, data);
 	return (
 		<>
 			<PageHeader
@@ -228,6 +231,24 @@ function VolumePage() {
 							<FillGauge size={volume.size} deleted={volume.deletedBytes} limit={data.volumeSizeLimitBytes} />
 						</div>
 					</AuroraCard>
+					{volume.replicas.length > 1 && (
+						<AuroraCard className="mt-3 p-4">
+							<SheetCaption title="Copies compared">
+								Copies that drift apart are still catching up
+							</SheetCaption>
+							<BarList
+								className="mt-3"
+								label="Size of each copy"
+								color={dataColor(0)}
+								items={volume.replicas.map((r) => ({
+									key: `${r.server}-${r.diskId}`,
+									label: <span className="font-mono">{r.server}</span>,
+									value: r.size,
+									display: formatBytes(r.size),
+								}))}
+							/>
+						</AuroraCard>
+					)}
 				</Section>
 				<Section title="Details" className="mt-0 lg:col-span-4">
 					<InfoList
@@ -246,6 +267,20 @@ function VolumePage() {
 					<p className="mt-2 px-4 text-[12px] text-muted-foreground">
 						{describeReplication(volume.replication)}
 					</p>
+					<h3 className="mt-6 mb-2 font-semibold text-[13px]">In the fleet</h3>
+					<InfoList
+						items={[
+							{ label: "Size rank", value: `#${rank.rank} of ${formatCount(rank.of)}` },
+							{
+								label: "Share of its collection",
+								value: `${formatPercent(rank.shareOfCollection)} of ${formatCount(rank.peers)} ${rank.peers === 1 ? "volume" : "volumes"}`,
+							},
+							{
+								label: "Garbage",
+								value: `${formatPercent(volume.garbageRatio)} (collection ${formatPercent(rank.peerGarbage)})`,
+							},
+						]}
+					/>
 				</Section>
 			</div>
 			<Section

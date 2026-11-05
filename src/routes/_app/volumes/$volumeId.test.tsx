@@ -9,8 +9,11 @@ describe("volume detail", () => {
 	test("shows size, copies across servers and the facts that matter", async () => {
 		renderApp("/volumes/1", { "GET /storage": busyInventory() });
 		expect(await screen.findByRole("heading", { name: "Volume 1" })).toBeTruthy();
-		expect(screen.getByText("a:8080")).toBeTruthy();
-		expect(screen.getByText("b:8080")).toBeTruthy();
+		// Each copy appears in the size comparison and in the copies table.
+		expect(screen.getAllByText("a:8080")).toHaveLength(2);
+		expect(screen.getAllByText("b:8080")).toHaveLength(2);
+		expect(screen.getByRole("list", { name: "Size of each copy" })).toBeTruthy();
+		expect(screen.getByText("Size rank").nextSibling?.textContent).toMatch(/^#\d+ of \d+$/);
 		expect(
 			screen.getByText("2 copies: the original plus 1 on another server in the same rack."),
 		).toBeTruthy();

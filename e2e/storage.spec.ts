@@ -91,7 +91,7 @@ test("vacuum cluster previews and runs", async ({ page }) => {
 
 test("viewers browse storage without write controls", async ({ viewerPage }) => {
 	await viewerPage.goto("/volumes");
-	await expect(viewerPage.getByRole("heading", { name: "Volumes" })).toBeVisible();
+	await expect(viewerPage.getByRole("heading", { level: 1, name: "Volumes" })).toBeVisible();
 	await expect(viewerPage.getByRole("button", { name: "Grow volumes" })).toHaveCount(0);
 	await expect(viewerPage.getByRole("button", { name: "Vacuum cluster" })).toHaveCount(0);
 });

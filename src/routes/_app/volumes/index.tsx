@@ -1,11 +1,35 @@
 import type { StorageInventory } from "@shared/storage.ts";
+import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { AuroraCard, PageHeader, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import {
+	BarList,
+	Columns,
+	compact,
+	dataColor,
+	Kpi,
+	latest,
+	perSecond,
+	Ring,
+	splitUnit,
+	TimeChart,
+	useRange,
+} from "@/components/kelp/charts/index.ts";
+import { PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
 import { GrowVolumesDialog, VacuumClusterDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { HeroSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
-import { VolumeSkyline } from "@/components/kelp/storage/visuals.tsx";
+import { HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import {
+	collectionSlices,
+	fillColumns,
+	garbageBars,
+	hotVolumes,
+	lastWriteColumns,
+	reads,
+	volumeTraffic,
+	writes,
+} from "@/components/kelp/storage/insights.ts";
+import { MetricsOffNote, RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -31,14 +55,10 @@ export function volumesSummary(inventory: StorageInventory): string {
 function VolumesPage() {
 	const { filter } = Route.useSearch();
 	const canWrite = useCanWrite();
+	const [range, setRange] = useRange();
 	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
+	const telemetry = useTelemetry(range);
 	const volumes = data?.volumes;
-	const stored = volumes?.reduce((sum, v) => sum + v.size, 0) ?? 0;
-	const garbage = volumes?.reduce((sum, v) => sum + v.deletedBytes, 0) ?? 0;
-	const needsVacuum = volumes?.filter((v) => v.garbageRatio >= VACUUM_THRESHOLD).length ?? 0;
-	const attention = volumes?.filter((v) => volumeHealth(v).tone !== "good").length ?? 0;
-	const readOnly = volumes?.filter((v) => v.readOnly).length ?? 0;
-	const freeSlots = data?.disks.reduce((sum, d) => sum + d.freeVolumeCount, 0) ?? 0;
 
 	return (
 		<>
@@ -46,44 +66,21 @@ function VolumesPage() {
 				title="Volumes"
 				description={data ? volumesSummary(data) : "Where your data lives."}
 				actions={
-					canWrite && (
-						<>
-							<VacuumClusterDialog inventory={data} />
-							<GrowVolumesDialog inventory={data} />
-						</>
-					)
+					<>
+						<RangeControl telemetry={telemetry} range={range} onChange={setRange} />
+						{canWrite && (
+							<>
+								<VacuumClusterDialog inventory={data} />
+								<GrowVolumesDialog inventory={data} />
+							</>
+						)}
+					</>
 				}
 			/>
 			{data ? (
 				<Reveal>
-					<StatBand
-						stats={[
-							{
-								label: "Volumes",
-								value: data.volumes.length,
-								hint: `${formatCount(freeSlots)} free slots`,
-							},
-							{ label: "Files", value: data.totals.files, hint: `in ${formatBytes(stored)}` },
-							{
-								label: "Reclaimable",
-								value: garbage,
-								format: formatBytes,
-								hint:
-									needsVacuum > 0
-										? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
-										: `${formatPercent(ratio(garbage, stored))} of stored bytes`,
-							},
-							{ label: "Needs attention", value: attention, hint: `${readOnly} read-only` },
-						]}
-					/>
-					{data.volumes.length > 0 && (
-						<AuroraCard className="mt-3 p-4">
-							<SheetCaption title="Fill by volume">
-								{formatBytes(stored)} stored, each bar is one volume
-							</SheetCaption>
-							<VolumeSkyline volumes={data.volumes} limit={data.volumeSizeLimitBytes} className="mt-3" />
-						</AuroraCard>
-					)}
+					<VolumeNumbers inventory={data} telemetry={telemetry} />
+					{data.volumes.length > 0 && <VolumeCharts inventory={data} telemetry={telemetry} />}
 				</Reveal>
 			) : (
 				!error && <HeroSkeleton />
@@ -96,6 +93,185 @@ function VolumesPage() {
 					onRetry={() => refetch()}
 					{...(filter ? { initialFilter: filter } : {})}
 				/>
+			</div>
+		</>
+	);
+}
+
+/** Six numbers about the fleet, each with its trend where Kelp has one. */
+function VolumeNumbers({
+	inventory,
+	telemetry,
+}: {
+	inventory: StorageInventory;
+	telemetry: Telemetry | undefined;
+}) {
+	const volumes = inventory.volumes;
+	const stored = volumes.reduce((sum, v) => sum + v.size, 0);
+	const garbage = volumes.reduce((sum, v) => sum + v.deletedBytes, 0);
+	const needsVacuum = volumes.filter((v) => v.garbageRatio >= VACUUM_THRESHOLD).length;
+	const attention = volumes.filter((v) => volumeHealth(v).tone !== "good").length;
+	const readOnly = volumes.filter((v) => v.readOnly).length;
+	const freeSlots = inventory.disks.reduce((sum, d) => sum + d.freeVolumeCount, 0);
+	const growth = telemetry?.inventory ?? [];
+	const points = telemetry?.points ?? [];
+	const readRates = points.map(reads);
+	const writeRates = points.map(writes);
+	return (
+		<div className="grid grid-cols-2 gap-3 max-sm:[&_section_svg]:hidden md:grid-cols-3 xl:grid-cols-6">
+			<Kpi
+				label="Volumes"
+				value={formatCount(volumes.length)}
+				hint={`${formatCount(freeSlots)} free slots`}
+				trend={growth.map((p) => p.volumes)}
+			/>
+			<Kpi
+				label="Stored"
+				{...splitUnit(formatBytes(stored))}
+				hint={`${formatCount(inventory.totals.files)} files`}
+				trend={growth.map((p) => p.storedBytes)}
+				color={dataColor(2)}
+			/>
+			<Kpi
+				label="Reclaimable"
+				{...splitUnit(formatBytes(garbage))}
+				hint={
+					needsVacuum > 0
+						? `${needsVacuum} ${needsVacuum === 1 ? "volume needs" : "volumes need"} a vacuum`
+						: `${formatPercent(ratio(garbage, stored))} of stored bytes`
+				}
+				{...(needsVacuum > 0 ? { tone: "warn" as const } : {})}
+			/>
+			<Kpi
+				label="Needs attention"
+				value={formatCount(attention)}
+				hint={`${needsVacuum} need a vacuum, ${readOnly} read-only`}
+				{...(volumes.some((v) => volumeHealth(v).tone === "bad") ? { tone: "bad" as const } : {})}
+			/>
+			<Kpi
+				label="Reads"
+				value={compact(latest(readRates) ?? 0)}
+				unit="/s"
+				hint={telemetry?.enabled ? "On volume servers, now" : "Metrics are off"}
+				trend={readRates}
+			/>
+			<Kpi
+				label="Writes"
+				value={compact(latest(writeRates) ?? 0)}
+				unit="/s"
+				hint={`${hotVolumes(volumes)} volumes written today`}
+				trend={writeRates}
+				color={dataColor(1)}
+			/>
+		</div>
+	);
+}
+
+/** How the fleet fills, where it is busy, and where a vacuum would pay off. */
+function VolumeCharts({
+	inventory,
+	telemetry,
+}: {
+	inventory: StorageInventory;
+	telemetry: Telemetry | undefined;
+}) {
+	const navigate = useNavigate();
+	const slices = collectionSlices(inventory.collections);
+	const stored = inventory.volumes.reduce((sum, v) => sum + v.size, 0);
+	return (
+		<>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="Volume server traffic"
+					description="Reads and writes per second"
+					className="min-w-0 xl:col-span-8"
+				>
+					{telemetry?.enabled ? (
+						<TimeChart
+							times={telemetry.points.map((p) => p.t)}
+							series={volumeTraffic(telemetry.points)}
+							mode="area"
+							height={200}
+							format={perSecond}
+							label="Volume server reads and writes per second"
+						/>
+					) : (
+						<MetricsOffNote />
+					)}
+				</Panel>
+				<Panel
+					title="Fill"
+					description={`Volumes by how full they are, of ${formatBytes(inventory.volumeSizeLimitBytes)}`}
+					className="min-w-0 xl:col-span-4"
+				>
+					<Columns
+						height={200}
+						color={dataColor(0)}
+						label="Volumes by fill level"
+						format={formatCount}
+						columns={fillColumns(inventory.volumes)}
+					/>
+				</Panel>
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="By collection"
+					description="Where the stored bytes are"
+					className="min-w-0 xl:col-span-5"
+				>
+					<Ring
+						label="Stored bytes by collection"
+						size={144}
+						thickness={14}
+						slices={slices}
+						center={
+							<>
+								<span className="font-rounded font-semibold text-[20px] leading-6">
+									{formatBytes(stored)}
+								</span>
+								<span className="text-[12px] text-muted-foreground">stored</span>
+							</>
+						}
+					/>
+				</Panel>
+				<Panel
+					title="Last write"
+					description="Hot volumes take data; cold ones only serve it"
+					className="min-w-0 xl:col-span-4"
+				>
+					<Columns
+						height={160}
+						color={dataColor(2)}
+						label="Volumes by time since their last write"
+						format={formatCount}
+						columns={lastWriteColumns(inventory.volumes)}
+					/>
+				</Panel>
+				<Panel
+					title="Most garbage"
+					description="Where a vacuum frees the most"
+					className="min-w-0 xl:col-span-3"
+				>
+					<BarList
+						label="Volumes with the most reclaimable bytes"
+						color={dataColor(1)}
+						empty="No volume has reclaimable bytes."
+						items={garbageBars(inventory.volumes, 5).map((item) => ({
+							...item,
+							label: (
+								<button
+									type="button"
+									className="text-left hover:underline"
+									onClick={() =>
+										navigate({ to: "/volumes/$volumeId", params: { volumeId: String(item.id) } })
+									}
+								>
+									{item.label}
+								</button>
+							),
+						}))}
+					/>
+				</Panel>
 			</div>
 		</>
 	);

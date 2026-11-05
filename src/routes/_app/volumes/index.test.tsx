@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { pickSegment } from "../../../../test/segment.ts";
 import { busyInventory, realInventory } from "../../../../test/storage-fixtures.ts";
+import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
 import { volumesSummary } from "./index.tsx";
 
 const ok = { ok: true };
@@ -17,9 +18,32 @@ describe("volumes page", () => {
 		const inventory = await realInventory();
 		renderApp("/volumes", { "GET /storage": inventory });
 		expect(await screen.findByText(/5 volumes on 1 server\. Each grows to 256 MiB/)).toBeTruthy();
-		expect(screen.getByText("Reclaimable")).toBeTruthy();
-		expect(screen.getByRole("img", { name: /^5 volumes by fill level/ })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Reclaimable" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Volumes by fill level" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Stored bytes by collection" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Volumes by time since their last write" })).toBeTruthy();
+		// Without sampled metrics the traffic chart says how to turn it on, and no range control shows.
+		expect(screen.getByText(/Live traffic appears here/)).toBeTruthy();
+		expect(screen.queryByRole("radiogroup", { name: "Time range" })).toBeNull();
 		for (const v of inventory.volumes) expect(screen.getByRole("link", { name: String(v.id) })).toBeTruthy();
+	});
+
+	test("charts live volume-server traffic and ranks garbage when metrics are sampled", async () => {
+		const app = renderApp("/volumes", { "GET /storage": busyInventory(), "GET /telemetry": makeTelemetry() });
+		expect(
+			await screen.findByRole("img", { name: "Volume server reads and writes per second" }),
+		).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Reads" }).textContent).toMatch(/\/s/);
+		const garbage = screen.getByRole("list", { name: "Volumes with the most reclaimable bytes" });
+		fireEvent.click(within(garbage).getAllByRole("button")[0] as HTMLElement);
+		await waitFor(() => expect(app.router.state.location.pathname).toMatch(/^\/volumes\/\d+$/));
+	});
+
+	test("the range control asks for the chosen range", async () => {
+		const app = renderApp("/volumes", { "GET /storage": busyInventory(), "GET /telemetry": makeTelemetry() });
+		const range = await screen.findByRole("radiogroup", { name: "Time range" });
+		pickSegment(within(range).getByRole("radio", { name: "24h" }));
+		await waitFor(() => expect(app.api.last("GET", "/telemetry")?.query.get("range")).toBe("24h"));
 	});
 
 	test("filters by health, from the toolbar or the URL", async () => {
