@@ -29,12 +29,15 @@ test("offset ports shift every service and feed the Kelp environment", () => {
 		iceberg: 8281,
 		broker: 17877,
 		admin: 12635,
+		metrics: 9427,
+		adminMetrics: 9428,
 	});
 	expect(kelpEnv(ports)).toEqual({
 		KELP_ADMIN_URL: "http://127.0.0.1:12635",
 		KELP_MASTER_URL: "http://127.0.0.1:9433",
 		KELP_FILER_URL: "http://127.0.0.1:8988",
 		KELP_S3_ENDPOINT: "http://127.0.0.1:8433",
+		KELP_METRICS_URLS: "http://127.0.0.1:9427/metrics,http://127.0.0.1:9428/metrics",
 	});
 });
 

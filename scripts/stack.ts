@@ -89,6 +89,7 @@ start("server", [
 	`-s3.config=${join(dataDir, "s3.json")}`,
 	"-volume.max=0",
 	"-master.volumeSizeLimitMB=256",
+	`-metricsPort=${PORTS.metrics}`,
 ]);
 await ready("filer", `http://127.0.0.1:${PORTS.filer}/`);
 await ready("s3", `http://127.0.0.1:${PORTS.s3}/`);
@@ -123,6 +124,7 @@ start("admin", [
 	"admin",
 	`-port=${PORTS.admin}`,
 	"-port.legacy=0",
+	`-metricsPort=${PORTS.adminMetrics}`,
 	`-master=127.0.0.1:${PORTS.master}`,
 	`-dataDir=${join(dataDir, "admin")}`,
 ]);
