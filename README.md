@@ -97,7 +97,26 @@ Kelp itself also reads `KELP_ADMIN_URL`, `KELP_MASTER_URL`, `KELP_FILER_URL` (an
 
 ### Upgrading
 
-Kelp and SeaweedFS move together. CI tests every Kelp change against the exact `weed` release pinned in `mise.toml`, and a test fails if `docker-compose.yml` names a different version. To upgrade, pull the newer release's compose file (or bump `KELP_VERSION` and `SEAWEEDFS_VERSION` together) and run `docker compose up -d`.
+Kelp and SeaweedFS move together. Each Kelp release runs the SeaweedFS version recorded as last-known-good (LKG) in `seaweedfs-lkg.json`, and CI tests every change against exactly that `weed` release. To upgrade, pull the newer release's compose file (or bump `KELP_VERSION` and `SEAWEEDFS_VERSION` together) and run `docker compose up -d`.
+
+### SeaweedFS compatibility
+
+Every day, the [SeaweedFS compatibility](.github/workflows/seaweedfs-compat.yml) workflow validates Kelp against the three newest SeaweedFS releases, plus the current LKG as a baseline:
+
+- the full end-to-end suite against that release's native `weed` binary,
+- the compose stack with that release's `chrislusf/seaweedfs` image (marked pending until Docker Hub has it),
+- a comparison of the vendored `proto/` files with upstream, for information.
+
+When a release newer than the LKG passes every check, the workflow commits the new LKG to `main`: `seaweedfs-lkg.json`, `mise.toml`, `docker-compose.yml` and `.env.example` move together, and a test keeps them in agreement. The next Kelp release then ships it. A newer release that fails gets a `seaweedfs-compat` issue with the results and how to reproduce, which closes itself once a later run passes. If the LKG itself fails, nothing is promoted and the run fails, because the problem is in Kelp or the runner.
+
+Run it by hand from the Actions tab, optionally for specific versions. Locally:
+
+```sh
+bun scripts/seaweedfs.ts candidates                 # versions the next run validates
+mise install github:seaweedfs/seaweedfs@4.51
+WEED_BIN=$(mise where github:seaweedfs/seaweedfs@4.51)/weed CI=1 bun run e2e
+bun scripts/seaweedfs.ts promote 4.51               # pin a version by hand
+```
 
 ## Security model
 

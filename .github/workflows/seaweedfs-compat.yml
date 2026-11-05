@@ -1,0 +1,251 @@
+name: SeaweedFS compatibility
+
+# Validates Kelp against the newest SeaweedFS releases (plus the current last-known-good as a
+# baseline) and moves the LKG pin in seaweedfs-lkg.json, mise.toml, docker-compose.yml and
+# .env.example to the newest release that passes. Newer releases that fail get an issue.
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: Comma-separated SeaweedFS versions to validate instead of the newest releases
+        required: false
+      count:
+        description: How many of the newest releases to validate
+        default: "3"
+      promote:
+        description: Commit a new LKG when one passes
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seaweedfs-compat
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Pick versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      versions: ${{ steps.pick.outputs.versions }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: bun
+      - id: pick
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSIONS: ${{ inputs.versions }}
+          COUNT: ${{ inputs.count || '3' }}
+        run: |
+          if [ -n "$VERSIONS" ]; then
+            list=$(bun scripts/seaweedfs.ts candidates --versions "$VERSIONS")
+          else
+            list=$(bun scripts/seaweedfs.ts candidates --count "$COUNT")
+          fi
+          echo "versions=$list" >> "$GITHUB_OUTPUT"
+          echo "Validating SeaweedFS $list against Kelp $(git rev-parse --short HEAD)." >> "$GITHUB_STEP_SUMMARY"
+
+  validate:
+    name: SeaweedFS ${{ matrix.version }}
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.discover.outputs.versions) }}
+    env:
+      SEAWEEDFS: ${{ matrix.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - run: bun install --frozen-lockfile
+
+      - name: Install SeaweedFS ${{ matrix.version }}
+        id: install
+        run: |
+          mise install "github:seaweedfs/seaweedfs@$SEAWEEDFS"
+          bin="$(mise where "github:seaweedfs/seaweedfs@$SEAWEEDFS")/weed"
+          "$bin" version
+          # The e2e stack must run exactly this release, not the LKG binary on PATH.
+          "$bin" version | grep -qF " $SEAWEEDFS " || { echo "::error::$bin is not SeaweedFS $SEAWEEDFS"; exit 1; }
+          echo "WEED_BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps chromium
+
+      - name: End-to-end tests (native weed)
+        id: e2e
+        continue-on-error: true
+        run: bun run e2e
+
+      - name: Docker image published?
+        id: image
+        run: |
+          if bun scripts/seaweedfs.ts image-exists "$SEAWEEDFS"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::chrislusf/seaweedfs:$SEAWEEDFS is not on Docker Hub yet; the compose check waits for it."
+          fi
+      - if: steps.image.outputs.published == 'true'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - if: steps.image.outputs.published == 'true'
+        name: Build Kelp image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: ghcr.io/${{ github.repository }}:ci
+          cache-from: type=gha
+      - name: Compose stack with chrislusf/seaweedfs:${{ matrix.version }}
+        id: compose
+        if: steps.image.outputs.published == 'true'
+        continue-on-error: true
+        env:
+          KELP_VERSION: ci
+          SEAWEEDFS_VERSION: ${{ matrix.version }}
+        run: bun scripts/compose-smoke.ts
+
+      - name: Proto changes against the vendored copies
+        id: proto
+        if: always()
+        run: echo "files=$(bun scripts/seaweedfs.ts proto-drift "$SEAWEEDFS" || echo '[]')" >> "$GITHUB_OUTPUT"
+
+      - name: Record result
+        if: always()
+        env:
+          # A release that can't even be installed counts as a failure, not as pending.
+          E2E: ${{ steps.install.outcome == 'success' && steps.e2e.outcome || 'failure' }}
+          COMPOSE: ${{ steps.compose.outcome }}
+          DRIFT: ${{ steps.proto.outputs.files || '[]' }}
+        run: |
+          mkdir -p .tmp/compat
+          bun scripts/seaweedfs.ts result --version "$SEAWEEDFS" --e2e "$E2E" --compose "$COMPOSE" \
+            --proto-drift "$DRIFT" --out ".tmp/compat/$SEAWEEDFS.json"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: compat-${{ matrix.version }}
+          path: .tmp/compat/${{ matrix.version }}.json
+          retention-days: 30
+      - if: steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.version }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
+  report:
+    name: Update last-known-good
+    needs: [discover, validate]
+    if: always() && needs.discover.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          install_args: bun
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: compat-*
+          path: .tmp/compat/results
+          merge-multiple: true
+
+      - name: Decide
+        id: decide
+        env:
+          APPLY: ${{ github.ref == 'refs/heads/main' && inputs.promote != false }}
+        run: |
+          if [ "$APPLY" = "true" ]; then bun scripts/seaweedfs.ts decide --results .tmp/compat/results --apply
+          else bun scripts/seaweedfs.ts decide --results .tmp/compat/results; fi
+
+      - name: Pins agree with the LKG file
+        run: bun test scripts/versions.test.ts
+
+      - name: Commit
+        if: steps.decide.outputs.changed == 'true' && github.ref == 'refs/heads/main' && inputs.promote != false
+        env:
+          PROMOTE: ${{ steps.decide.outputs.promote }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seaweedfs-lkg.json mise.toml docker-compose.yml .env.example
+          if [ -n "$PROMOTE" ]; then
+            git commit -m "fix(seaweedfs): run SeaweedFS $PROMOTE by default" -m "Validated by $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          else
+            git commit -m "chore(seaweedfs): record compatibility results" -m "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+          # main may have moved while the matrix ran; these files rarely conflict.
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && break
+            [ "$attempt" = 3 ] && exit 1
+            sleep 3
+          done
+          # Pushes made with GITHUB_TOKEN don't start workflows; dispatch CI for the new pin.
+          if [ -n "$PROMOTE" ]; then gh workflow run ci.yml --ref main; fi
+
+      - name: Issues for releases Kelp can't run yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGRESSIONS: ${{ steps.decide.outputs.regressions }}
+          BASELINE_FAILED: ${{ steps.decide.outputs.baseline_failed }}
+          LKG: ${{ steps.decide.outputs.lkg }}
+        run: |
+          gh label create seaweedfs-compat --color 5552E0 --description "SeaweedFS release compatibility" 2>/dev/null || true
+          open_issue() { # title
+            gh issue list --label seaweedfs-compat --state open --search "\"$1\" in:title" --json number,title \
+              --jq ".[] | select(.title == \"$1\") | .number" | head -1
+          }
+          report() { # title
+            number=$(open_issue "$1")
+            if [ -n "$number" ]; then gh issue comment "$number" --body-file .tmp/compat/issue.md
+            else gh issue create --title "$1" --label seaweedfs-compat --body-file .tmp/compat/issue.md; fi
+          }
+          failing=" ${REGRESSIONS//,/ } "
+          for version in $failing; do report "SeaweedFS $version fails Kelp validation"; done
+          if [ "$BASELINE_FAILED" = "true" ]; then report "Last-known-good SeaweedFS $LKG fails Kelp validation"; fi
+          # Close issues whose version now passes or is no longer ahead of the LKG.
+          gh issue list --label seaweedfs-compat --state open --json number,title --jq '.[] | "\(.number) \(.title)"' |
+            while read -r number title; do
+              version=$(echo "$title" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+              case "$title" in
+                Last-known-good*) [ "$BASELINE_FAILED" = "true" ] && continue ;;
+                *) [[ "$failing" == *" $version "* ]] && continue ;;
+              esac
+              gh issue close "$number" --comment "Passes in $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            done
+
+      - name: Fail when the baseline fails
+        if: steps.decide.outputs.baseline_failed == 'true'
+        env:
+          LKG: ${{ steps.decide.outputs.lkg }}
+        run: |
+          echo "::error::The last-known-good SeaweedFS $LKG failed, so Kelp itself (or the runner) needs attention."
+          exit 1
