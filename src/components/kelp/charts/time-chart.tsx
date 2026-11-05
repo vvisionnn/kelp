@@ -16,6 +16,20 @@ export interface TimeSeries {
 const MARGIN = { top: 8, right: 8, bottom: 22, left: 44 };
 
 /**
+ * The top of the y axis. A lone spike (a startup burst, one slow request) would flatten
+ * everything else, so when the largest value is far above the 95th percentile the axis fits
+ * the typical range and the spike is drawn clipped at the top. Tooltips still show real values.
+ */
+export function robustTop(values: number[]): { top: number; clipped: boolean } {
+	const max = Math.max(0, ...values);
+	if (values.length < 8) return { top: max, clipped: false };
+	const sorted = [...values].sort((a, b) => a - b);
+	const p95 = sorted[Math.floor((sorted.length - 1) * 0.95)] as number;
+	if (p95 > 0 && max > p95 * 4) return { top: p95 * 1.5, clipped: true };
+	return { top: max, clipped: false };
+}
+
+/**
  * A time series chart: lines, washed areas or stacked areas over a shared time axis, with a
  * crosshair that snaps to the nearest sample and lists every series (dataviz rules). Keyboard:
  * focus the chart and use the arrow keys.
@@ -59,9 +73,11 @@ export function TimeChart({
 		);
 	}, [mode, series, times]);
 
-	const maxValue = useMemo(() => {
-		if (stacked) return Math.max(0, ...stacked.flatMap((s) => s.map((p) => p[1])));
-		return Math.max(0, ...series.flatMap((s) => s.values.filter((v): v is number => v !== null)));
+	const { top: maxValue, clipped } = useMemo(() => {
+		const values = stacked
+			? stacked.flatMap((s) => s.map((p) => p[1]))
+			: series.flatMap((s) => s.values.filter((v): v is number => v !== null));
+		return robustTop(values);
 	}, [series, stacked]);
 
 	if (times.length < 2) {
@@ -82,7 +98,8 @@ export function TimeChart({
 	const y = scaleLinear()
 		.domain([0, maxValue || 1])
 		.nice(4)
-		.range([innerHeight, 0]);
+		.range([innerHeight, 0])
+		.clamp(true);
 	const yTicks = y.ticks(4);
 	const xTicks = x.ticks(Math.max(2, Math.min(6, Math.floor(innerWidth / 110))));
 	// Ticks closer than a minute apart need seconds, or the labels repeat.
@@ -241,6 +258,11 @@ export function TimeChart({
 						</p>
 					))}
 				</div>
+			)}
+			{clipped && (
+				<p className="absolute top-0 right-2 text-[11px] text-tertiary">
+					Peaks above {format(y.domain()[1] as number)} are cut off
+				</p>
 			)}
 			{series.length > 1 && (
 				<Legend

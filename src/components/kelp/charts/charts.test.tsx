@@ -15,6 +15,7 @@ import {
 	millis,
 	perSecond,
 	Ring,
+	robustTop,
 	Sparkline,
 	splitUnit,
 	TimeChart,
@@ -106,6 +107,27 @@ describe("time chart", () => {
 		fireEvent.keyDown(chart, { key: "ArrowRight" });
 		fireEvent.blur(chart);
 		expect(screen.queryByRole("status")).toBeNull();
+	});
+});
+
+describe("robust axis", () => {
+	test("a lone spike is cut off so the typical range stays readable", () => {
+		const calm = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
+		expect(robustTop([...calm, 400])).toEqual({ top: 3, clipped: true });
+		expect(robustTop(calm)).toEqual({ top: 2, clipped: false });
+		expect(robustTop([1, 900])).toEqual({ top: 900, clipped: false });
+	});
+
+	test("a clipped chart says so", () => {
+		const t = Array.from({ length: 12 }, (_, i) => i * 15_000);
+		render(
+			<TimeChart
+				times={t}
+				series={[{ label: "Latency", color: "red", values: t.map((_, i) => (i === 0 ? 900 : 3)) }]}
+				label="Latency"
+			/>,
+		);
+		expect(screen.getByText(/are cut off/)).toBeTruthy();
 	});
 });
 
