@@ -1,7 +1,35 @@
 {
-	"lastKnownGood": "4.51",
-	"validatedAt": "2026-11-05T10:00:38.417Z",
-	"kelpCommit": "manual",
-	"run": "",
-	"window": []
+	"lastKnownGood": "4.52",
+	"validatedAt": "2026-11-05T10:04:48.332Z",
+	"kelpCommit": "35dfb01",
+	"run": "https://github.com/vvisionnn/kelp/actions/runs/42007120510",
+	"window": [
+		{
+			"version": "4.52",
+			"result": "pass",
+			"e2e": "pass",
+			"compose": "pass",
+			"protoDrift": []
+		},
+		{
+			"version": "4.51",
+			"result": "pass",
+			"e2e": "pass",
+			"compose": "pass",
+			"protoDrift": [
+				"filer.proto",
+				"volume_server.proto"
+			]
+		},
+		{
+			"version": "4.50",
+			"result": "pass",
+			"e2e": "pass",
+			"compose": "pass",
+			"protoDrift": [
+				"filer.proto",
+				"volume_server.proto"
+			]
+		}
+	]
 }

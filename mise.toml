@@ -3,7 +3,7 @@
 "aqua:koalaman/shellcheck" = "0.11.0"
 bun = "1.4.4"
 node = "24"
-"github:seaweedfs/seaweedfs" = { version = "4.51", bin = "weed" }
+"github:seaweedfs/seaweedfs" = { version = "4.52", bin = "weed" }
 
 [env]
 _.path = ["./node_modules/.bin"]
