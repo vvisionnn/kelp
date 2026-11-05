@@ -4,10 +4,21 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Bot, FileLock2, KeyRound, Trash2, UsersRound, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import {
+	ALL_BUCKETS,
+	ageInDays,
+	type BucketGrant,
+	LEVEL_LABEL,
+	levelOf,
+	ROTATE_AFTER_DAYS,
+	userAccess,
+} from "@/components/kelp/access/analysis.ts";
 import { KeyStatusBadge, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateKeyDialog } from "@/components/kelp/access/create-key-dialog.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
+import { ReachGrid } from "@/components/kelp/access/insights.tsx";
 import { TokenField } from "@/components/kelp/access/token-field.tsx";
+import { Kpi } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import {
@@ -45,6 +56,8 @@ function UserPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
 	const { data: user, isPending, error, refetch } = useQuery(accessQueries.user(username));
+	const groups = useQuery(accessQueries.groups()).data;
+	const policies = useQuery(accessQueries.policies()).data;
 	const remove = useAction({
 		run: () => api.delete(userPath(username)),
 		success: `User ${username} deleted`,
@@ -88,8 +101,23 @@ function UserPage() {
 					read-only here.
 				</p>
 			)}
-			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
-				<div className="grid min-w-0 gap-8 lg:col-span-8">
+			{groups && policies && <UserReachStats user={user} grants={userAccess(user, groups, policies)} />}
+			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12 [&>*]:min-w-0">
+				<div className="grid min-w-0 grid-cols-1 gap-8 lg:col-span-8">
+					{groups && policies && (
+						<Section
+							title={`What ${user.username} can reach`}
+							description="Combined from direct actions, attached policies and group policies, after denies."
+							className="mt-0 min-w-0"
+						>
+							<div className="group-sheet p-4">
+								<ReachGrid
+									grants={userAccess(user, groups, policies)}
+									empty="No action, policy or group gives this user access to any bucket."
+								/>
+							</div>
+						</Section>
+					)}
 					<KeysSection user={user} editable={editable} />
 					<PermissionsSection
 						key={JSON.stringify([user.email, user.actions, user.policies])}
@@ -122,6 +150,52 @@ function UserPage() {
 				</div>
 			</Reveal>
 		</>
+	);
+}
+
+/** The user's reach and key health at a glance. */
+function UserReachStats({ user, grants }: { user: IamUser; grants: BucketGrant[] }) {
+	const all = grants.find((g) => g.bucket === ALL_BUCKETS);
+	const named = grants.filter((g) => g.bucket !== ALL_BUCKETS);
+	const changes = grants.filter((g) => ["write", "admin"].includes(levelOf(g.capabilities) ?? ""));
+	const active = user.accessKeys.filter((k) => k.status === "Active");
+	const ages = active.map((k) => ageInDays(k.createdAt)).filter((a): a is number => a !== null);
+	const oldest = ages.length > 0 ? Math.max(...ages) : null;
+	return (
+		<Reveal className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+			<Kpi
+				label="Buckets reached"
+				value={all ? "All" : String(named.length)}
+				hint={
+					all
+						? `${LEVEL_LABEL[levelOf(all.capabilities) ?? "list"]} on every bucket`
+						: "Through actions, policies and groups"
+				}
+			/>
+			<Kpi
+				label="Can change"
+				value={
+					all && ["write", "admin"].includes(levelOf(all.capabilities) ?? "") ? "All" : String(changes.length)
+				}
+				hint="Buckets it can write to or delete from"
+			/>
+			<Kpi
+				label="Keys that can sign"
+				value={String(active.length)}
+				hint={`${user.accessKeys.length - active.length} paused`}
+			/>
+			<Kpi
+				label="Oldest active key"
+				value={oldest === null ? "–" : String(oldest)}
+				{...(oldest === null ? {} : { unit: oldest === 1 ? "day" : "days" })}
+				hint={
+					oldest !== null && oldest >= ROTATE_AFTER_DAYS
+						? "Time to rotate"
+						: `Rotate after ${ROTATE_AFTER_DAYS} days`
+				}
+				{...(oldest !== null && oldest >= ROTATE_AFTER_DAYS ? { tone: "warn" as const } : {})}
+			/>
+		</Reveal>
 	);
 }
 
@@ -175,6 +249,13 @@ function KeyRow({
 				<KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
 				<span className="truncate font-mono text-[13px]">{accessKey.accessKey}</span>
 				<CopyButton value={accessKey.accessKey} label="Copy access key" />
+				{ageInDays(accessKey.createdAt) !== null && (
+					<span className="shrink-0 text-[12px] text-muted-foreground">
+						{ageInDays(accessKey.createdAt) === 0
+							? "created today"
+							: `${ageInDays(accessKey.createdAt)} days old`}
+					</span>
+				)}
 			</div>
 			<KeyStatusBadge status={accessKey.status} />
 			{editable && (
