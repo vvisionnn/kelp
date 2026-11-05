@@ -69,8 +69,10 @@ jobs:
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
       - run: bun install --frozen-lockfile
 
+      # Results are data: a failing check is recorded, not raised. Only a failing baseline fails the run.
       - name: Install SeaweedFS ${{ matrix.version }}
         id: install
+        continue-on-error: true
         run: |
           mise install "github:seaweedfs/seaweedfs@$SEAWEEDFS"
           bin="$(mise where "github:seaweedfs/seaweedfs@$SEAWEEDFS")/weed"
@@ -94,6 +96,7 @@ jobs:
 
       - name: End-to-end tests (native weed)
         id: e2e
+        if: steps.install.outcome == 'success'
         continue-on-error: true
         run: bun run e2e
 
@@ -219,6 +222,8 @@ jobs:
           REGRESSIONS: ${{ steps.decide.outputs.regressions }}
           BASELINE_FAILED: ${{ steps.decide.outputs.baseline_failed }}
           LKG: ${{ steps.decide.outputs.lkg }}
+          LKG_AFTER: ${{ steps.decide.outputs.lkg_after }}
+          PASSED: ${{ steps.decide.outputs.passed }}
         run: |
           gh label create seaweedfs-compat --color 5552E0 --description "SeaweedFS release compatibility" 2>/dev/null || true
           open_issue() { # title
@@ -233,15 +238,21 @@ jobs:
           failing=" ${REGRESSIONS//,/ } "
           for version in $failing; do report "SeaweedFS $version fails Kelp validation"; done
           if [ "$BASELINE_FAILED" = "true" ]; then report "Last-known-good SeaweedFS $LKG fails Kelp validation"; fi
-          # Close issues whose version now passes or is no longer ahead of the LKG.
+          # Close an issue only when its version passed in this run, or the LKG has reached it. A version
+          # this run didn't test (a manual run, or one that left the window) keeps its issue open.
+          passed=" ${PASSED//,/ } "
           gh issue list --label seaweedfs-compat --state open --json number,title --jq '.[] | "\(.number) \(.title)"' |
             while read -r number title; do
               version=$(echo "$title" | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+              [ -n "$version" ] || continue
               case "$title" in
-                Last-known-good*) [ "$BASELINE_FAILED" = "true" ] && continue ;;
-                *) [[ "$failing" == *" $version "* ]] && continue ;;
+                Last-known-good*)
+                  if [ "$BASELINE_FAILED" = "true" ] || [[ "$passed" != *" $version "* ]]; then continue; fi ;;
+                *)
+                  reached=$([ "$(printf '%s\n%s\n' "$version" "$LKG_AFTER" | sort -V | head -1)" = "$version" ] && echo yes || echo no)
+                  [[ "$passed" == *" $version "* ]] || [ "$reached" = yes ] || continue ;;
               esac
-              gh issue close "$number" --comment "Passes in $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+              gh issue close "$number" --comment "SeaweedFS $version passes, or the last-known-good version ($LKG_AFTER) has reached it: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
             done
 
       - name: Fail when the baseline fails

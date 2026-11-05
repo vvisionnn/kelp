@@ -212,6 +212,11 @@ switch (command) {
 			baseline_failed: String(decision.baselineFailed),
 			changed: String(Object.keys(out).length > 0),
 			lkg: lkg.lastKnownGood,
+			lkg_after: decision.promote ?? lkg.lastKnownGood,
+			passed: decision.window
+				.filter((w) => w.result === "pass")
+				.map((w) => w.version)
+				.join(","),
 		});
 		await Bun.write(
 			join(values.results, "..", "issue.md"),
@@ -224,7 +229,7 @@ switch (command) {
 				"",
 				"Reproduce locally: `mise install github:seaweedfs/seaweedfs@<version>`, then",
 				"`WEED_BIN=$(mise where github:seaweedfs/seaweedfs@<version>)/weed CI=1 bun run e2e`.",
-				"This issue closes itself once a run promotes a version at or above the failing one.",
+				"This issue closes itself once this version passes, or once the last-known-good version moves to or past it.",
 			].join("\n"),
 		);
 		break;
