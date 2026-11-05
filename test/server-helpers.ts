@@ -17,6 +17,7 @@ export function testConfig(overrides: Partial<KelpConfig> = {}): KelpConfig {
 		sessionSecret: "test-secret",
 		sessionTtlSeconds: 3600,
 		staticDir: "dist",
+		metricsUrls: [],
 		...overrides,
 	};
 }

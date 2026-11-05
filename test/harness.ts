@@ -1,6 +1,8 @@
 import { createApp } from "../server/app.ts";
+import { inventoryFrom } from "../server/map/cluster.ts";
 import { apiRoutes } from "../server/routes/index.ts";
 import type { Services } from "../server/services.ts";
+import { TelemetrySampler } from "../server/telemetry/sampler.ts";
 import type { ClusterGrpc } from "../server/upstream/grpc.ts";
 import { HttpUpstream } from "../server/upstream/http.ts";
 import { FakeUpstream } from "./fake-upstream.ts";
@@ -58,12 +60,14 @@ export async function harness(options: { role?: "admin" | "viewer" } = {}) {
 	const filer = new FakeUpstream();
 	const grpc = fakeGrpc();
 	const config = testConfig({ adminUrl: admin.url, masterUrl: master.url, filerUrl: filer.url });
+	const telemetry = new TelemetrySampler({ urls: [], inventory: async () => inventoryFrom({}) });
 	const services: Services = {
 		config,
 		admin: new HttpUpstream("admin", `${admin.url}/api`),
 		master: new HttpUpstream("master", master.url),
 		filer: new HttpUpstream("filer", filer.url),
 		grpc,
+		telemetry,
 	};
 	const app = createApp({ config, routes: apiRoutes(services) });
 	const role = options.role ?? "admin";
@@ -92,6 +96,7 @@ export async function harness(options: { role?: "admin" | "viewer" } = {}) {
 		master,
 		filer,
 		grpc,
+		telemetry,
 		request,
 		get: (path: string) => request("GET", path),
 		// biome-ignore lint/suspicious/noExplicitAny: tests assert on arbitrary JSON shapes.

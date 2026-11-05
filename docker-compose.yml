@@ -22,6 +22,7 @@ services:
       -filer
       -s3
       -s3.port=8333
+      -metricsPort=9327
       -master.volumeSizeLimitMB=${SEAWEEDFS_VOLUME_SIZE_LIMIT_MB:-1024}
     environment:
       # Bootstrap S3 admin identity. Manage everything else from Kelp.
@@ -43,7 +44,7 @@ services:
     <<: *seaweedfs
     # The native admin API Kelp drives. It runs without its own login, so it only joins the private
     # `control` network (no internet, no published ports) shared with Kelp, the worker and SeaweedFS.
-    command: admin -ip=0.0.0.0 -allowInsecureBind -port=12535 -port.legacy=0 -master=seaweedfs:9333 -dataDir=/data
+    command: admin -ip=0.0.0.0 -allowInsecureBind -port=12535 -port.legacy=0 -metricsPort=9328 -master=seaweedfs:9333 -dataDir=/data
     environment: &worker-auth # Authenticates maintenance workers to the admin (gRPC). Only the admin and worker get it.
       WEED_JWT_FILER_SIGNING_KEY: ${SEAWEEDFS_WORKER_KEY:?set SEAWEEDFS_WORKER_KEY in .env}
     volumes:
@@ -94,6 +95,8 @@ services:
       KELP_VIEWER_USER: ${KELP_VIEWER_USER:-}
       KELP_VIEWER_PASSWORD: ${KELP_VIEWER_PASSWORD:-}
       KELP_SESSION_SECRET: ${KELP_SESSION_SECRET:?set KELP_SESSION_SECRET in .env}
+      # Prometheus endpoints Kelp samples for its live charts. Internal only, never published.
+      KELP_METRICS_URLS: ${KELP_METRICS_URLS:-http://seaweedfs:9327/metrics,http://admin:9328/metrics}
     networks: [default, control]
     ports:
       - "${KELP_PORT:-3000}:3000"

@@ -7,6 +7,7 @@ import type {
 	VersionGroup,
 	VolumeServer,
 } from "../../shared/api.ts";
+import type { InventoryPoint } from "../../shared/telemetry.ts";
 import { cleanVersion } from "../upstream/grpc.ts";
 import { bool, list, num, obj, type Raw, str, time } from "./raw.ts";
 
@@ -97,5 +98,17 @@ export function mapOverview(raw: Raw, nodes: ClusterNodes): Overview {
 		},
 		maintenance: { workers: num(trends.workers), tasks: num(trends.tasks) },
 		updatedAt: time(raw.last_updated) ?? new Date(0).toISOString(),
+	};
+}
+
+/** What the cluster holds right now, from the admin dashboard, for growth charts. */
+export function inventoryFrom(raw: Raw): Omit<InventoryPoint, "t"> {
+	const servers = list(raw.volume_servers).map(mapVolumeServer);
+	return {
+		storedBytes: num(raw.total_size),
+		files: num(raw.total_chunks),
+		volumes: num(raw.total_volumes),
+		diskUsedBytes: servers.reduce((sum, s) => sum + s.diskUsage, 0),
+		diskTotalBytes: servers.reduce((sum, s) => sum + s.diskCapacity, 0),
 	};
 }

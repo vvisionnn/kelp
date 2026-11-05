@@ -15,6 +15,8 @@ export interface KelpConfig {
 	sessionSecret: string;
 	sessionTtlSeconds: number;
 	staticDir: string;
+	/** Prometheus endpoints of the SeaweedFS processes; empty turns telemetry off. */
+	metricsUrls: string[];
 }
 
 type Env = Record<string, string | undefined>;
@@ -42,6 +44,25 @@ function positiveNumber(env: Env, name: string, fallback: number): number {
 	if (!Number.isFinite(value) || value <= 0)
 		throw new Error(`${name} must be a positive number, got "${raw}"`);
 	return value;
+}
+
+/** A comma-separated list of http(s) URLs; empty means none. */
+function urlList(env: Env, name: string): string[] {
+	const raw = env[name]?.trim();
+	if (!raw) return [];
+	return raw
+		.split(",")
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.map((part) => {
+			try {
+				const url = new URL(part);
+				if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error();
+				return url.toString();
+			} catch {
+				throw new Error(`${name} must be comma-separated http(s) URLs, got "${part}"`);
+			}
+		});
 }
 
 const randomToken = (bytes: number) => randomBytes(bytes).toString("base64url");
@@ -88,6 +109,7 @@ export function loadConfig(env: Env): { config: KelpConfig; warnings: string[] }
 			sessionSecret,
 			sessionTtlSeconds: Math.round(positiveNumber(env, "KELP_SESSION_TTL_HOURS", 12) * 3600),
 			staticDir: env.KELP_STATIC_DIR?.trim() || "dist",
+			metricsUrls: urlList(env, "KELP_METRICS_URLS"),
 		},
 		warnings,
 	};

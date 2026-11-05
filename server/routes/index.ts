@@ -10,6 +10,7 @@ import { messagingRoutes } from "./messaging.ts";
 import { settingsRoutes } from "./settings.ts";
 import { storageRoutes } from "./storage.ts";
 import { tablesRoutes } from "./tables.ts";
+import { telemetryRoutes } from "./telemetry.ts";
 
 /** Every feature router, mounted under `/api`. Each area owns its own file. */
 export function apiRoutes(services: Services): Array<[string, Hono<Env>]> {
@@ -23,5 +24,6 @@ export function apiRoutes(services: Services): Array<[string, Hono<Env>]> {
 		["/", messagingRoutes(services)],
 		["/", tablesRoutes(services)],
 		["/", settingsRoutes(services)],
+		["/", telemetryRoutes(services)],
 	];
 }

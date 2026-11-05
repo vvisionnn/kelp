@@ -8,6 +8,9 @@ export const PORTS = {
 	iceberg: 8181,
 	broker: 17777,
 	admin: 12535,
+	/** Prometheus endpoints of `weed server` and `weed admin` (the broker has none). */
+	metrics: 9327,
+	adminMetrics: 9328,
 } as const;
 export type Ports = { [K in keyof typeof PORTS]: number };
 
@@ -21,6 +24,8 @@ export function stackPorts(offset = 0): Ports {
 		iceberg: PORTS.iceberg + offset,
 		broker: PORTS.broker + offset,
 		admin: PORTS.admin + offset,
+		metrics: PORTS.metrics + offset,
+		adminMetrics: PORTS.adminMetrics + offset,
 	};
 }
 
@@ -31,6 +36,9 @@ export function kelpEnv(ports: Ports): Record<string, string> {
 		KELP_MASTER_URL: `http://127.0.0.1:${ports.master}`,
 		KELP_FILER_URL: `http://127.0.0.1:${ports.filer}`,
 		KELP_S3_ENDPOINT: `http://127.0.0.1:${ports.s3}`,
+		KELP_METRICS_URLS: [ports.metrics, ports.adminMetrics]
+			.map((port) => `http://127.0.0.1:${port}/metrics`)
+			.join(","),
 	};
 }
 export const S3_CREDENTIALS = { accessKey: "kelp-dev-access-key", secretKey: "kelp-dev-secret-key" } as const;

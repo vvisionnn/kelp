@@ -16,8 +16,20 @@ describe("loadConfig", () => {
 			sessionTtlSeconds: 43200,
 			staticDir: "dist",
 			users: [{ name: "admin", password: "pw", role: "admin" }],
+			metricsUrls: [],
 		});
 		expect(warnings).toEqual([]);
+	});
+
+	test("reads metrics endpoints as a comma-separated list and rejects anything else", () => {
+		const base = { KELP_ADMIN_PASSWORD: "pw", KELP_SESSION_SECRET: "s" };
+		const { config } = loadConfig({
+			...base,
+			KELP_METRICS_URLS: " http://seaweedfs:9327/metrics , http://admin:9328/metrics,, ",
+		});
+		expect(config.metricsUrls).toEqual(["http://seaweedfs:9327/metrics", "http://admin:9328/metrics"]);
+		expect(() => loadConfig({ ...base, KELP_METRICS_URLS: "seaweedfs:9327" })).toThrow(/KELP_METRICS_URLS/);
+		expect(() => loadConfig({ ...base, KELP_METRICS_URLS: "ftp://x/metrics" })).toThrow(/KELP_METRICS_URLS/);
 	});
 
 	test("reads every setting from the environment", () => {

@@ -89,6 +89,7 @@ Create a **Docker Compose** resource from this repository (or paste the release'
 | `KELP_VIEWER_USER`, `KELP_VIEWER_PASSWORD` | no       | An optional read-only account.                                                   |
 | `KELP_S3_ENDPOINT`                         | no       | Public S3 URL, used for copyable object URLs.                                    |
 | `KELP_SESSION_TTL_HOURS`                   | no       | How long a sign-in lasts (default 12).                                           |
+| `KELP_METRICS_URLS`                        | no       | SeaweedFS Prometheus endpoints for the live charts. The compose file sets them.  |
 | `KELP_VERSION`, `SEAWEEDFS_VERSION`        | no       | Image versions. Each Kelp release pins the SeaweedFS version it was tested with. |
 | `KELP_PORT`, `S3_PORT`                     | no       | Published ports (defaults 3000 and 8333).                                        |
 
