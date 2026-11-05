@@ -7,6 +7,37 @@ import { catalogUri } from "./index.tsx";
 
 const config = { kelp: { s3Endpoint: "https://s3.example.com" } };
 
+describe("tables dashboard", () => {
+	test("totals every warehouse and ranks tables and commits", async () => {
+		const { list, detail, orders, invoices } = await tablesApi();
+		renderApp("/tables", {
+			"GET /tables/buckets": list,
+			"GET /system/config": config,
+			"GET /tables/buckets/analytics": detail,
+			"GET /tables/buckets/analytics/namespaces/sales/tables/orders": orders,
+			"GET /tables/buckets/analytics/namespaces/finance/tables/invoices": invoices,
+		});
+		const largest = await screen.findByRole("list", { name: "Tables by records" });
+		expect(within(largest).getByRole("link", { name: "sales.orders" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Records" }).textContent).toContain("510");
+		const commits = screen.getByRole("list", { name: "Latest commits" });
+		expect(within(commits).getAllByRole("listitem").length).toBeGreaterThan(0);
+	});
+
+	test("before any engine writes, the dashboard says so", async () => {
+		const { list, detail } = await tablesApi();
+		renderApp("/tables", {
+			"GET /tables/buckets": list,
+			"GET /system/config": config,
+			"GET /tables/buckets/analytics": detail,
+		});
+		expect(
+			await screen.findByText("No table has data yet. Engines add it through the catalog."),
+		).toBeTruthy();
+		expect(screen.getByText("No commits yet.")).toBeTruthy();
+	});
+});
+
 describe("tables page", () => {
 	test("lists table buckets and how engines connect", async () => {
 		const { list } = await tablesApi();

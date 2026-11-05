@@ -4,8 +4,45 @@ import { objectsApi } from "../../../../test/objects-fixtures.ts";
 import { choose } from "../../../../test/objects-helpers.ts";
 import { type ApiCall, renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { settle } from "../../../../test/settle.ts";
+import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
 
 const ok = { ok: true };
+
+describe("bucket dashboard", () => {
+	test("shows this bucket's traffic, failures, quota and details", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/backups", { ...routes, "GET /telemetry": makeTelemetry() });
+		expect(await screen.findByRole("img", { name: "S3 requests per second to backups" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Requests" }).textContent).toContain("900");
+		expect(screen.getByRole("region", { name: "Failed requests" }).textContent).toContain("0");
+		const details = screen.getByLabelText("Bucket details");
+		expect(within(details).getByText("s3://backups")).toBeTruthy();
+		expect(within(details).getByText("Lifecycle")).toBeTruthy();
+		expect(screen.getByRole("radiogroup", { name: "Time range" })).toBeTruthy();
+	});
+
+	test("a bucket with failed requests and no recent traffic reads accordingly", async () => {
+		const { routes } = await objectsApi();
+		const telemetry = makeTelemetry();
+		telemetry.buckets = [
+			{ bucket: "media", rps: 1, requests: 10, errors: 2, series: telemetry.points.map(() => 1) },
+		];
+		renderApp("/buckets/media", { ...routes, "GET /telemetry": telemetry });
+		expect(await screen.findByText("20% of requests")).toBeTruthy();
+		renderApp("/buckets/archive", { ...routes, "GET /telemetry": makeTelemetry() });
+		expect(await screen.findByText("No requests in this range")).toBeTruthy();
+	});
+
+	test("without live metrics the traffic chart steps aside", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/media", {
+			...routes,
+			"GET /telemetry": { ...makeTelemetry(), enabled: false, points: [], buckets: [] },
+		});
+		expect(await screen.findByText("Live metrics are off")).toBeTruthy();
+		expect(screen.queryByRole("img", { name: /S3 requests per second to/ })).toBeNull();
+	});
+});
 
 describe("bucket page", () => {
 	test("shows the bucket's numbers, flags and objects", async () => {

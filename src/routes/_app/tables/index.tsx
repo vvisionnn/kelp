@@ -1,5 +1,5 @@
 import type { TableBucket } from "@shared/tables.ts";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Database, ScrollText, Table2 } from "lucide-react";
 import { motion } from "motion/react";
@@ -7,6 +7,7 @@ import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import { EmptyState, ErrorState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { CreateBucketDialog } from "@/components/kelp/tables/create-dialogs.tsx";
+import { WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -53,7 +54,7 @@ function TablesPage() {
 			/>
 			{isPending ? (
 				<div
-					className="grid gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]"
+					className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]"
 					role="status"
 					aria-label="Loading table buckets"
 				>
@@ -69,16 +70,33 @@ function TablesPage() {
 					description="Create a table bucket to give engines like Spark, Trino or DuckDB an Iceberg warehouse on SeaweedFS."
 				/>
 			) : (
-				<Reveal className="grid gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
-					<section aria-label="Table buckets" className="group-sheet h-fit divide-y divide-border">
-						{data.buckets.map((bucket, index) => (
-							<BucketRow key={bucket.arn} bucket={bucket} index={index} />
-						))}
-					</section>
-					<ConnectCard port={data.icebergPort} example={data.buckets[0]?.name ?? "analytics"} />
+				<Reveal>
+					<TablesOverview buckets={data.buckets} />
+					<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+						<section aria-label="Table buckets" className="group-sheet h-fit divide-y divide-border">
+							{data.buckets.map((bucket, index) => (
+								<BucketRow key={bucket.arn} bucket={bucket} index={index} />
+							))}
+						</section>
+						<ConnectCard port={data.icebergPort} example={data.buckets[0]?.name ?? "analytics"} />
+					</div>
 				</Reveal>
 			)}
 		</>
+	);
+}
+
+/** Every warehouse's namespaces and tables, totalled across the cluster. */
+function TablesOverview({ buckets }: { buckets: TableBucket[] }) {
+	const details = useQueries({ queries: buckets.map((b) => streamsQueries.tableBucket(b.name)) });
+	const loaded = details.flatMap((q) => (q.data ? [q.data] : []));
+	const tables = loaded.flatMap((d) => d.tables.map((table) => ({ bucket: d.bucket.name, table })));
+	return (
+		<WarehouseDashboard
+			warehouses={buckets.length}
+			namespaces={loaded.reduce((sum, d) => sum + d.namespaces.length, 0)}
+			tables={tables}
+		/>
 	);
 }
 

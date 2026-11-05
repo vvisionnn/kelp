@@ -26,7 +26,7 @@ test("browses an Iceberg table: schema, rows, and a past snapshot", async ({ pag
 
 	await expect(page.getByRole("heading", { name: "sales.orders" })).toBeVisible();
 	await expect(page.getByText("placed_at")).toBeVisible();
-	await expect(page.getByText("510", { exact: true })).toBeVisible();
+	await expect(page.getByRole("region", { name: "Records" }).getByText("510", { exact: true })).toBeVisible();
 
 	await page.getByRole("tab", { name: "Data" }).click();
 	await expect(page.getByRole("list", { name: "Data files" }).getByRole("button")).toHaveCount(9);

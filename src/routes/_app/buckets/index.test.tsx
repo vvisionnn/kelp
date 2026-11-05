@@ -3,12 +3,63 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { objectsApi } from "../../../../test/objects-fixtures.ts";
 import { choose } from "../../../../test/objects-helpers.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
+import { pickSegment } from "../../../../test/segment.ts";
 import { settle } from "../../../../test/settle.ts";
+import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
 
 async function openCreate() {
 	fireEvent.click(await screen.findByRole("button", { name: "Create bucket" }));
 	return screen.findByRole("dialog");
 }
+
+describe("buckets dashboard", () => {
+	test("headlines totals and live traffic, ranks busy buckets and shows requests per bucket", async () => {
+		const { routes } = await objectsApi();
+		const app = renderApp("/buckets", { ...routes, "GET /telemetry": makeTelemetry() });
+		expect(await screen.findByRole("img", { name: "S3 requests per second by type" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "S3 requests" }).textContent).toContain("/s");
+		expect(screen.getByRole("region", { name: "Failed requests" }).textContent).toContain("%");
+		const busiest = screen.getByRole("list", { name: "Buckets by S3 requests" });
+		expect(within(busiest).getByRole("link", { name: "backups" })).toBeTruthy();
+		// Traffic to buckets that no longer exist is left out.
+		expect(within(busiest).queryByText("photo-library")).toBeNull();
+		expect(screen.getByRole("img", { name: "Object data per bucket" })).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Quota usage" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Objects by size" })).toBeTruthy();
+		// The bucket table is the one without a caption; charts carry captioned data tables.
+		const table = screen.getAllByRole("table").find((t) => !t.querySelector("caption")) as HTMLElement;
+		expect(within(table).getByText("900")).toBeTruthy();
+		expect(within(table).getAllByText("–").length).toBeGreaterThan(0);
+		pickSegment(
+			within(screen.getByRole("radiogroup", { name: "Time range" })).getByRole("radio", { name: "24h" }),
+		);
+		await waitFor(() => expect(app.api.last("GET", "/telemetry")?.query.get("range")).toBe("24h"));
+	});
+
+	test("without live metrics it still shows what the buckets hold", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets", {
+			...routes,
+			"GET /telemetry": { ...makeTelemetry(), enabled: false, points: [], buckets: [], objectSizes: [] },
+		});
+		expect(await screen.findByText("Live metrics are off")).toBeTruthy();
+		expect(screen.getByText("Appears once live metrics are on.")).toBeTruthy();
+		expect(screen.queryByRole("radiogroup", { name: "Time range" })).toBeNull();
+		expect(screen.queryByRole("columnheader", { name: /Requests/ })).toBeNull();
+	});
+
+	test("says so when no bucket has data or a quota", async () => {
+		const { routes, buckets } = await objectsApi();
+		const empty = buckets.map((b) => ({ ...b, logicalSize: 0, quota: { enabled: false, bytes: 0 } }));
+		renderApp("/buckets", {
+			...routes,
+			"GET /buckets": { buckets: empty },
+			"GET /telemetry": makeTelemetry(),
+		});
+		expect(await screen.findByText("No bucket holds data yet.")).toBeTruthy();
+		expect(screen.getByText("No bucket has a quota. Set one in a bucket's settings.")).toBeTruthy();
+	});
+});
 
 describe("buckets page", () => {
 	test("lists buckets with their data, quota, owner and flags", async () => {
