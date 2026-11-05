@@ -39,7 +39,7 @@ function LoginPage() {
 		<main className="relative isolate flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background px-6 py-12">
 			<div className="pointer-events-none absolute inset-0 -z-10 opacity-60" aria-hidden="true">
 				<AmbientRays
-					color={resolvedTheme === "dark" ? "#8ab8ff" : "#0a66e8"}
+					color={resolvedTheme === "dark" ? "#a5a3ff" : "#6366f1"}
 					light={resolvedTheme === "light"}
 					className="size-full"
 				/>
