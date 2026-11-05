@@ -93,11 +93,14 @@ async function writeFiles(out: Record<string, string>) {
 	const files = Object.keys(out);
 	if (files.length === 0) return;
 	for (const file of files) await Bun.write(join(root, file), out[file] as string);
-	const format = Bun.spawn(["bunx", "biome", "format", "--write", ...files.filter((f) => f.endsWith(".json"))], {
-		cwd: root,
-		stdout: "ignore",
-		stderr: "inherit",
-	});
+	const format = Bun.spawn(
+		["bunx", "biome", "format", "--write", ...files.filter((f) => f.endsWith(".json"))],
+		{
+			cwd: root,
+			stdout: "ignore",
+			stderr: "inherit",
+		},
+	);
 	if ((await format.exited) !== 0) throw new Error("biome format failed");
 }
 
