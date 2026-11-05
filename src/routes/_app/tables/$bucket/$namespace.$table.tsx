@@ -3,11 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Camera, Database, Rows3, Trash2 } from "lucide-react";
 import { z } from "zod";
+import { BarList, compact, dataColor, Kpi, splitUnit } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { SchemaTree } from "@/components/kelp/tables/schema-tree.tsx";
+import { snapshotHistory, TableGrowth } from "@/components/kelp/tables/table-insights.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
 import { Alert, AlertDescription } from "@/components/reui/alert";
 import {
@@ -65,7 +67,16 @@ function TablePage() {
 				description={
 					<>
 						An Iceberg table in <span className="font-mono">{bucket}</span>, namespace{" "}
-						<span className="font-mono">{namespace}</span>.
+						<span className="font-mono">{namespace}</span>
+						{data?.iceberg?.partition.length ? (
+							<>
+								, partitioned by{" "}
+								<span className="font-mono">
+									{data.iceberg.partition.map((p) => p.sourceName).join(", ")}
+								</span>
+							</>
+						) : null}
+						.
 					</>
 				}
 				actions={
@@ -74,7 +85,7 @@ function TablePage() {
 			/>
 			{isPending ? (
 				<div className="space-y-6" role="status" aria-label="Loading table">
-					<div className="grid gap-3 lg:grid-cols-12">
+					<div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
 						<SkeletonBlock className="h-36 rounded-xl lg:col-span-5" />
 						<SkeletonBlock className="h-36 rounded-xl lg:col-span-7" />
 					</div>
@@ -133,75 +144,59 @@ function TableBody({ detail }: { detail: TableDetail }) {
 	);
 }
 
-/** The table at a glance: its records and history, and the numbers behind them. */
+/** The table at a glance: its size and history as numbers, then how it grew commit by commit. */
 function TableHero({ detail }: { detail: TableDetail }) {
 	const iceberg = detail.iceberg;
 	const metrics = iceberg?.metrics;
 	const snapshots = iceberg?.snapshots ?? [];
-	const latest = snapshots[0];
+	const history = snapshotHistory(snapshots);
+	const last = history.at(-1);
 	return (
-		<div className="grid gap-3 lg:grid-cols-12">
-			<section className="group-sheet flex flex-col p-4 lg:col-span-5">
-				<p className="text-[13px] text-muted-foreground">Records</p>
-				<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
-					{formatCount(metrics?.records ?? 0)}
-				</p>
-				<p className="mt-0.5 text-[12px] text-muted-foreground">
-					{latest
-						? `Last ${latest.operation} ${formatRelative(latest.timestamp)}.`
-						: "No engine has written to this table yet."}
-				</p>
-				{snapshots.length > 0 && <SnapshotStrand snapshots={snapshots} />}
-			</section>
-			<section className="group-sheet grid grid-cols-2 gap-x-4 gap-y-3 p-4 sm:grid-cols-4 lg:col-span-7">
-				<SmallStat label="Data files" value={formatCount(metrics?.dataFiles ?? 0)} />
-				<SmallStat label="Size" value={formatBytes(metrics?.totalSize ?? 0)} />
-				<SmallStat label="Snapshots" value={formatCount(snapshots.length)} />
-				<SmallStat label="Columns" value={formatCount(iceberg?.fields.length ?? 0)} />
-				<div className="col-span-full border-border border-t pt-3 text-[12px]">
-					<span className="text-muted-foreground">Partitioned by </span>
-					{iceberg?.partition.length ? (
-						<span className="font-mono">{iceberg.partition.map((p) => p.sourceName).join(", ")}</span>
-					) : (
-						"nothing"
-					)}
-				</div>
-			</section>
-		</div>
-	);
-}
-
-function SmallStat({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="min-w-0">
-			<p className="text-[12px] text-muted-foreground">{label}</p>
-			<p className="metric truncate font-semibold text-[20px] leading-6">{value}</p>
-		</div>
-	);
-}
-
-/** Every snapshot as a bead on one line, oldest on the left; the live one glows. */
-function SnapshotStrand({ snapshots }: { snapshots: IcebergSnapshot[] }) {
-	const ordered = [...snapshots].reverse();
-	return (
-		<div
-			role="img"
-			aria-label={`${snapshots.length} ${snapshots.length === 1 ? "snapshot" : "snapshots"}, oldest first`}
-			className="relative mt-4 flex h-4 items-center justify-between"
-		>
-			<span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
-			{ordered.map((snapshot) => (
-				<span
-					key={snapshot.id}
-					title={`${snapshot.operation}, ${formatRelative(snapshot.timestamp)}`}
-					className={cn(
-						"relative rounded-full",
-						snapshot.current
-							? "size-2.5 bg-primary shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_22%,transparent)]"
-							: "size-1.5 bg-muted-foreground/60",
-					)}
+		<div className="space-y-3">
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				<Kpi
+					label="Records"
+					value={compact(metrics?.records ?? 0)}
+					hint={
+						(metrics?.records ?? 0) >= 1000
+							? `${formatCount(metrics?.records ?? 0)} rows`
+							: "In the current snapshot"
+					}
+					trend={history.map((p) => p.records)}
+					color={dataColor(0)}
 				/>
-			))}
+				<Kpi
+					label="Data size"
+					{...splitUnit(formatBytes(metrics?.totalSize ?? 0))}
+					trend={history.map((p) => p.bytes)}
+					color={dataColor(3)}
+				/>
+				<Kpi
+					label="Data files"
+					value={formatCount(metrics?.dataFiles ?? 0)}
+					hint={metrics?.deleteFiles ? `${formatCount(metrics.deleteFiles)} delete files` : "No delete files"}
+				/>
+				<Kpi label="Snapshots" value={formatCount(snapshots.length)} hint="Kept for time travel" />
+				<Kpi
+					label="Columns"
+					value={formatCount(iceberg?.fields.length ?? 0)}
+					hint={
+						iceberg?.schemaCount
+							? `${iceberg.schemaCount} schema ${iceberg.schemaCount === 1 ? "version" : "versions"}`
+							: undefined
+					}
+				/>
+				<Kpi
+					label="Last commit"
+					value={last ? formatRelative(new Date(last.t).toISOString()) : "None"}
+					hint={
+						last
+							? `${last.operation}${last.addedRecords ? `, +${compact(last.addedRecords)} records` : ""}`
+							: "No engine has written yet"
+					}
+				/>
+			</div>
+			<TableGrowth snapshots={snapshots} />
 		</div>
 	);
 }
@@ -217,7 +212,7 @@ function SchemaTab({ iceberg }: { iceberg: IcebergTable | null }) {
 		);
 	}
 	return (
-		<div className="grid items-start gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+		<div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
 			<Panel
 				title="Columns"
 				description={
@@ -291,73 +286,109 @@ function DataTab({ detail }: { detail: TableDetail }) {
 	const select = (patch: { snapshot?: string | undefined; file?: string | undefined }) =>
 		navigate({ search: (s) => ({ ...s, ...patch }) });
 
+	const partitions = preview.data ? recordsByPartition(preview.data.files) : [];
 	return (
-		<div className="grid items-start gap-4 xl:grid-cols-[20rem_1fr]">
-			<Panel title="Files" description="Live data files in the chosen snapshot.">
-				<div className="mb-3 grid gap-1 text-xs">
-					<label htmlFor="preview-snapshot" className="text-muted-foreground">
-						Snapshot
-					</label>
-					<Select
-						value={snapshot ?? detail.iceberg?.currentSnapshotId ?? ""}
-						onValueChange={(value) => select({ snapshot: value as string, file: undefined })}
-					>
-						<SelectTrigger id="preview-snapshot" aria-label="Snapshot" className="w-full font-mono">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{snapshots.map((s) => (
-								<SelectItem key={s.id} value={s.id} className="font-mono">
-									{s.id} {s.current ? "(current)" : ""}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				{preview.isPending ? (
-					<SkeletonBlock className="h-40" />
-				) : preview.data ? (
-					<FileList
-						files={preview.data.files}
-						selected={preview.data.file}
-						onSelect={(path) => select({ file: path })}
+		<div className="space-y-4">
+			{partitions.length > 1 && (
+				<Panel title="Records by partition" description="In the chosen snapshot's data files">
+					<BarList
+						label="Records by partition"
+						color={dataColor(0)}
+						items={partitions.slice(0, 8).map((p) => ({
+							key: p.partition,
+							label: <span className="font-mono text-[12px]">{p.partition}</span>,
+							value: p.records,
+							display: compact(p.records),
+							extra: (
+								<span className="w-16 text-right text-[12px] text-muted-foreground tabular">
+									{formatBytes(p.bytes)}
+								</span>
+							),
+						}))}
 					/>
-				) : null}
-			</Panel>
-			<Panel
-				title="Rows"
-				description={
-					preview.data?.file ? (
-						<span className="break-all font-mono">{preview.data.file.split("/").pop()}</span>
+				</Panel>
+			)}
+			<div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[20rem_1fr]">
+				<Panel title="Files" description="Live data files in the chosen snapshot.">
+					<div className="mb-3 grid gap-1 text-xs">
+						<label htmlFor="preview-snapshot" className="text-muted-foreground">
+							Snapshot
+						</label>
+						<Select
+							value={snapshot ?? detail.iceberg?.currentSnapshotId ?? ""}
+							onValueChange={(value) => select({ snapshot: value as string, file: undefined })}
+						>
+							<SelectTrigger id="preview-snapshot" aria-label="Snapshot" className="w-full font-mono">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{snapshots.map((s) => (
+									<SelectItem key={s.id} value={s.id} className="font-mono">
+										{s.id} {s.current ? "(current)" : ""}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					{preview.isPending ? (
+						<SkeletonBlock className="h-40" />
+					) : preview.data ? (
+						<FileList
+							files={preview.data.files}
+							selected={preview.data.file}
+							onSelect={(path) => select({ file: path })}
+						/>
+					) : null}
+				</Panel>
+				<Panel
+					title="Rows"
+					description={
+						preview.data?.file ? (
+							<span className="break-all font-mono">{preview.data.file.split("/").pop()}</span>
+						) : (
+							"First rows of the selected file."
+						)
+					}
+					actions={
+						preview.isFetching && !preview.isPending ? (
+							<span className="tide h-1 w-16 rounded-full bg-accent" />
+						) : null
+					}
+				>
+					{preview.error ? (
+						<ErrorState error={preview.error} onRetry={() => preview.refetch()} />
+					) : preview.isPending ? (
+						<SkeletonBlock className="h-64" />
 					) : (
-						"First rows of the selected file."
-					)
-				}
-				actions={
-					preview.isFetching && !preview.isPending ? (
-						<span className="tide h-1 w-16 rounded-full bg-accent" />
-					) : null
-				}
-			>
-				{preview.error ? (
-					<ErrorState error={preview.error} onRetry={() => preview.refetch()} />
-				) : preview.isPending ? (
-					<SkeletonBlock className="h-64" />
-				) : (
-					<>
-						{preview.data.notes.map((note) => (
-							<p key={note} className="mb-2 text-muted-foreground text-sm">
-								{note}
-							</p>
-						))}
-						{preview.data.rows.length > 0 && (
-							<RowsGrid columns={preview.data.columns} rows={preview.data.rows} />
-						)}
-					</>
-				)}
-			</Panel>
+						<>
+							{preview.data.notes.map((note) => (
+								<p key={note} className="mb-2 text-muted-foreground text-sm">
+									{note}
+								</p>
+							))}
+							{preview.data.rows.length > 0 && (
+								<RowsGrid columns={preview.data.columns} rows={preview.data.rows} />
+							)}
+						</>
+					)}
+				</Panel>
+			</div>
 		</div>
 	);
+}
+
+/** Records and bytes per partition value, largest first, from a snapshot's data files. */
+export function recordsByPartition(files: DataFileInfo[]) {
+	const groups = new Map<string, { records: number; bytes: number }>();
+	for (const file of files) {
+		const key =
+			Object.entries(file.partition)
+				.map(([name, value]) => `${name}=${value ?? "null"}`)
+				.join(", ") || "unpartitioned";
+		const current = groups.get(key) ?? { records: 0, bytes: 0 };
+		groups.set(key, { records: current.records + file.records, bytes: current.bytes + file.size });
+	}
+	return [...groups].map(([partition, v]) => ({ partition, ...v })).sort((a, b) => b.records - a.records);
 }
 
 function FileList({
@@ -536,7 +567,7 @@ function DetailsTab({ detail }: { detail: TableDetail }) {
 	];
 	const properties = Object.entries(iceberg?.properties ?? {}).sort(([a], [b]) => a.localeCompare(b));
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-2">
+		<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
 			<Panel title="Table">
 				<dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
 					{rows
@@ -620,7 +651,7 @@ function AccessTab({ detail }: { detail: TableDetail }) {
 		invalidate,
 	});
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
+		<div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1.4fr_1fr]">
 			<Panel title="Table policy" description="Applies to this table on top of the bucket policy.">
 				<PolicyEditor
 					policy={detail.policy}

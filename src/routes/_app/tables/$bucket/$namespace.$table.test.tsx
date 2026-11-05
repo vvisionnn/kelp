@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { snapshotHistory } from "@/components/kelp/tables/table-insights.tsx";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
 import { settle } from "../../../../../test/settle.ts";
 import { tablesApi } from "../../../../../test/streams-fixtures.ts";
-import { snapshotHighlights } from "./$namespace.$table.tsx";
+import { recordsByPartition, snapshotHighlights } from "./$namespace.$table.tsx";
 
 const ORDERS = "/tables/buckets/analytics/namespaces/sales/tables/orders";
 
@@ -19,6 +20,56 @@ async function setup(
 	return { ...api, app };
 }
 
+describe("table dashboard", () => {
+	test("charts records over time, what recent commits added, and records by partition", async () => {
+		await setup();
+		expect(await screen.findByRole("img", { name: "Total records after each commit" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "Records added by recent commits" })).toBeTruthy();
+		expect(screen.getByRole("region", { name: "Last commit" }).textContent).toMatch(
+			/append|overwrite|replace|delete/,
+		);
+		expect(screen.getByText(/partitioned by/)).toBeTruthy();
+		fireEvent.click(screen.getByRole("tab", { name: "Data" }));
+		const partitions = await screen.findByRole("list", { name: "Records by partition" });
+		expect(within(partitions).getAllByRole("listitem").length).toBeGreaterThan(1);
+	});
+
+	test("history and partition helpers", () => {
+		expect(
+			snapshotHistory([
+				{
+					id: "2",
+					timestamp: "2026-01-02T00:00:00Z",
+					operation: "append",
+					summary: { "total-records": "30", "added-records": "20" },
+				},
+				{
+					id: "1",
+					timestamp: "2026-01-01T00:00:00Z",
+					operation: "append",
+					summary: { "total-records": "x" },
+				},
+				{ id: "0", timestamp: null, operation: "append", summary: {} },
+			] as never),
+		).toMatchObject([
+			{ id: "1", records: null, addedRecords: null },
+			{ id: "2", records: 30, addedRecords: 20 },
+		]);
+		expect(
+			recordsByPartition([
+				{ path: "a", format: "parquet", records: 2, size: 10, partition: { region: "eu" } },
+				{ path: "b", format: "parquet", records: 5, size: 20, partition: { region: null } },
+				{ path: "c", format: "parquet", records: 1, size: 5, partition: {} },
+				{ path: "d", format: "parquet", records: 3, size: 5, partition: { region: "eu" } },
+			]),
+		).toEqual([
+			{ partition: "region=eu", records: 5, bytes: 15 },
+			{ partition: "region=null", records: 5, bytes: 20 },
+			{ partition: "unpartitioned", records: 1, bytes: 5 },
+		]);
+	});
+});
+
 describe("table page", () => {
 	test("headlines the table and shows its schema and partitioning", async () => {
 		await setup();
@@ -26,7 +77,7 @@ describe("table page", () => {
 		expect(screen.getByText("timestamptz")).toBeTruthy();
 		expect(screen.getAllByText("required")).toHaveLength(5);
 		expect(screen.getByText("optional")).toBeTruthy();
-		expect(screen.getByText("510")).toBeTruthy();
+		expect(within(screen.getByRole("region", { name: "Records" })).getByText("510")).toBeTruthy();
 		expect(screen.getByText("identity")).toBeTruthy();
 		expect(screen.getByText("Unsorted.")).toBeTruthy();
 	});

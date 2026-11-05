@@ -1,14 +1,20 @@
 import type { Bucket } from "@shared/objects.ts";
+import type { BucketTraffic } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Database } from "lucide-react";
+import { useMemo } from "react";
+import { compact, RANGES, Sparkline, useRange } from "@/components/kelp/charts/index.ts";
+import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { BucketsDashboard } from "@/components/kelp/objects/bucket-dashboard.tsx";
 import { BucketFlags } from "@/components/kelp/objects/bucket-flags.tsx";
 import { CreateBucketDialog } from "@/components/kelp/objects/create-bucket.tsx";
-import { ShareBars, topShares } from "@/components/kelp/objects/showcase.tsx";
-import { CapacityBar, EmptyState, PageHeader, Panel, Reveal, StatBand } from "@/components/kelp/page.tsx";
+import { trafficByBucket } from "@/components/kelp/objects/insights.ts";
+import { CapacityBar, EmptyState, PageHeader } from "@/components/kelp/page.tsx";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
+import { queries } from "@/lib/queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/buckets/")({
@@ -92,19 +98,55 @@ export const bucketColumns: Array<Column<Bucket>> = [
 	},
 ];
 
+/** The busiest-first requests column: requests in the range, with their shape over time. */
+function requestsColumn(traffic: Map<string, BucketTraffic>): Column<Bucket> {
+	return {
+		id: "requests",
+		accessorFn: (bucket) => traffic.get(bucket.name)?.requests ?? 0,
+		header: "Requests",
+		cell: ({ row }) => {
+			const t = traffic.get(row.original.name);
+			if (!t || t.requests === 0) return <span className="text-tertiary">–</span>;
+			return (
+				<span className="flex items-center gap-2.5">
+					<Sparkline values={t.series} width={56} height={18} label={`${row.original.name} requests`} />
+					<span className="tabular">{compact(t.requests)}</span>
+				</span>
+			);
+		},
+	};
+}
+
 function BucketsPage() {
 	const { data, isPending, error, refetch } = useQuery(objectQueries.buckets());
+	const [range, setRange] = useRange();
+	const telemetry = useQuery(queries.telemetry(range)).data;
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
+	const traffic = useMemo(() => trafficByBucket(telemetry), [telemetry]);
+	const columns = useMemo(
+		() =>
+			telemetry?.enabled
+				? [...bucketColumns.slice(0, 3), requestsColumn(traffic), ...bucketColumns.slice(3)]
+				: bucketColumns,
+		[telemetry?.enabled, traffic],
+	);
 
 	return (
 		<>
 			<PageHeader
 				title="Buckets"
-				description="S3 buckets, what they hold, and the rules they follow."
-				actions={canWrite && <CreateBucketDialog />}
+				description="S3 buckets, what they hold, how busy they are, and the rules they follow."
+				actions={
+					<>
+						{telemetry?.enabled && (
+							<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+						)}
+						{canWrite && <CreateBucketDialog />}
+					</>
+				}
 			/>
-			{data && data.length > 0 && <BucketsOverview buckets={data} />}
+			{data && data.length > 0 && <BucketsDashboard buckets={data} telemetry={telemetry} />}
 			<DataTable
 				data={data}
 				isLoading={isPending}
@@ -115,7 +157,7 @@ function BucketsPage() {
 				searchPlaceholder="Search buckets"
 				onRowClick={(bucket) => navigate({ to: "/buckets/$bucket", params: { bucket: bucket.name } })}
 				initialSorting={[{ id: "name", desc: false }]}
-				columns={bucketColumns}
+				columns={columns}
 				empty={
 					<EmptyState
 						icon={<Database />}
@@ -130,40 +172,5 @@ function BucketsPage() {
 				}
 			/>
 		</>
-	);
-}
-
-/** Where the object data is: totals as widgets, and the largest buckets beside them. */
-function BucketsOverview({ buckets }: { buckets: Bucket[] }) {
-	const total = buckets.reduce((sum, b) => sum + b.logicalSize, 0);
-	const onDisk = buckets.reduce((sum, b) => sum + b.physicalSize, 0);
-	const files = buckets.reduce((sum, b) => sum + (b.storedFiles ?? 0), 0);
-	const limited = buckets.filter((b) => b.quota.enabled).length;
-	return (
-		<Reveal className="mb-6 grid gap-3 lg:grid-cols-12">
-			<StatBand
-				className="lg:col-span-6 lg:grid-cols-2"
-				stats={[
-					{ label: "Object data", value: total, format: formatBytes },
-					{
-						label: "Buckets",
-						value: buckets.length,
-						hint: limited > 0 ? `${limited} with a quota` : "None has a quota",
-					},
-					{ label: "Stored files", value: files },
-					{ label: "On disk", value: onDisk, format: formatBytes, hint: "With copies" },
-				]}
-			/>
-			<Panel title="Largest buckets" description="Object data per bucket" className="lg:col-span-6">
-				<ShareBars
-					label="Object data per bucket"
-					items={topShares(
-						buckets.map((b) => ({ label: b.name, value: b.logicalSize })),
-						5,
-					)}
-					format={formatBytes}
-				/>
-			</Panel>
-		</Reveal>
 	);
 }

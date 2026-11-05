@@ -68,6 +68,7 @@ import {
 import { useCanWrite } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 import { FilePreviewSheet } from "./file-preview.tsx";
+import { FolderSummary } from "./folder-summary.tsx";
 import { UploadTray, useUploads } from "./uploads.tsx";
 
 /** Folders first, then names in natural order (file2 before file10). */
@@ -138,10 +139,11 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 		scroller.current?.scrollTo({ top: 0 });
 	}, [path]);
 
+	const loaded = useMemo(() => listing.data?.pages.flatMap((page) => page.entries) ?? [], [listing.data]);
 	const entries = useMemo(() => {
-		const all = sortEntries(listing.data?.pages.flatMap((page) => page.entries) ?? []);
+		const all = sortEntries(loaded);
 		return filter.trim() ? all.filter((entry) => matchesSearch(entry.name, filter)) : all;
-	}, [listing.data, filter]);
+	}, [loaded, filter]);
 
 	const virtualizer = useVirtualizer({
 		count: entries.length,
@@ -194,6 +196,7 @@ export function FileBrowser({ root, rootLabel, path, onNavigate }: FileBrowserPr
 
 	return (
 		<div className="grid grid-cols-[minmax(0,1fr)] gap-3">
+			<FolderSummary entries={loaded} partial={Boolean(listing.hasNextPage)} onOpen={open} />
 			<div className="flex flex-wrap items-center gap-2">
 				<Breadcrumbs crumbs={crumbsFor(root, path, rootLabel)} onNavigate={onNavigate} />
 				<div className="ml-auto flex flex-wrap items-center gap-2">

@@ -4,17 +4,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import {
-	EmptyState,
-	ErrorState,
-	PageHeader,
-	Panel,
-	Reveal,
-	SkeletonBlock,
-	StatBand,
-} from "@/components/kelp/page.tsx";
+import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { CreateNamespaceDialog, CreateTableDialog } from "@/components/kelp/tables/create-dialogs.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
+import { WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,17 +93,9 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 	return (
 		<Reveal className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-12">
 			<div className="space-y-3 lg:col-span-8">
-				<StatBand
-					className="mb-6 lg:grid-cols-3"
-					stats={[
-						{ label: "Namespaces", value: detail.namespaces.length },
-						{ label: "Tables", value: detail.tables.length },
-						{
-							label: "With data",
-							value: detail.tables.filter((t) => t.metadataLocation).length,
-							hint: "Tables an engine has written",
-						},
-					]}
+				<WarehouseDashboard
+					namespaces={detail.namespaces.length}
+					tables={detail.tables.map((table) => ({ bucket: name, table }))}
 				/>
 				{groups.length === 0 ? (
 					<EmptyState
