@@ -1,6 +1,6 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { motion } from "motion/react";
-import { createContext, type ReactNode, useContext, useId } from "react";
+import { type ReactNode, useId } from "react";
 import Counter from "@/components/react-bits/Counter.tsx";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,11 +8,6 @@ import { ApiError } from "@/lib/api.ts";
 import { formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "./motion.ts";
-import type { NavItem } from "./nav.ts";
-import { Tile } from "./tile.tsx";
-
-/** The nav item for the page being shown, so headers can wear its identity tile. */
-export const PageItemContext = createContext<Pick<NavItem, "icon" | "tile"> | undefined>(undefined);
 
 export function PageHeader({
 	title,
@@ -23,17 +18,13 @@ export function PageHeader({
 	description?: ReactNode;
 	actions?: ReactNode;
 }) {
-	const item = useContext(PageItemContext);
 	return (
-		<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2 pb-6">
-			<div className="flex min-w-0 items-center gap-3">
-				{item && <Tile item={item} size="lg" />}
-				<div className="min-w-0">
-					<h1 className="truncate font-bold text-[26px] leading-8 tracking-[-0.022em]">{title}</h1>
-					{description && (
-						<div className="text-[13px] text-muted-foreground leading-[18px]">{description}</div>
-					)}
-				</div>
+		<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-2 pb-6">
+			<div className="min-w-0">
+				<h1 className="truncate font-semibold text-[26px] leading-8 tracking-[-0.022em]">{title}</h1>
+				{description && (
+					<div className="mt-0.5 text-[13px] text-muted-foreground leading-[18px]">{description}</div>
+				)}
 			</div>
 			{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
 		</div>

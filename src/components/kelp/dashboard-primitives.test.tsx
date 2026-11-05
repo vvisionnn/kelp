@@ -1,11 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { HardDrive } from "lucide-react";
 import { useState } from "react";
 import { HoldToDelete, Segmented } from "./controls.tsx";
 import { itemFor } from "./nav.ts";
-import { InfoList, PageHeader, PageItemContext, Section, StatBand } from "./page.tsx";
-import { Tile } from "./tile.tsx";
+import { InfoList, PageHeader, Section, StatBand } from "./page.tsx";
 
 function SegmentHarness({ onChange }: { onChange: (value: string) => void }) {
 	const [value, setValue] = useState<"all" | "busy">("all");
@@ -26,33 +24,13 @@ function SegmentHarness({ onChange }: { onChange: (value: string) => void }) {
 }
 
 describe("dashboard primitives", () => {
-	test("a page header wears its page's identity tile when the shell provides one", () => {
-		const { container, rerender } = render(<PageHeader title="Volumes" description="All of them" />);
-		expect(container.querySelector(".tile")).toBeNull();
-		rerender(
-			<PageItemContext.Provider value={{ icon: HardDrive, tile: "#0a84ff" }}>
-				<PageHeader title="Volumes" description="All of them" actions={<button type="button">Grow</button>} />
-			</PageItemContext.Provider>,
+	test("a page header shows the title, description and actions", () => {
+		render(
+			<PageHeader title="Volumes" description="All of them" actions={<button type="button">Grow</button>} />,
 		);
-		const tile = container.querySelector<HTMLElement>(".tile");
-		expect(tile?.style.getPropertyValue("--tile")).toBe("#0a84ff");
 		expect(screen.getByRole("heading", { level: 1, name: "Volumes" })).toBeTruthy();
+		expect(screen.getByText("All of them")).toBeTruthy();
 		expect(screen.getByRole("button", { name: "Grow" })).toBeTruthy();
-	});
-
-	test("tiles come in three sizes", () => {
-		const { container } = render(
-			<>
-				<Tile item={{ icon: HardDrive, tile: "#000" }} />
-				<Tile item={{ icon: HardDrive, tile: "#000" }} size="md" />
-				<Tile item={{ icon: HardDrive, tile: "#000" }} size="lg" className="extra" />
-			</>,
-		);
-		const tiles = [...container.querySelectorAll(".tile")].map((t) => t.className);
-		expect(tiles[0]).toContain("size-5");
-		expect(tiles[1]).toContain("size-7");
-		expect(tiles[2]).toContain("size-9");
-		expect(tiles[2]).toContain("extra");
 	});
 
 	test("sections title their content and info lists pair labels with values", () => {

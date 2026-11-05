@@ -26,8 +26,6 @@ import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
 import { CommandMenu, useCommandMenu } from "./command-menu.tsx";
 import { itemFor, NAV } from "./nav.ts";
-import { PageItemContext } from "./page.tsx";
-import { Tile } from "./tile.tsx";
 
 declare module "@tanstack/react-router" {
 	interface StaticDataRouteOption {
@@ -113,16 +111,21 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 											onClick={onNavigate}
 											data-active={active ? "" : undefined}
 											aria-current={active ? "page" : undefined}
-											className="relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition-colors hover:bg-accent/60 data-active:font-semibold"
+											className="group/nav relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/80 transition-colors hover:bg-accent/60 hover:text-foreground data-active:font-medium data-active:text-foreground"
 										>
 											{active && (
 												<motion.span
 													layoutId="sidebar-active"
 													className="absolute inset-0 -z-10 rounded-md bg-accent"
 													transition={{ type: "spring", stiffness: 500, damping: 40 }}
-												/>
+												>
+													<span className="absolute inset-y-2 -left-2 w-[3px] rounded-full bg-[linear-gradient(180deg,#6366f1,#a855f7,#ec4899,#f97316)]" />
+												</motion.span>
 											)}
-											<Tile item={item} />
+											<item.icon
+												className="size-4 shrink-0 text-muted-foreground transition-colors group-data-active/nav:text-foreground"
+												strokeWidth={1.75}
+											/>
 											<span className="truncate">{item.title}</span>
 										</Link>
 									</li>
@@ -322,7 +325,6 @@ export function AppShell() {
 	useSessionWatcher();
 	const command = useCommandMenu();
 	const [sheetOpen, setSheetOpen] = useState(false);
-	const pageItem = itemFor(useRouterState({ select: (s) => s.location.pathname }));
 	return (
 		<div className="min-h-svh">
 			<aside className="glass fixed inset-y-2 left-2 z-40 hidden w-62 rounded-xl lg:block">
@@ -341,9 +343,7 @@ export function AppShell() {
 			<div className="flex min-h-svh min-w-0 flex-col lg:pl-66">
 				<Toolbar onShowSidebar={() => setSheetOpen(true)} onSearch={() => command.setOpen(true)} />
 				<main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8">
-					<PageItemContext.Provider value={pageItem}>
-						<Outlet />
-					</PageItemContext.Provider>
+					<Outlet />
 				</main>
 			</div>
 			<CommandMenu open={command.open} onOpenChange={command.setOpen} />

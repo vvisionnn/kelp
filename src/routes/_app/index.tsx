@@ -11,7 +11,6 @@ import {
 	SkeletonBlock,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { Tile } from "@/components/kelp/tile.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
 import { queries } from "@/lib/queries.ts";
@@ -209,7 +208,7 @@ function WidgetLabel({ to, children }: { to: string; children: string }) {
 			to={to as "/"}
 			className="flex w-fit items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
 		>
-			{item && <Tile item={item} />}
+			{item && <item.icon className="size-3.5" strokeWidth={1.75} />}
 			{children}
 		</Link>
 	);
