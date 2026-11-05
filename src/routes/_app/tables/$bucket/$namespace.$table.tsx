@@ -188,7 +188,7 @@ function TableHero({ detail }: { detail: TableDetail }) {
 				/>
 				<Kpi
 					label="Last commit"
-					value={last ? formatRelative(new Date(last.t).toISOString()) : "None"}
+					{...(last ? splitUnit(formatRelative(new Date(last.t).toISOString())) : { value: "None" })}
 					hint={
 						last
 							? `${last.operation}${last.addedRecords ? `, +${compact(last.addedRecords)} records` : ""}`

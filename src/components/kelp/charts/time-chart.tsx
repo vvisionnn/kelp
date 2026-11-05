@@ -29,6 +29,16 @@ export function robustTop(values: number[]): { top: number; clipped: boolean } {
 	return { top: max, clipped: false };
 }
 
+/** Axis labels for the ticks, dropping any that would repeat the label before it. */
+function tickLabels(ticks: Date[], withSeconds: boolean, withDay: boolean) {
+	const labels: Array<{ tick: Date; text: string }> = [];
+	for (const tick of ticks) {
+		const text = withSeconds ? clockSeconds(tick.getTime()) : clock(tick.getTime(), withDay);
+		if (labels.at(-1)?.text !== text) labels.push({ tick, text });
+	}
+	return labels;
+}
+
 /**
  * A time series chart: lines, washed areas or stacked areas over a shared time axis, with a
  * crosshair that snaps to the nearest sample and lists every series (dataviz rules). Keyboard:
@@ -172,7 +182,7 @@ export function TimeChart({
 							</text>
 						</g>
 					))}
-					{xTicks.map((tick) => (
+					{tickLabels(xTicks, withSeconds, spanDays >= 1).map(({ tick, text }) => (
 						<text
 							key={tick.getTime()}
 							x={x(tick)}
@@ -180,7 +190,7 @@ export function TimeChart({
 							textAnchor="middle"
 							className="fill-muted-foreground text-[11px] tabular"
 						>
-							{withSeconds ? clockSeconds(tick.getTime()) : clock(tick.getTime(), spanDays >= 1)}
+							{text}
 						</text>
 					))}
 					{stacked
