@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/kelp/brand.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import {
 	ErrorState,
+	InfoList,
 	PageHeader,
 	Reveal,
 	Section,
@@ -15,7 +16,9 @@ import {
 import { type Theme, useTheme } from "@/components/theme-provider.tsx";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { formatDateTime } from "@/lib/format.ts";
 import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
+import { queries } from "@/lib/queries.ts";
 import { useSession } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,7 @@ function SettingsPage() {
 					</div>
 				</Section>
 				<ClusterPanel />
+				<MetricsPanel />
 				<KelpPanel />
 				<Section title="Keyboard shortcuts">
 					<dl className="group-sheet divide-y divide-border text-[13px]">
@@ -89,9 +93,9 @@ const PREVIEW = {
 		edge: "rgb(255 255 255 / 0.08)",
 	},
 };
-const TILES = ["#0a84ff", "#ff9f0a", "#ff375f", "#30d158"];
+const ROWS = [0, 1, 2, 3];
 
-/** A tiny drawing of Kelp in a palette: the floating sidebar with its tiles, and grouped sheets. */
+/** A tiny drawing of Kelp in a palette: the floating sidebar with its spectrum marker, and sheets. */
 function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 	const c = PREVIEW[mode];
 	const edge = { boxShadow: `0 0 0 0.5px ${c.edge}` };
@@ -101,9 +105,10 @@ function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 				className="flex w-[30%] flex-col gap-1 rounded-[5px] p-1.5"
 				style={{ background: c.sidebar, ...edge }}
 			>
-				{TILES.map((tile) => (
-					<span key={tile} className="flex items-center gap-1">
-						<span className="size-1.5 rounded-[2px]" style={{ background: tile }} />
+				{ROWS.map((row) => (
+					<span key={row} className="relative flex items-center gap-1">
+						{row === 0 && <span className="spectrum absolute -left-1 h-2 w-0.5 rounded-full" />}
+						<span className="size-1.5 rounded-[2px]" style={{ background: c.line }} />
 						<span className="h-1 flex-1 rounded-full" style={{ background: c.line }} />
 					</span>
 				))}
@@ -118,6 +123,61 @@ function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 				<span className="flex-1 rounded-[4px]" style={{ background: c.sheet, ...edge }} />
 			</div>
 		</div>
+	);
+}
+
+/** Whether Kelp is sampling SeaweedFS's metrics for live charts, and from where. */
+function MetricsPanel() {
+	const { data, error } = useQuery(queries.telemetry("1h"));
+	return (
+		<Section
+			title="Live metrics"
+			description="Kelp samples SeaweedFS's Prometheus endpoints every 15 seconds for the live charts."
+		>
+			{error ? (
+				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
+					Kelp could not read its metrics status: {error.message}
+				</p>
+			) : (
+				<InfoList
+					items={[
+						{
+							label: "Status",
+							value: !data ? (
+								"Checking"
+							) : data.enabled ? (
+								<StatusDot
+									tone={data.unreachable.length ? "warn" : "good"}
+									label={data.unreachable.length ? "Some endpoints are unreachable" : "Sampling"}
+								/>
+							) : (
+								<StatusDot tone="idle" label="Off. Set KELP_METRICS_URLS to turn on live charts." />
+							),
+						},
+						{
+							label: "Sampling since",
+							value: data?.since ? formatDateTime(new Date(data.since).toISOString()) : "Not started",
+						},
+						{
+							label: "Points in the last hour",
+							value: <span className="tabular">{data?.points.length ?? 0}</span>,
+						},
+						{
+							label: "Growth samples",
+							value: <span className="tabular">{data?.inventory.length ?? 0}</span>,
+						},
+						...(data?.unreachable.length
+							? [
+									{
+										label: "Unreachable",
+										value: <span className="font-mono text-[12px]">{data.unreachable.join(", ")}</span>,
+									},
+								]
+							: []),
+					]}
+				/>
+			)}
+		</Section>
 	);
 }
 

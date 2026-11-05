@@ -106,7 +106,7 @@ describe("job type page", () => {
 		fireEvent.click(screen.getByRole("tab", { name: "Run history" }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({ tab: "history" }));
 		expect((await screen.findAllByText(runs[0]?.message as string)).length).toBe(runs.length);
-		expect(screen.getAllByText("Succeeded").length).toBe(runs.length);
+		expect(within(screen.getByRole("tabpanel")).getAllByText("Succeeded").length).toBe(runs.length);
 	});
 
 	test("empty jobs and history explain themselves", async () => {
@@ -132,7 +132,7 @@ describe("job type page", () => {
 		expect(await screen.findByText("No jobs yet")).toBeTruthy();
 		fireEvent.click(screen.getByRole("tab", { name: "Run history" }));
 		expect(await screen.findByText("disk full")).toBeTruthy();
-		expect(screen.getByText("Failed")).toBeTruthy();
+		expect(within(screen.getByRole("tabpanel")).getByText("Failed")).toBeTruthy();
 	});
 
 	test("viewers can read settings but not act", async () => {

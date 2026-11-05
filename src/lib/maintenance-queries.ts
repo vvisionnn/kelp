@@ -61,17 +61,30 @@ export const maintenanceQueries = {
 			queryFn: () => api.get<JobDetail>(`/maintenance/jobs/${encodeURIComponent(jobId)}`),
 			refetchInterval: LIVE,
 		}),
-	activities: (jobType?: string) =>
+	activities: (jobType?: string, limit = 40) =>
 		queryOptions({
-			queryKey: ["maintenance", "activities", jobType ?? "all"],
+			queryKey: ["maintenance", "activities", jobType ?? "all", limit],
 			queryFn: async () =>
 				(
 					await api.get<{ activities: MaintenanceActivity[] }>("/maintenance/activities", {
 						jobType,
-						limit: 40,
+						limit,
 					})
 				).activities,
 			refetchInterval: FEED,
+		}),
+	/** Enough history for a day of charts: the last 1000 jobs and 500 activities. */
+	history: (jobType?: string) =>
+		queryOptions({
+			queryKey: ["maintenance", "history", jobType ?? "all"],
+			queryFn: async () => {
+				const [jobs, activities] = await Promise.all([
+					api.get<{ jobs: MaintenanceJob[] }>("/maintenance/jobs", { jobType, limit: 1000 }),
+					api.get<{ activities: MaintenanceActivity[] }>("/maintenance/activities", { jobType, limit: 500 }),
+				]);
+				return { jobs: jobs.jobs, activities: activities.activities };
+			},
+			refetchInterval: LIVE,
 		}),
 	jobType: (jobType: string) =>
 		queryOptions({

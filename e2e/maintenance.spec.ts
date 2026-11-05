@@ -76,7 +76,7 @@ test("vacuum end to end: tune, detect, run, inspect the job", async ({ page }) =
 		.click();
 	await expect(page.getByText("Succeeded").first()).toBeVisible();
 	await expect(page.getByText("Timeline")).toBeVisible();
-	await expect(page.getByText("Job queued for execution")).toBeVisible();
+	await expect(page.getByText("Job queued for execution").first()).toBeVisible();
 
 	await page.getByRole("link", { name: "Vacuum", exact: true }).click();
 	await page.getByRole("tab", { name: "Run history" }).click();

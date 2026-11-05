@@ -15,7 +15,10 @@ describe("maintenance job page", () => {
 		expect(screen.getByText("Succeeded")).toBeTruthy();
 		expect(screen.getByText("Outputs")).toBeTruthy();
 		expect(screen.getAllByText("Volume id", { selector: "dt" })).toHaveLength(2);
-		expect(screen.getByText("Job queued for execution")).toBeTruthy();
+		expect(
+			within(screen.getByRole("region", { name: "Timeline" })).getByText("Job queued for execution"),
+		).toBeTruthy();
+		expect(screen.getByRole("list", { name: "Time spent per step" })).toBeTruthy();
 		expect(screen.queryByText(/progress \d+%/)).toBeNull();
 		expect(screen.getByRole("button", { name: "Copy job id" })).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Expire job" })).toBeNull();

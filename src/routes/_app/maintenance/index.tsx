@@ -2,6 +2,8 @@ import type { JobTypeSummary, MaintenanceOverview, MaintenanceWorker } from "@sh
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Bot, ChevronRight, ListChecks } from "lucide-react";
+import { compact, Kpi } from "@/components/kelp/charts/index.ts";
+import { ChecksChart, lastDay, OutcomesChart, WorkerTime } from "@/components/kelp/maintenance/insights.tsx";
 import {
 	ACTIVE_STATES,
 	ActivityFeed,
@@ -12,15 +14,16 @@ import {
 	OutcomeBadge,
 	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
+import { successRate, waitProgress } from "@/components/kelp/maintenance/stats.ts";
 import {
 	CapacityBar,
 	EmptyState,
 	ErrorState,
 	PageHeader,
+	Panel,
 	Reveal,
 	Section,
 	SkeletonBlock,
-	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
@@ -65,6 +68,7 @@ function MaintenancePage() {
 	const overview = useQuery(maintenanceQueries.overview());
 	const jobs = useQuery(maintenanceQueries.jobs());
 	const activities = useQuery(maintenanceQueries.activities());
+	const history = useQuery(maintenanceQueries.history());
 
 	if (overview.isPending) return <MaintenanceSkeleton />;
 	if (overview.error) return <ErrorState error={overview.error} onRetry={() => overview.refetch()} />;
@@ -76,6 +80,20 @@ function MaintenancePage() {
 	const dayAgo = Date.now() - 86_400_000;
 	const recent = allJobs.filter((j) => j.completedAt && new Date(j.completedAt).getTime() >= dayAgo);
 	const failed = recent.filter((j) => j.state === "failed").length;
+	const past = history.data ?? { jobs: allJobs, activities: [] };
+	const buckets = lastDay(past.jobs, past.activities);
+	const checks = buckets.reduce((sum, b) => sum + b.checks, 0);
+	const proposed = buckets.reduce((sum, b) => sum + b.proposals, 0);
+	const rate = successRate(past.jobs);
+	const finishedRuns = past.jobs.filter((j) => j.state === "succeeded" || j.state === "failed").length;
+	const slots = data.workers.reduce(
+		(acc, w) => ({ used: acc.used + w.executionSlots.used, total: acc.total + w.executionSlots.total }),
+		{ used: 0, total: 0 },
+	);
+	const queued = data.workers.reduce(
+		(sum, w) => sum + Object.values(w.queuedByType).reduce((a, b) => a + b, 0),
+		0,
+	);
 
 	return (
 		<>
@@ -94,18 +112,65 @@ function MaintenancePage() {
 			/>
 
 			<Reveal>
-				<StatBand
-					stats={[
-						{ label: "Workers", value: data.workerCount, hint: "Connected to the admin server" },
-						{ label: "Running now", value: active, hint: "Queued, assigned or running" },
-						{
-							label: "Finished today",
-							value: recent.length - failed,
-							hint: "Completed in the last 24 hours",
-						},
-						{ label: "Failed today", value: failed, hint: "Open a job to see why" },
-					]}
-				/>
+				<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+					<Kpi
+						label="Workers"
+						value={String(data.workerCount)}
+						hint={`${slots.used} of ${slots.total} slots busy`}
+					/>
+					<Kpi label="Running now" value={String(active)} hint={`${queued} queued on workers`} />
+					<Kpi
+						label="Checks, 24 hours"
+						value={compact(checks)}
+						hint={`${compact(proposed)} ${proposed === 1 ? "job" : "jobs"} proposed`}
+						trend={buckets.map((b) => b.checks)}
+						color="var(--data-1)"
+					/>
+					<Kpi
+						label="Finished, 24 hours"
+						value={String(recent.length - failed)}
+						hint="Jobs that completed"
+						trend={buckets.map((b) => b.succeeded)}
+						color="var(--data-3)"
+					/>
+					<Kpi
+						label="Failed, 24 hours"
+						value={String(failed)}
+						hint={failed > 0 ? "Open a job to see why" : "Nothing has failed"}
+						trend={buckets.map((b) => b.failed)}
+						color="var(--data-2)"
+						{...(failed > 0 ? { tone: "bad" as const } : {})}
+					/>
+					<Kpi
+						label="Success rate"
+						{...(rate === null ? { value: "–" } : { value: String(Math.round(rate * 100)), unit: "%" })}
+						hint={rate === null ? "No job has finished yet" : `Of the last ${finishedRuns} finished jobs`}
+						{...(rate !== null && rate < 0.9 ? { tone: "warn" as const } : {})}
+					/>
+				</div>
+				<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+					<Panel
+						title="Checks for work"
+						description="Scheduled checks per hour, last 24 hours"
+						className="xl:col-span-4"
+					>
+						<ChecksChart buckets={buckets} />
+					</Panel>
+					<Panel
+						title="Finished jobs"
+						description="Jobs per hour by outcome, last 24 hours"
+						className="xl:col-span-4"
+					>
+						<OutcomesChart buckets={buckets} />
+					</Panel>
+					<Panel
+						title="Where worker time goes"
+						description="Total run time by job type"
+						className="xl:col-span-4"
+					>
+						<WorkerTime jobs={past.jobs} names={names} />
+					</Panel>
+				</div>
 			</Reveal>
 
 			<Section
@@ -224,7 +289,7 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 							params={{ jobType: type.jobType }}
 							className="group grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-raised/70 focus-visible:bg-raised md:grid-cols-[auto_minmax(0,1fr)_10rem_11rem_auto]"
 						>
-							<span className="tile size-7 rounded-[7px] [--tile:#636366] [&_svg]:size-4">
+							<span className="flex size-8 items-center justify-center rounded-md bg-secondary text-muted-foreground [&_svg]:size-4">
 								<JobTypeIcon jobType={type.jobType} />
 							</span>
 							<div className="min-w-0">
@@ -263,6 +328,7 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 												, {formatInterval(type.detectionIntervalMinutes)}
 											</span>
 										)}
+										<NextCheckMeter type={type} />
 									</dd>
 								</div>
 								<div>
@@ -286,6 +352,21 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 				);
 			})}
 		</ul>
+	);
+}
+
+/** How far a job type is through its wait for the next check, as a hairline meter. */
+function NextCheckMeter({ type }: { type: JobTypeSummary }) {
+	const progress = type.enabled ? waitProgress(type.lastDetectedAt, type.nextDetectionAt, Date.now()) : null;
+	if (progress === null) return null;
+	return (
+		<span
+			aria-hidden="true"
+			className="mt-1.5 block h-0.5 w-28 overflow-hidden rounded-full bg-accent"
+			title={`${Math.round(progress * 100)}% of the wait has passed`}
+		>
+			<span className="spectrum block h-full rounded-full" style={{ width: `${progress * 100}%` }} />
+		</span>
 	);
 }
 
@@ -357,17 +438,17 @@ function MaintenanceSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading maintenance">
 			<div className="flex items-center gap-3 pt-2 pb-6">
-				<SkeletonBlock className="size-9 rounded-[9px]" />
 				<div className="space-y-1.5">
 					<SkeletonBlock className="h-7 w-48" />
 					<SkeletonBlock className="h-4 w-80 max-w-full" />
 				</div>
 			</div>
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-[92px] rounded-xl" />
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<SkeletonBlock key={i} className="h-[104px] rounded-xl" />
 				))}
 			</div>
+			<SkeletonBlock className="mt-3 h-64 rounded-xl" />
 			<SkeletonBlock className="mt-8 h-6 w-32" />
 			<SkeletonBlock className="mt-3 h-80 rounded-xl" />
 		</div>
