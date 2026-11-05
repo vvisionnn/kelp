@@ -70,7 +70,7 @@ describe("boot", () => {
 		});
 		expect(await screen.findByText("Connecting to your cluster")).toBeTruthy();
 		release();
-		expect(await screen.findByText("Disk capacity", {}, { timeout: 3000 })).toBeTruthy();
+		expect(await screen.findByText("Disk used", {}, { timeout: 3000 })).toBeTruthy();
 	});
 });
 

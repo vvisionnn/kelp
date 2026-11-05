@@ -6,13 +6,22 @@ import type {
 	TopologyDataCenter,
 	VolumeServer,
 } from "@shared/api.ts";
-import { queryOptions } from "@tanstack/react-query";
+import type { Telemetry, TelemetryRange } from "@shared/telemetry.ts";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { api } from "./api.ts";
 
 const LIVE = 15_000;
 
 /** Query definitions shared by route loaders and components. */
 export const queries = {
+	/** Live traffic and growth series. Keeps the previous range on screen while a new one loads. */
+	telemetry: (range: TelemetryRange) =>
+		queryOptions({
+			queryKey: ["telemetry", range],
+			queryFn: () => api.get<Telemetry>(`/telemetry?range=${range}`),
+			refetchInterval: LIVE,
+			placeholderData: keepPreviousData,
+		}),
 	overview: () =>
 		queryOptions({
 			queryKey: ["overview"],

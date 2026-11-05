@@ -9,6 +9,8 @@ const nodes = {
 };
 
 /** API responses built from real SeaweedFS fixtures through the server's mappers. */
+import { makeTelemetry } from "./telemetry-fixtures.ts";
+
 export async function clusterApi() {
 	const admin = await fixture<Record<string, unknown>>("admin/admin");
 	const overview: Overview = mapOverview(admin, nodes);
@@ -21,6 +23,7 @@ export async function clusterApi() {
 		overview,
 		routes: {
 			"GET /overview": overview,
+			"GET /telemetry": makeTelemetry(),
 			"GET /cluster/masters": { masters, leader: "127.0.0.1:19333", maxVolumeId: 21 },
 			"GET /cluster/volume-servers": { volumeServers },
 			"GET /cluster/topology": { dataCenters: topology },

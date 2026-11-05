@@ -1,11 +1,33 @@
+import type { Overview } from "@shared/api.ts";
+import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { NAV_ITEMS } from "@/components/kelp/nav.ts";
+import { Activity } from "lucide-react";
+import {
+	BarList,
+	Columns,
+	compact,
+	dataColor,
+	hasSeries,
+	Kpi,
+	latencySeries,
+	latest,
+	millis,
+	perSecond,
+	RANGES,
+	Ring,
+	Sparkline,
+	splitUnit,
+	TimeChart,
+	trafficByType,
+	useRange,
+} from "@/components/kelp/charts/index.ts";
+import { Segmented } from "@/components/kelp/controls.tsx";
 import {
 	CapacityBar,
 	ErrorState,
-	Metric,
 	PageHeader,
+	Panel,
 	Reveal,
 	Section,
 	SkeletonBlock,
@@ -13,6 +35,7 @@ import {
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
+import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
 
 export const Route = createFileRoute("/_app/")({
@@ -21,20 +44,15 @@ export const Route = createFileRoute("/_app/")({
 	component: OverviewPage,
 });
 
-import { healthSummary } from "@/lib/health.ts";
-
 export { healthSummary };
 
 function OverviewPage() {
+	const [range, setRange] = useRange();
 	const { data, error, refetch, isPending } = useQuery(queries.overview());
+	const telemetry = useQuery(queries.telemetry(range)).data;
 	if (isPending) return <OverviewSkeleton />;
 	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
 	const health = healthSummary(data);
-	const diskUsed = data.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0);
-	const diskTotal = data.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0);
-	const slotsUsed = data.volumeServers.reduce((sum, s) => sum + s.volumes, 0);
-	const slotsTotal = data.volumeServers.reduce((sum, s) => sum + s.maxVolumes, 0);
-	const leader = data.masters.find((m) => m.isLeader);
 
 	return (
 		<>
@@ -46,59 +64,313 @@ function OverviewPage() {
 						<span className="text-tertiary">Updated {formatRelative(data.updatedAt)}</span>
 					</span>
 				}
+				actions={
+					telemetry?.enabled && (
+						<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+					)
+				}
 			/>
-
-			<Reveal className="grid grid-cols-2 gap-3 lg:grid-cols-12">
-				<section className="group-sheet col-span-2 flex min-h-56 flex-col p-4 lg:col-span-6 lg:row-span-2">
-					<WidgetLabel to="/cluster">Disk capacity</WidgetLabel>
-					<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
-						<Metric value={diskUsed} format={formatBytes} />
-						<span className="ml-1.5 font-normal font-sans text-[13px] text-muted-foreground tracking-normal">
-							of {formatBytes(diskTotal)} used
-						</span>
-					</p>
-					<div className="mt-3 flex items-center gap-3">
-						<CapacityBar used={diskUsed} total={diskTotal} className="h-2" />
-						<span className="shrink-0 text-[13px] text-muted-foreground tabular">
-							{formatPercent(ratio(diskUsed, diskTotal))}
-						</span>
-					</div>
-					<p className="mt-5 flex items-baseline justify-between text-[13px]">
-						<span className="text-muted-foreground">Volume slots</span>
-						<span className="tabular">
-							{formatCount(slotsUsed)}{" "}
-							<span className="text-muted-foreground">of {formatCount(slotsTotal)}</span>
-						</span>
-					</p>
-					<CapacityBar used={slotsUsed} total={slotsTotal} className="mt-2" />
-					<dl className="mt-auto grid grid-cols-3 gap-3 border-border border-t pt-3.5 text-[12px]">
-						<Fact label="Object data" value={formatBytes(data.totalSize)} />
-						<Fact label="Free" value={formatBytes(Math.max(0, diskTotal - diskUsed))} />
-						<Fact label="Data centers" value={formatCount(data.dataCenters.length)} />
-					</dl>
-				</section>
-				<Widget
-					to="/volumes"
-					label="Volumes"
-					value={data.totalVolumes}
-					hint={`Up to ${formatCount(data.volumeSizeLimitMb)} MiB each`}
-				/>
-				<Widget to="/volumes" label="Files" value={data.totalFiles} hint="Across all volumes" />
-				<Widget
-					to="/erasure-coding"
-					label="EC shards"
-					value={data.totalEcShards}
-					hint={`${data.totalEcVolumes} encoded ${data.totalEcVolumes === 1 ? "volume" : "volumes"}`}
-				/>
-				<Widget to="/cluster" label="Mounts" value={data.totalMountClients} hint="FUSE clients connected" />
+			<Reveal>
+				<Headline data={data} telemetry={telemetry} />
+				{telemetry?.enabled ? (
+					<Live data={data} telemetry={telemetry} />
+				) : (
+					<MetricsOff unreachable={telemetry?.unreachable} />
+				)}
+				<Fleet data={data} telemetry={telemetry} />
 			</Reveal>
+		</>
+	);
+}
 
+/** The six numbers an operator checks first, each with its recent trend. */
+function Headline({ data, telemetry }: { data: Overview; telemetry: Telemetry | undefined }) {
+	const inventory = telemetry?.inventory ?? [];
+	const points = telemetry?.points ?? [];
+	const diskUsed = data.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0);
+	const diskTotal = data.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0);
+	const rps = points.map((p) => p.s3.rps);
+	const p95 = points.map((p) => p.s3.p95);
+	const errors = points.map((p) => p.s3.clientErrors + p.s3.serverErrors);
+	const latestRps = latest(rps) ?? 0;
+	const latestErrors = latest(errors) ?? 0;
+	const latestP95 = latest(p95);
+	const stored = splitUnit(formatBytes(data.totalSize));
+	const used = ratio(diskUsed, diskTotal);
+	return (
+		<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+			<Kpi
+				label="Object data"
+				{...stored}
+				hint={`${formatCount(data.totalVolumes)} volumes`}
+				trend={inventory.map((p) => p.storedBytes)}
+				color={dataColor(0)}
+			/>
+			<Kpi
+				label="Files"
+				value={compact(data.totalFiles)}
+				hint={`${formatCount(data.totalFiles)} in all volumes`}
+				trend={inventory.map((p) => p.files)}
+				color={dataColor(2)}
+			/>
+			<Kpi
+				label="Disk used"
+				value={formatPercent(used).replace("%", "")}
+				unit="%"
+				hint={`${formatBytes(diskUsed)} of ${formatBytes(diskTotal)}`}
+				trend={inventory.map((p) => ratio(p.diskUsedBytes, p.diskTotalBytes) * 100)}
+				color={dataColor(1)}
+				{...(used >= 0.95 ? { tone: "bad" as const } : used >= 0.8 ? { tone: "warn" as const } : {})}
+			/>
+			<Kpi
+				label="S3 requests"
+				value={compact(latestRps)}
+				unit="/s"
+				hint={telemetry?.enabled ? "Right now" : "Metrics are off"}
+				trend={rps}
+				color={dataColor(0)}
+			/>
+			<Kpi
+				label="S3 latency, p95"
+				{...(latestP95 === null ? { value: "–" } : splitUnit(millis(latestP95)))}
+				hint={latestP95 === null ? "No requests in the last interval" : "95% of requests are faster"}
+				trend={p95}
+				color={dataColor(3)}
+			/>
+			<Kpi
+				label="S3 errors"
+				value={compact(latestErrors)}
+				unit="/s"
+				hint={latestErrors > 0 ? "4xx and 5xx responses" : "No failed requests"}
+				trend={errors}
+				color={dataColor(1)}
+				{...(latestErrors > 0 ? { tone: "warn" as const } : {})}
+			/>
+		</div>
+	);
+}
+
+/** Traffic, latency, capacity and the busiest buckets, from the sampled metrics. */
+function Live({ data, telemetry }: { data: Overview; telemetry: Telemetry }) {
+	const times = telemetry.points.map((p) => p.t);
+	const ready = hasSeries(telemetry);
+	const diskUsed = data.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0);
+	const diskTotal = data.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0);
+	const other = Math.max(0, diskUsed - data.totalSize);
+	return (
+		<>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="S3 traffic"
+					description="Requests per second by request type"
+					className="xl:col-span-8"
+					actions={<LiveBadge />}
+				>
+					<TimeChart
+						times={times}
+						series={trafficByType(telemetry.points, (p) => p.s3)}
+						mode="stacked"
+						height={220}
+						format={perSecond}
+						label="S3 requests per second by type"
+					/>
+				</Panel>
+				<Panel title="Capacity" description="What fills the volume servers' disks" className="xl:col-span-4">
+					<Ring
+						label="Disk used"
+						slices={[
+							{
+								label: "Object data",
+								value: data.totalSize,
+								color: dataColor(0),
+								display: formatBytes(data.totalSize),
+							},
+							{
+								label: "Other files on disk",
+								value: other,
+								color: dataColor(3),
+								display: formatBytes(other),
+							},
+							{
+								label: "Free",
+								value: Math.max(0, diskTotal - diskUsed),
+								color: "var(--accent)",
+								display: formatBytes(Math.max(0, diskTotal - diskUsed)),
+							},
+						]}
+						center={
+							<>
+								<span className="font-rounded font-semibold text-[24px] leading-7 tracking-[-0.02em]">
+									{formatPercent(ratio(diskUsed, diskTotal))}
+								</span>
+								<span className="text-[12px] text-muted-foreground">of {formatBytes(diskTotal)}</span>
+							</>
+						}
+					/>
+				</Panel>
+			</div>
+
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="S3 latency"
+					description="How long requests take, by percentile"
+					className="xl:col-span-6"
+				>
+					<TimeChart
+						times={times}
+						series={latencySeries(telemetry.points, (p) => p.s3)}
+						height={200}
+						format={millis}
+						label="S3 request latency percentiles"
+						empty={ready ? "No S3 requests in this range." : undefined}
+					/>
+				</Panel>
+				<Panel title="Busiest buckets" description="S3 requests in this range" className="xl:col-span-6">
+					<BarList
+						label="Buckets by S3 requests"
+						empty="No bucket has served a request in this range."
+						items={telemetry.buckets.slice(0, 6).map((b) => ({
+							key: b.bucket,
+							label: (
+								<Link
+									to="/buckets/$bucket"
+									params={{ bucket: b.bucket }}
+									className="font-mono hover:underline"
+								>
+									{b.bucket}
+								</Link>
+							),
+							value: b.requests,
+							display: compact(b.requests),
+							extra: <Sparkline values={b.series} width={64} height={20} label={`${b.bucket} requests`} />,
+						}))}
+					/>
+				</Panel>
+			</div>
+
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel title="Volume servers" description="Reads and writes per second" className="xl:col-span-5">
+					<TimeChart
+						times={times}
+						series={[
+							{
+								label: "Reads",
+								color: dataColor(0),
+								values: telemetry.points.map((p) => p.volume.byType.GET ?? 0),
+							},
+							{
+								label: "Writes",
+								color: dataColor(1),
+								values: telemetry.points.map(
+									(p) =>
+										(p.volume.byType.POST ?? 0) + (p.volume.byType.PUT ?? 0) + (p.volume.byType.DELETE ?? 0),
+								),
+							},
+						]}
+						mode="area"
+						height={180}
+						format={perSecond}
+						label="Volume server reads and writes per second"
+					/>
+				</Panel>
+				<Panel title="Filer metadata" description="Store operations per second" className="xl:col-span-4">
+					<TimeChart
+						times={times}
+						series={storeSeries(telemetry)}
+						mode="stacked"
+						height={180}
+						format={perSecond}
+						label="Filer store operations per second"
+					/>
+				</Panel>
+				<Panel
+					title="Object sizes"
+					description="Objects written since the filer started"
+					className="xl:col-span-3"
+				>
+					<Columns
+						height={180}
+						color={dataColor(2)}
+						label="Objects by size"
+						columns={sizeColumns(telemetry.objectSizes)}
+					/>
+				</Panel>
+			</div>
+		</>
+	);
+}
+
+/** Store operations by type, busiest three plus "Other". */
+function storeSeries(telemetry: Telemetry) {
+	const totals = new Map<string, number>();
+	for (const p of telemetry.points)
+		for (const [type, v] of Object.entries(p.store)) totals.set(type, (totals.get(type) ?? 0) + v);
+	const top = [...totals.entries()].sort((a, b) => b[1] - a[1]).map(([type]) => type);
+	const named = top.slice(0, 3);
+	const series = named.map((type, i) => ({
+		label: type,
+		color: dataColor(i),
+		values: telemetry.points.map((p) => p.store[type] ?? 0),
+	}));
+	if (top.length > 3)
+		series.push({
+			label: "Other",
+			color: dataColor(4),
+			values: telemetry.points.map((p) =>
+				Object.entries(p.store)
+					.filter(([type]) => !named.includes(type))
+					.reduce((sum, [, v]) => sum + v, 0),
+			),
+		});
+	return series;
+}
+
+/** Turns a cumulative size histogram into per-bucket counts with readable labels. */
+export function sizeColumns(buckets: Telemetry["objectSizes"]) {
+	const finite = buckets.filter((b) => Number.isFinite(b.le)).sort((a, b) => a.le - b.le);
+	return finite.map((b, i) => ({
+		label: `≤${formatBytes(b.le).replace(" ", "")}`,
+		value: Math.max(0, b.count - (finite[i - 1]?.count ?? 0)),
+	}));
+}
+
+function LiveBadge() {
+	return (
+		<span className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+			<Activity className="size-3.5" />
+			Live
+		</span>
+	);
+}
+
+/** Shown when Kelp has no metrics endpoint to sample: what is missing and how to turn it on. */
+function MetricsOff({ unreachable }: { unreachable: string[] | undefined }) {
+	return (
+		<div className="group-sheet mt-3 flex flex-col gap-1 p-4 text-[13px]">
+			<p className="font-semibold">Live charts are off</p>
+			<p className="text-muted-foreground">
+				Kelp draws traffic, latency and growth from SeaweedFS's Prometheus metrics. Start SeaweedFS with{" "}
+				<code className="font-mono text-foreground">-metricsPort</code> and set{" "}
+				<code className="font-mono text-foreground">KELP_METRICS_URLS</code>; the release compose file does
+				both.
+				{unreachable && unreachable.length > 0 && ` Unreachable: ${unreachable.join(", ")}.`}
+			</p>
+		</div>
+	);
+}
+
+/** The machines and services behind the numbers. */
+function Fleet({ data, telemetry }: { data: Overview; telemetry: Telemetry | undefined }) {
+	const leader = data.masters.find((m) => m.isLeader);
+	const process = latest(telemetry?.points.map((p) => p.process) ?? []);
+	return (
+		<>
 			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<Section
 					title="Volume servers"
 					className="mt-0 lg:col-span-7"
 					actions={
-						<Link to="/cluster" className="text-[13px] text-primary hover:underline">
+						<Link to="/cluster" className="text-[13px] text-muted-foreground hover:text-foreground">
 							All nodes
 						</Link>
 					}
@@ -147,7 +419,7 @@ function OverviewPage() {
 							note={`${data.maintenance.tasks} tasks running`}
 						/>
 					</dl>
-					<div className="mt-2 px-4 text-[12px] text-muted-foreground">
+					<div className="mt-2 space-y-1 px-4 text-[12px] text-muted-foreground">
 						{data.versions.uniform ? (
 							<p>
 								Every node runs SeaweedFS{" "}
@@ -170,6 +442,12 @@ function OverviewPage() {
 									))}
 								</ul>
 							</div>
+						)}
+						{process && (
+							<p>
+								SeaweedFS processes use {Math.round(process.cpuPercent)}% CPU and{" "}
+								{formatBytes(process.memoryBytes)} of memory.
+							</p>
 						)}
 					</div>
 				</Section>
@@ -197,42 +475,6 @@ function OverviewPage() {
 				</Section>
 			)}
 		</>
-	);
-}
-
-/** A widget's label: the related page's identity tile and a name, linking to that page. */
-function WidgetLabel({ to, children }: { to: string; children: string }) {
-	const item = NAV_ITEMS.find((i) => i.to === to);
-	return (
-		<Link
-			to={to as "/"}
-			className="flex w-fit items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground"
-		>
-			{item && <item.icon className="size-3.5" strokeWidth={1.75} />}
-			{children}
-		</Link>
-	);
-}
-
-/** One number the operator checks often, linking to where it comes from. */
-function Widget({ to, label, value, hint }: { to: string; label: string; value: number; hint: string }) {
-	return (
-		<section className="group-sheet min-w-0 p-4 lg:col-span-3">
-			<WidgetLabel to={to}>{label}</WidgetLabel>
-			<p className="metric mt-1.5 font-semibold text-[28px] leading-8">
-				<Metric value={value} />
-			</p>
-			<p className="mt-0.5 truncate text-[12px] text-muted-foreground">{hint}</p>
-		</section>
-	);
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-	return (
-		<div className="min-w-0">
-			<dt className="text-muted-foreground">{label}</dt>
-			<dd className="truncate font-medium text-[13px] tabular">{value}</dd>
-		</div>
 	);
 }
 
@@ -264,20 +506,19 @@ function ServiceRow({
 function OverviewSkeleton() {
 	return (
 		<div role="status" aria-busy="true" aria-label="Loading overview">
-			<div className="flex items-center gap-3 pt-2 pb-6">
-				<SkeletonBlock className="size-9 rounded-[9px]" />
-				<div className="space-y-1.5">
-					<SkeletonBlock className="h-7 w-40" />
-					<SkeletonBlock className="h-4 w-64" />
-				</div>
+			<div className="space-y-1.5 pt-2 pb-6">
+				<SkeletonBlock className="h-7 w-40" />
+				<SkeletonBlock className="h-4 w-64" />
 			</div>
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-12">
-				<SkeletonBlock className="col-span-2 h-56 rounded-xl lg:col-span-6 lg:row-span-2" />
-				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-[106px] rounded-xl lg:col-span-3" />
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<SkeletonBlock key={i} className="h-[104px] rounded-xl" />
 				))}
 			</div>
-			<SkeletonBlock className="mt-8 h-64 rounded-xl" />
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<SkeletonBlock className="h-72 rounded-xl xl:col-span-8" />
+				<SkeletonBlock className="h-72 rounded-xl xl:col-span-4" />
+			</div>
 		</div>
 	);
 }

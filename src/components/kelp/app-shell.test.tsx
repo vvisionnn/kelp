@@ -38,7 +38,7 @@ describe("app shell", () => {
 	test("the toolbar title appears once the page header scrolls away", async () => {
 		const { routes } = await clusterApi();
 		renderApp("/", routes);
-		await screen.findByText("Disk capacity");
+		await screen.findByText("Disk used");
 		const title = within(toolbar()).getByText("Overview");
 		expect(title.getAttribute("aria-hidden")).toBe("true");
 		await act(async () => {
@@ -52,7 +52,7 @@ describe("app shell", () => {
 	test("on narrow screens the sidebar opens as a sheet and closes after navigating", async () => {
 		const { routes } = await clusterApi();
 		const app = renderApp("/", routes);
-		await screen.findByText("Disk capacity");
+		await screen.findByText("Disk used");
 		fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
 		const sheet = await screen.findByRole("dialog");
 		fireEvent.click(within(sheet).getByRole("link", { name: "Nodes" }));
@@ -111,7 +111,7 @@ describe("app shell", () => {
 	test("command menu opens with ⌘K and navigates", async () => {
 		const { routes } = await clusterApi();
 		const app = renderApp("/", routes);
-		await screen.findByText("Disk capacity");
+		await screen.findByText("Disk used");
 		fireEvent.keyDown(window, { key: "k", metaKey: true });
 		const dialog = await screen.findByRole("dialog");
 		fireEvent.click(within(dialog).getByText("Nodes"));

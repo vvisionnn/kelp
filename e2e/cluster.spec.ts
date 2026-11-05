@@ -3,7 +3,7 @@ import { expect, test } from "./fixtures.ts";
 test("overview reports a healthy single-node cluster", async ({ page }) => {
 	await page.goto("/");
 	await expect(page.getByText(/Healthy\. 1 volume server reporting/)).toBeVisible();
-	await expect(page.getByText("Disk capacity")).toBeVisible();
+	await expect(page.getByText("Disk used")).toBeVisible();
 });
 
 test("nodes page lists every SeaweedFS process", async ({ page }) => {

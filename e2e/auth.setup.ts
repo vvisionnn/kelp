@@ -6,6 +6,6 @@ setup("sign in as admin", async ({ page }) => {
 	await page.getByLabel("Username").fill(E2E_ADMIN.username);
 	await page.getByLabel("Password").fill(E2E_ADMIN.password);
 	await page.getByRole("button", { name: "Sign in" }).click();
-	await expect(page.getByText("Disk capacity")).toBeVisible();
+	await expect(page.getByText("Disk used")).toBeVisible();
 	await page.context().storageState({ path: ".tmp/e2e/admin.json" });
 });

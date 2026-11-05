@@ -14,7 +14,7 @@ export const test = base.extend<{ viewerPage: Page }>({
 		await page.getByLabel("Username").fill(E2E_VIEWER.username);
 		await page.getByLabel("Password").fill(E2E_VIEWER.password);
 		await page.getByRole("button", { name: "Sign in" }).click();
-		await expect(page.getByText("Disk capacity")).toBeVisible();
+		await expect(page.getByText("Disk used")).toBeVisible();
 		await use(page);
 		await context.close();
 	},
