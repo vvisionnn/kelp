@@ -2,6 +2,44 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.4.0](https://github.com/vvisionnn/kelp/compare/v0.3.0...v0.4.0) - 2026-11-05
+
+### 🚀 Features
+
+- **design:** X.ai-informed color — monochrome actions, spectrum accents, validated indigo/orange/teal/violet/amber data palette; quiet sidebar icons with a spectrum indicator; telemetry contract ([`bf0b93c`](https://github.com/vvisionnn/kelp/commit/bf0b93cfa6efb382b19adafe1e7ef98d99c7fc5e))
+- **overview:** Big-screen dashboard with live traffic, latency, capacity, busiest buckets; Kelp chart kit (time series, sparkline, ring, columns, bar list, stat tile) ([`671a2c8`](https://github.com/vvisionnn/kelp/commit/671a2c84682d7c91bf529955477433b8264d2da5))
+- **login:** Spectrum-tinted light rays ([`afea6ae`](https://github.com/vvisionnn/kelp/commit/afea6ae5e7700ae3f826c408e95bfd6d0128e061))
+- **telemetry:** Sample SeaweedFS Prometheus metrics into live time series ([`169693c`](https://github.com/vvisionnn/kelp/commit/169693c3a11ffcad729e19326d18adb6d861f229))
+- **review:** A light synthetic S3 workload so live charts have traffic ([`9653968`](https://github.com/vvisionnn/kelp/commit/9653968665b879f01130950ca7b434ed0bdd909b))
+- **storage:** Data-rich Volumes, Collections, Erasure coding and Nodes dashboards ([`a5fb690`](https://github.com/vvisionnn/kelp/commit/a5fb690f7d59c1c4b149f6ddab975f2c6e78566a))
+- **operations:** Data-rich maintenance, messaging and settings dashboards ([`ae83fbe`](https://github.com/vvisionnn/kelp/commit/ae83fbe7289ad6fc31c7ee9b2c8e6740b9ba2e86))
+- **objects:** Data-rich buckets, files and tables dashboards ([`c395796`](https://github.com/vvisionnn/kelp/commit/c395796fec5407cd23e635f36e73c1352c928947))
+- **access:** Data-rich Access dashboards ([`237dafa`](https://github.com/vvisionnn/kelp/commit/237dafa9a008dfaf94ca90aa2d8bb2f573b57d83))
+- **charts:** Stat tiles roll whole numbers ([`950ab72`](https://github.com/vvisionnn/kelp/commit/950ab7227e72cd820ac7652dc8a81929f106f50f))
+- **charts:** Robust y axis keeps one spike from flattening a chart ([`43e5832`](https://github.com/vvisionnn/kelp/commit/43e583283060cef67bea02d3c04b197481c6e019))
+
+### 🐛 Bug Fixes
+
+- **overview:** Object size buckets are per-bucket counts with an open-ended last bucket ([`5acea45`](https://github.com/vvisionnn/kelp/commit/5acea45ff2ea9ee247f28b838a1aee8edee07af0))
+- **charts:** Stat tile trends run along the bottom; second-level axis ticks for short ranges ([`0c43112`](https://github.com/vvisionnn/kelp/commit/0c43112df7a7e0e30e7fe99fd399acbdc5c0f29a))
+- **page:** Panels can shrink inside grids ([`02ad330`](https://github.com/vvisionnn/kelp/commit/02ad33062b51b87e771e4167de8b8aa8bdc23771))
+- **charts:** Hidden data tables no longer lengthen the page ([`2a27a8f`](https://github.com/vvisionnn/kelp/commit/2a27a8f5b03a49c30f0cb729e9ecbf14a74d693c))
+- **nodes:** Show summed CPU as cores in use ([`1ccf863`](https://github.com/vvisionnn/kelp/commit/1ccf863c948dd44f9555a93556ae0aebdef39df1))
+- **charts:** Cut-off note sits with the legend ([`045bca5`](https://github.com/vvisionnn/kelp/commit/045bca5d2edb396b77e7c4fb8d56aae631fb5cf1))
+- **charts:** No repeated axis labels; relative times split into value and unit ([`b1d3a64`](https://github.com/vvisionnn/kelp/commit/b1d3a6435d589837fe6bde3d5b15349e484ed291))
+
+### ♻️ Refactoring
+
+- **charts:** StackedColumns joins the chart kit; stat tile trends never widen a tile ([`a28cc0b`](https://github.com/vvisionnn/kelp/commit/a28cc0b7a10edfcee5de5b28f59e9cc248b26343))
+
+### 📚 Documentation
+
+- **design:** X.ai color thinking, quiet icons, charts; spectrum meters ([`ec98c4e`](https://github.com/vvisionnn/kelp/commit/ec98c4e533e605fe4808fd4dffa0943230cfbc0a))
+- Dashboard screenshots ([`6018ccd`](https://github.com/vvisionnn/kelp/commit/6018ccd26bf3d796ce0ce7b10ef800ed8a14da57))
+
+### 🧪 Tests
+
+- **e2e:** Scope selectors for pages that now repeat names in charts ([`d0b76b4`](https://github.com/vvisionnn/kelp/commit/d0b76b4e1d838c072e4255c84f331c0282f97d83))
 ## [0.3.0](https://github.com/vvisionnn/kelp/compare/v0.2.0...v0.3.0) - 2026-11-04
 
 ### 🚀 Features
