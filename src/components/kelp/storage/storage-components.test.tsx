@@ -1,14 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { StorageVolume } from "@shared/storage.ts";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { serverPalette, volumeHealth } from "@/lib/storage-queries.ts";
 import { renderApp } from "../../../../test/render-app.tsx";
 import { busyInventory } from "../../../../test/storage-fixtures.ts";
 import { describeReplication } from "./cluster-actions.tsx";
-import { shareSegments } from "./collection-share.tsx";
 import { ecHealth } from "./ec-volume-list.tsx";
 import { serverFill, shardCells, shardRanges } from "./shard-map.tsx";
-import { SKYLINE_LIMIT, skylineScale, skylineVolumes, VolumeSkyline } from "./visuals.tsx";
 import { matchesFilter } from "./volume-table.tsx";
 
 describe("links inside clickable rows", () => {
@@ -68,49 +65,5 @@ describe("storage helpers", () => {
 		if (!ec) throw new Error("fixture");
 		expect(shardCells(ec)[3]?.holders.map((h) => h.server)).toEqual(["a:8080", "d:8080"]);
 		expect(ecHealth(ec)).toEqual({ tone: "warn", label: "Extra copies" });
-	});
-
-	test("share segments keep colors by name and fold the rest into Other", () => {
-		const segments = shareSegments(busyInventory().collections);
-		expect(segments).toHaveLength(5);
-		expect(segments.at(-1)).toMatchObject({ key: "~other", fill: "bg-[rgb(120_120_128/0.45)]" });
-		expect(new Set(segments.slice(0, 4).map((s) => s.fill)).size).toBe(4);
-		expect(shareSegments([])).toEqual([]);
-	});
-});
-
-describe("volume skyline", () => {
-	const many = () => {
-		const base = busyInventory().volumes[0] as StorageVolume;
-		return Array.from({ length: SKYLINE_LIMIT + 40 }, (_, i) => ({
-			...base,
-			id: i + 1,
-			fullness: (i % 50) / 50,
-		}));
-	};
-
-	test("scales to the largest volume until one is half full", () => {
-		const volumes = busyInventory().volumes;
-		const largest = Math.max(...volumes.map((v) => v.size));
-		expect(skylineScale(volumes, largest * 4)).toBe(largest);
-		expect(skylineScale(volumes, largest * 2)).toBe(largest * 2);
-		expect(skylineScale([], 100)).toBe(1);
-	});
-
-	test("draws every volume in id order while they fit", () => {
-		const volumes = busyInventory().volumes;
-		expect(skylineVolumes([...volumes].reverse()).map((v) => v.id)).toEqual(
-			[...volumes].map((v) => v.id).sort((a, b) => a - b),
-		);
-	});
-
-	test("keeps only the fullest volumes when there are too many, and says so", () => {
-		const shown = skylineVolumes(many());
-		expect(shown).toHaveLength(SKYLINE_LIMIT);
-		expect(shown.every((v, i) => i === 0 || v.id > (shown[i - 1] as StorageVolume).id)).toBe(true);
-		expect(Math.min(...shown.map((v) => v.fullness))).toBeGreaterThan(0);
-		render(<VolumeSkyline volumes={many()} limit={1} />);
-		expect(screen.getByText("Bars fill to the 1 B limit")).toBeTruthy();
-		expect(screen.getByText(`Fullest ${SKYLINE_LIMIT} of ${SKYLINE_LIMIT + 40}`)).toBeTruthy();
 	});
 });

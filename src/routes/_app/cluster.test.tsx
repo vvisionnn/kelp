@@ -2,8 +2,30 @@ import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
+import { makeTelemetry } from "../../../test/telemetry-fixtures.ts";
 
 describe("nodes page", () => {
+	test("charts requests, latency and process cost per component, and volume slots per server", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/cluster", routes);
+		expect(await screen.findByRole("img", { name: "Requests per second by component" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "95th percentile latency by component" })).toBeTruthy();
+		expect(screen.getByRole("img", { name: "CPU trend" })).toBeTruthy();
+		expect(screen.getAllByText("Volume servers", { selector: "li" })).toHaveLength(2);
+		expect(await screen.findByRole("list", { name: "Volume slots by server" })).toBeTruthy();
+		expect(screen.getByRole("radiogroup", { name: "Time range" })).toBeTruthy();
+	});
+
+	test("without sampled metrics the live panels say how to turn them on", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/cluster", {
+			...routes,
+			"GET /telemetry": { ...makeTelemetry(), enabled: false, points: [] },
+		});
+		expect((await screen.findAllByText(/Live traffic appears here/)).length).toBe(2);
+		expect(screen.queryByRole("radiogroup", { name: "Time range" })).toBeNull();
+	});
+
 	test("shows the topology and masters with the leader", async () => {
 		const { routes } = await clusterApi();
 		renderApp("/cluster", routes);
