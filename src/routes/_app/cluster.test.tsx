@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
 import { makeTelemetry } from "../../../test/telemetry-fixtures.ts";
+import { cores } from "./cluster.tsx";
 
 describe("nodes page", () => {
 	test("charts requests, latency and process cost per component, and volume slots per server", async () => {
@@ -168,5 +169,13 @@ describe("nodes page", () => {
 		});
 		fireEvent.change(await screen.findByLabelText("Search mounts"), { target: { value: "/data" } });
 		expect(screen.getByText("10.0.0.5:1234")).toBeTruthy();
+	});
+});
+
+describe("cores", () => {
+	test("CPU summed over processes reads as cores in use", () => {
+		expect(cores(166)).toBe("1.66 cores");
+		expect(cores(100)).toBe("1.00 core");
+		expect(cores(1250)).toBe("12.5 cores");
 	});
 });

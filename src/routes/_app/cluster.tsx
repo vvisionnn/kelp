@@ -165,12 +165,7 @@ export function NodeActivity({ telemetry }: { telemetry: Telemetry | undefined }
 					className="min-w-0 xl:col-span-4"
 				>
 					<dl className="divide-y divide-border">
-						<ProcessStat
-							label="CPU"
-							value={`${Math.round(latest(cpu) ?? 0)}%`}
-							trend={cpu}
-							color={dataColor(1)}
-						/>
+						<ProcessStat label="CPU" value={cores(latest(cpu) ?? 0)} trend={cpu} color={dataColor(1)} />
 						<ProcessStat
 							label="Memory"
 							value={formatBytes(latest(memory) ?? 0)}
@@ -546,4 +541,10 @@ function MountsTab() {
 			columns={mountColumns}
 		/>
 	);
+}
+
+/** CPU summed over processes, as cores in use: 166% reads as "1.66 cores", never a percentage past 100. */
+export function cores(percent: number): string {
+	const value = percent / 100;
+	return `${value < 10 ? value.toFixed(2) : value.toFixed(1)} ${value === 1 ? "core" : "cores"}`;
 }

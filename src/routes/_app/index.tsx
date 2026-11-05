@@ -37,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
 import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
+import { cores } from "./cluster.tsx";
 
 export const Route = createFileRoute("/_app/")({
 	staticData: { title: "Overview" },
@@ -446,8 +447,8 @@ function Fleet({ data, telemetry }: { data: Overview; telemetry: Telemetry | und
 						)}
 						{process && (
 							<p>
-								SeaweedFS processes use {Math.round(process.cpuPercent)}% CPU and{" "}
-								{formatBytes(process.memoryBytes)} of memory.
+								SeaweedFS processes use {cores(process.cpuPercent)} and {formatBytes(process.memoryBytes)} of
+								memory.
 							</p>
 						)}
 					</div>
