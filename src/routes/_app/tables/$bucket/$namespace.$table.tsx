@@ -1,4 +1,4 @@
-import type { DataFileInfo, IcebergSnapshot, IcebergTable, TableDetail } from "@shared/tables.ts";
+import type { DataFileInfo, IcebergTable, TableDetail } from "@shared/tables.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Camera, Database, Rows3, Trash2 } from "lucide-react";
@@ -8,6 +8,7 @@ import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { Collapse, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
 import { EmptyState, PageHeader, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
+import { recordsByPartition, snapshotHighlights } from "@/components/kelp/tables/insights.ts";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { SchemaTree } from "@/components/kelp/tables/schema-tree.tsx";
 import { GrowthGhost, snapshotHistory, TableGrowth } from "@/components/kelp/tables/table-insights.tsx";
@@ -399,20 +400,6 @@ function DataTab({ detail }: { detail: TableDetail }) {
 	);
 }
 
-/** Records and bytes per partition value, largest first, from a snapshot's data files. */
-export function recordsByPartition(files: DataFileInfo[]) {
-	const groups = new Map<string, { records: number; bytes: number }>();
-	for (const file of files) {
-		const key =
-			Object.entries(file.partition)
-				.map(([name, value]) => `${name}=${value ?? "null"}`)
-				.join(", ") || "unpartitioned";
-		const current = groups.get(key) ?? { records: 0, bytes: 0 };
-		groups.set(key, { records: current.records + file.records, bytes: current.bytes + file.size });
-	}
-	return [...groups].map(([partition, v]) => ({ partition, ...v })).sort((a, b) => b.records - a.records);
-}
-
 function FileList({
 	files,
 	selected,
@@ -497,22 +484,6 @@ function RowsGrid({ columns, rows }: { columns: string[]; rows: Array<Array<stri
 			</table>
 		</div>
 	);
-}
-
-const SUMMARY_LABELS: Array<[string, string, (v: number) => string]> = [
-	["added-records", "rows added", formatCount],
-	["deleted-records", "rows deleted", formatCount],
-	["added-data-files", "files added", formatCount],
-	["deleted-data-files", "files removed", formatCount],
-	["added-files-size", "written", formatBytes],
-];
-
-/** The headline numbers of a snapshot summary, skipping zeros. */
-export function snapshotHighlights(snapshot: IcebergSnapshot): string[] {
-	return SUMMARY_LABELS.flatMap(([key, label, format]) => {
-		const value = Number(snapshot.summary[key] ?? 0);
-		return value > 0 ? [`${format(value)} ${label}`] : [];
-	});
 }
 
 function SnapshotsTab({ iceberg }: { iceberg: IcebergTable | null }) {

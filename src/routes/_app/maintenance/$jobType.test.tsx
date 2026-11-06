@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { DetectionResult } from "@shared/maintenance.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { detectionMessage } from "@/components/kelp/maintenance/stats.ts";
 import { maintenanceApi } from "../../../../test/maintenance-fixtures.ts";
 import { type ApiCall, renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { settle } from "../../../../test/settle.ts";
-import { detectionMessage } from "./$jobType.tsx";
 
 describe("job type page", () => {
 	test("shows the settings form and saves changes", async () => {

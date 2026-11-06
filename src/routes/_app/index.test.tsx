@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Overview } from "@shared/api.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { sizeColumns } from "@/components/kelp/objects/insights.ts";
+import { healthSummary } from "@/lib/health.ts";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
 import { pickSegment } from "../../../test/segment.ts";
 import { makeTelemetry } from "../../../test/telemetry-fixtures.ts";
-import { healthSummary, sizeColumns } from "./index.tsx";
 
 describe("overview page", () => {
 	test("shows capacity, counts, servers and services", async () => {

@@ -22,7 +22,9 @@ import {
 	trafficByType,
 	useRange,
 } from "@/components/kelp/charts/index.ts";
+import { cores } from "@/components/kelp/cluster/insights.ts";
 import { Segmented } from "@/components/kelp/controls.tsx";
+import { sizeColumns } from "@/components/kelp/objects/insights.ts";
 import {
 	CapacityBar,
 	PageHeader,
@@ -45,7 +47,6 @@ import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, plural, ratio } from "@/lib/format.ts";
 import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
-import { cores } from "./cluster.tsx";
 
 export const Route = createFileRoute("/_app/")({
 	staticData: { title: "Overview" },
@@ -56,8 +57,6 @@ export const Route = createFileRoute("/_app/")({
 	},
 	component: OverviewPage,
 });
-
-export { healthSummary };
 
 function OverviewPage() {
 	const [range, setRange] = useRange();
@@ -367,16 +366,6 @@ function storeSeries(telemetry: Telemetry) {
 			),
 		});
 	return series;
-}
-
-/** Size buckets as labelled columns; the open-ended last bucket reads "larger". */
-export function sizeColumns(buckets: Telemetry["objectSizes"]) {
-	const finite = buckets.filter((b) => b.le >= 0).sort((a, b) => a.le - b.le);
-	const columns = finite.map((b) => ({ label: `≤${formatBytes(b.le).replace(" ", "")}`, value: b.count }));
-	const rest = buckets.find((b) => b.le < 0);
-	const last = finite.at(-1);
-	if (rest && last) columns.push({ label: `>${formatBytes(last.le).replace(" ", "")}`, value: rest.count });
-	return columns;
 }
 
 function LiveBadge() {

@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { JobDetail, MaintenanceActivity } from "@shared/maintenance.ts";
 import { fireEvent, screen, within } from "@testing-library/react";
+import { timeline } from "@/components/kelp/maintenance/stats.ts";
 import { maintenanceApi } from "../../../../test/maintenance-fixtures.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
-import { timeline } from "./jobs.$jobId.tsx";
 
 const path = (detail: JobDetail) => `/maintenance/jobs/${detail.job.id}`;
 

@@ -1,4 +1,4 @@
-import type { JobDetail, JobRun, MaintenanceActivity } from "@shared/maintenance.ts";
+import type { JobDetail, JobRun } from "@shared/maintenance.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CircleStop } from "lucide-react";
@@ -21,7 +21,7 @@ import {
 	sourceLabel,
 	stateLabel,
 } from "@/components/kelp/maintenance/parts.tsx";
-import { jobDuration, runStats } from "@/components/kelp/maintenance/stats.ts";
+import { jobDuration, PROGRESS, runStats, timeline } from "@/components/kelp/maintenance/stats.ts";
 import { InfoList, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
@@ -54,24 +54,6 @@ export const Route = createFileRoute("/_app/maintenance/jobs/$jobId")({
 		void context.queryClient.prefetchQuery(maintenanceQueries.job(params.jobId)),
 	component: JobPage,
 });
-
-const PROGRESS = /\bprogress\b/i;
-
-/**
- * The job's story, oldest first: repeated messages are dropped, and progress ticks are hidden once
- * the job has finished (while it runs, only the latest tick is kept).
- */
-export function timeline(activities: MaintenanceActivity[], active: boolean): MaintenanceActivity[] {
-	const sorted = [...activities].sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
-	const lastProgress = sorted.findLast((a) => PROGRESS.test(a.message));
-	const seen = new Set<string>();
-	return sorted.filter((activity) => {
-		if (PROGRESS.test(activity.message) && (!active || activity !== lastProgress)) return false;
-		if (seen.has(activity.message)) return false;
-		seen.add(activity.message);
-		return true;
-	});
-}
 
 function JobPage() {
 	const { jobId } = Route.useParams();

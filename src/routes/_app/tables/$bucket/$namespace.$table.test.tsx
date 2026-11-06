@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { recordsByPartition, snapshotHighlights } from "@/components/kelp/tables/insights.ts";
 import { snapshotHistory } from "@/components/kelp/tables/table-insights.tsx";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
 import { settle } from "../../../../../test/settle.ts";
 import { tablesApi } from "../../../../../test/streams-fixtures.ts";
-import { recordsByPartition, snapshotHighlights } from "./$namespace.$table.tsx";
 
 const ORDERS = "/tables/buckets/analytics/namespaces/sales/tables/orders";
 

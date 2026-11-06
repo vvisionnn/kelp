@@ -1,4 +1,4 @@
-import type { TableBucketDetail, TableNamespace, TableSummary } from "@shared/tables.ts";
+import type { TableBucketDetail, TableSummary } from "@shared/tables.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
@@ -7,6 +7,7 @@ import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { EmptyState, PageHeader, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { CreateNamespaceDialog, CreateTableDialog } from "@/components/kelp/tables/create-dialogs.tsx";
+import { groupTables } from "@/components/kelp/tables/insights.ts";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { DashboardGhost, WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
@@ -28,15 +29,6 @@ export const Route = createFileRoute("/_app/tables/$bucket/")({
 	},
 	component: BucketPage,
 });
-
-/** Namespaces with their tables, including namespaces that have none yet. */
-export function groupTables(namespaces: TableNamespace[], tables: TableSummary[]) {
-	const groups = new Map<string, TableSummary[]>(namespaces.map((ns) => [ns.name, []]));
-	for (const table of tables) groups.set(table.namespace, [...(groups.get(table.namespace) ?? []), table]);
-	return [...groups]
-		.map(([namespace, items]) => ({ namespace, tables: items.sort((a, b) => a.name.localeCompare(b.name)) }))
-		.sort((a, b) => a.namespace.localeCompare(b.namespace));
-}
 
 function BucketPage() {
 	const { bucket } = Route.useParams();

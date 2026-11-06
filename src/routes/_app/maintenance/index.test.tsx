@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { MaintenanceOverview } from "@shared/maintenance.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { maintenanceSummary } from "@/components/kelp/maintenance/stats.ts";
 import { maintenanceApi } from "../../../../test/maintenance-fixtures.ts";
 import { renderApp } from "../../../../test/render-app.tsx";
-import { maintenanceSummary } from "./index.tsx";
 
 describe("maintenance overview page", () => {
 	test("shows job types, workers, lanes and live activity", async () => {

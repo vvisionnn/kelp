@@ -13,6 +13,7 @@ import {
 	TableGhost,
 	TileGhost,
 } from "@/components/kelp/access/loading.tsx";
+import { groupStats } from "@/components/kelp/access/stats.ts";
 import { BarList, dataColor, Kpi } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Panel, StatusDot } from "@/components/kelp/page.tsx";
@@ -135,18 +136,6 @@ function CreateGroupDialog() {
 			</DialogContent>
 		</Dialog>
 	);
-}
-
-/** Headline numbers for the groups page. */
-export function groupStats(groups: IamGroup[], users: IamUser[]) {
-	const members = new Set(groups.flatMap((group) => group.members));
-	return {
-		groups: groups.length,
-		off: groups.filter((group) => !group.enabled).length,
-		memberships: groups.reduce((sum, group) => sum + group.members.length, 0),
-		outside: users.filter((user) => !members.has(user.username)).map((user) => user.username),
-		attached: groups.reduce((sum, group) => sum + group.policies.length, 0),
-	};
 }
 
 function GroupsDashboard({

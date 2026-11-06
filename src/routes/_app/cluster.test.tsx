@@ -1,9 +1,9 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { cores } from "@/components/kelp/cluster/insights.ts";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
 import { makeTelemetry } from "../../../test/telemetry-fixtures.ts";
-import { cores } from "./cluster.tsx";
 
 describe("nodes page", () => {
 	test("charts requests, latency and process cost per component, and volume slots per server", async () => {

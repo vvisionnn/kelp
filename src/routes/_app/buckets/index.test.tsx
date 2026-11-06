@@ -76,6 +76,17 @@ describe("buckets page", () => {
 		expect(screen.getByText("Object data")).toBeTruthy();
 	});
 
+	test("names a bucket's owner, and says admins only when it has none", async () => {
+		const { routes, byName } = await objectsApi();
+		renderApp("/buckets", {
+			...routes,
+			"GET /buckets": { buckets: [{ ...byName("backups"), owner: "ci-bot" }, byName("archive")] },
+		});
+		const table = await screen.findByRole("table");
+		expect(within(table).getByText("ci-bot")).toBeTruthy();
+		expect(within(table).getByText("Admins only")).toBeTruthy();
+	});
+
 	test("search narrows the list and rows open the bucket", async () => {
 		const { routes } = await objectsApi();
 		const app = renderApp("/buckets", routes);
@@ -185,6 +196,21 @@ describe("buckets page", () => {
 		expect(names().sort()).toEqual(["archive", "backups", "media"]);
 		fireEvent.click(within(table).getByRole("link", { name: "archive" }));
 		await waitFor(() => expect(app.router.state.location.pathname).toBe("/buckets/archive"));
+	});
+
+	test("sorts by requests when traffic is live", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets", { ...routes, "GET /telemetry": makeTelemetry() });
+		const requests = await screen.findByRole("button", { name: /^Requests/ });
+		const table = requests.closest("table") as HTMLElement;
+		const names = () =>
+			within(table)
+				.getAllByRole("link")
+				.map((l) => l.textContent);
+		fireEvent.click(requests);
+		expect(names().at(-1)).toBe("backups");
+		fireEvent.click(requests);
+		expect(names()[0]).toBe("backups");
 	});
 
 	test("closing the create dialog starts fresh next time", async () => {

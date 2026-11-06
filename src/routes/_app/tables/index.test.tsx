@@ -1,9 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { catalogUri } from "@/components/kelp/tables/insights.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { settle } from "../../../../test/settle.ts";
 import { tablesApi } from "../../../../test/streams-fixtures.ts";
-import { catalogUri } from "./index.tsx";
 
 const config = { kelp: { s3Endpoint: "https://s3.example.com" } };
 

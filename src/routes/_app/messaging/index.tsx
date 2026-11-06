@@ -2,38 +2,20 @@ import type { ClusterNode } from "@shared/api.ts";
 import type { TopicSummary } from "@shared/messaging.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Crown, Eraser, MessagesSquare, Plus, Radio, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { Crown, Eraser, MessagesSquare, Plus, Radio } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { BarsGhost, Collapse, cellGhost, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
+import { DataTable } from "@/components/kelp/data-table.tsx";
+import { BarsGhost, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
+import { CreateTopicDialog } from "@/components/kelp/messaging/create-topic-dialog.tsx";
 import { MessagingInsights } from "@/components/kelp/messaging/insights.tsx";
-import {
-	draftFrom,
-	formatRetention,
-	RetentionFields,
-	retentionFrom,
-} from "@/components/kelp/messaging/retention.tsx";
+import { topicColumns } from "@/components/kelp/messaging/topic-columns.tsx";
 import { EmptyState, PageHeader, Panel, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { KpiGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api.ts";
-import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { streamsQueries } from "@/lib/streams-queries.ts";
@@ -162,83 +144,6 @@ function Brokers({ brokers, leader }: { brokers: ClusterNode[]; leader: string |
 	);
 }
 
-/** One tick per partition (up to 24), so the table shows how finely each topic is split. */
-function PartitionTicks({ count }: { count: number }) {
-	const shown = Math.min(count, 24);
-	return (
-		<span className="flex items-center gap-2.5">
-			<span className="tabular">{count}</span>
-			<span className="flex h-3 items-center gap-[2px]" aria-hidden="true">
-				{Array.from({ length: shown }, (_, i) => i).map((i) => (
-					<span key={i} className="h-full w-[3px] rounded-full bg-[var(--data-3)]" />
-				))}
-			</span>
-		</span>
-	);
-}
-
-export const topicColumns: Array<Column<TopicSummary>> = [
-	{
-		accessorKey: "name",
-		header: "Topic",
-		cell: ({ row }) => (
-			<div className="flex items-center gap-2">
-				<span className="font-mono">
-					<span className="text-muted-foreground">{row.original.namespace}.</span>
-					{row.original.name}
-				</span>
-				{row.original.detailError && (
-					<Tooltip>
-						<TooltipTrigger
-							render={<TriangleAlert className="size-3.5 text-warning" aria-label="Details unavailable" />}
-						/>
-						<TooltipContent>{row.original.detailError}</TooltipContent>
-					</Tooltip>
-				)}
-			</div>
-		),
-		size: 260,
-		meta: cellGhost("w-40"),
-	},
-	{
-		accessorKey: "partitionCount",
-		header: "Partitions",
-		cell: ({ row }) => <PartitionTicks count={row.original.partitionCount} />,
-		meta: cellGhost("w-16"),
-	},
-	{
-		accessorKey: "messageCount",
-		header: "Messages",
-		cell: ({ row }) => <span className="tabular">{formatCount(row.original.messageCount)}</span>,
-		meta: cellGhost("w-12"),
-	},
-	{
-		accessorKey: "totalSize",
-		header: "Size",
-		cell: ({ row }) => <span className="tabular">{formatBytes(row.original.totalSize)}</span>,
-		meta: cellGhost("w-14"),
-	},
-	{
-		id: "retention",
-		header: "Retention",
-		cell: ({ row }) =>
-			row.original.retention.enabled ? (
-				formatRetention(row.original.retention)
-			) : (
-				<Badge variant="secondary">Keep forever</Badge>
-			),
-		meta: cellGhost("w-16"),
-	},
-	{
-		accessorKey: "lastUpdated",
-		header: "Updated",
-		cell: ({ row }) => (
-			<span className="text-muted-foreground">{formatRelative(row.original.lastUpdated)}</span>
-		),
-		meta: cellGhost("w-16"),
-	},
-];
-
 function TopicsTable({ topics }: { topics: TopicSummary[] | undefined }) {
 	const navigate = useNavigate();
 	return (
@@ -282,119 +187,6 @@ function PurgeButton() {
 			confirmLabel="Purge expired data"
 			onConfirm={() => purge.mutateAsync()}
 		/>
-	);
-}
-
-const NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
-
-export function CreateTopicDialog() {
-	const [open, setOpen] = useState(false);
-	const [namespace, setNamespace] = useState("");
-	const [name, setName] = useState("");
-	const [partitions, setPartitions] = useState(4);
-	const [retention, setRetention] = useState(draftFrom({ enabled: true, seconds: 7 * 86_400 }));
-	const navigate = useNavigate();
-	const create = useAction({
-		run: () =>
-			api.post("/messaging/topics", {
-				namespace: namespace.trim(),
-				name: name.trim(),
-				partitionCount: partitions,
-				retention: retentionFrom(retention),
-			}),
-		success: () => `Topic ${namespace.trim()}.${name.trim()} created`,
-		invalidate: [["messaging"]],
-		onSuccess: () => {
-			setOpen(false);
-			navigate({
-				to: "/messaging/$namespace/$topic",
-				params: { namespace: namespace.trim(), topic: name.trim() },
-			});
-		},
-	});
-	const invalid =
-		(namespace && !NAME.test(namespace.trim())) || (name && !NAME.test(name.trim()))
-			? "Names use letters, digits, dots, dashes and underscores."
-			: null;
-	const ready = NAME.test(namespace.trim()) && NAME.test(name.trim()) && partitions >= 1 && partitions <= 100;
-
-	return (
-		<Dialog
-			open={open}
-			onOpenChange={(next) => {
-				setOpen(next);
-				if (!next) create.reset();
-			}}
-		>
-			<DialogTrigger
-				render={
-					<Button>
-						<Plus />
-						Create topic
-					</Button>
-				}
-			/>
-			<DialogContent className="sm:max-w-md">
-				<form
-					className="grid gap-5"
-					onSubmit={(event) => {
-						event.preventDefault();
-						if (ready) create.mutate();
-					}}
-				>
-					<DialogHeader>
-						<DialogTitle>Create topic</DialogTitle>
-						<DialogDescription>Publishers and subscribers address it as namespace.name.</DialogDescription>
-					</DialogHeader>
-					<div className="grid grid-cols-2 gap-3">
-						<div className="grid gap-1.5">
-							<Label htmlFor="topic-namespace">Namespace</Label>
-							<Input
-								id="topic-namespace"
-								placeholder="orders"
-								value={namespace}
-								onChange={(e) => setNamespace(e.target.value)}
-								autoComplete="off"
-							/>
-						</div>
-						<div className="grid gap-1.5">
-							<Label htmlFor="topic-name">Name</Label>
-							<Input
-								id="topic-name"
-								placeholder="created"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								autoComplete="off"
-							/>
-						</div>
-					</div>
-					<Collapse open={Boolean(invalid)} className="-mt-3">
-						<p className="text-[12px] text-destructive">{invalid}</p>
-					</Collapse>
-					<div className="grid gap-1.5">
-						<Label htmlFor="topic-partitions">Partitions</Label>
-						<Input
-							id="topic-partitions"
-							type="number"
-							min={1}
-							max={100}
-							className="w-24 tabular"
-							value={partitions}
-							onChange={(e) => setPartitions(Math.floor(Number(e.target.value) || 0))}
-						/>
-						<p className="text-[12px] text-muted-foreground">
-							More partitions allow more parallel consumers. 1 to 100.
-						</p>
-					</div>
-					<RetentionFields draft={retention} onChange={setRetention} />
-					<DialogFooter>
-						<Button type="submit" disabled={!ready || create.isPending} pending={create.isPending}>
-							Create topic
-						</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
 	);
 }
 

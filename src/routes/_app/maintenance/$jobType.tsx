@@ -1,4 +1,4 @@
-import type { DetectionResult, JobRun, MaintenanceJob } from "@shared/maintenance.ts";
+import type { DetectionResult, JobRun } from "@shared/maintenance.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { History, ListChecks, Play, RefreshCw, ScanSearch } from "lucide-react";
@@ -8,6 +8,7 @@ import { StackedColumns } from "@/components/kelp/charts/stacked-columns.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { ChecksChart, lastDay, StackedGhost } from "@/components/kelp/maintenance/insights.tsx";
+import { jobColumns } from "@/components/kelp/maintenance/job-columns.tsx";
 import {
 	ActivityFeed,
 	capitalize,
@@ -16,15 +17,13 @@ import {
 	formatDuration,
 	formatInterval,
 	humanize,
-	JobStateBadge,
 	KPI_TILE,
 	OutcomeBadge,
 	Pill,
 	settled,
-	twoLineGhost,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { SettingsForm } from "@/components/kelp/maintenance/settings-form.tsx";
-import { runStats } from "@/components/kelp/maintenance/stats.ts";
+import { detectionMessage, runStats } from "@/components/kelp/maintenance/stats.ts";
 import { EmptyState, Metric, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { KpiGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
@@ -56,15 +55,6 @@ export const Route = createFileRoute("/_app/maintenance/$jobType")({
 		void context.queryClient.prefetchQuery(maintenanceQueries.jobType(params.jobType)),
 	component: JobTypePage,
 });
-
-/** Toast text for a detection: what was found, or why nothing was. */
-export function detectionMessage(result: DetectionResult, name: string): string {
-	if (result.error) return `${name} check failed: ${result.error}`;
-	if (result.totalProposals > 0) {
-		return `${name} found ${result.totalProposals} ${result.totalProposals === 1 ? "job" : "jobs"} to run`;
-	}
-	return result.skippedReason ? `${name} skipped: ${result.skippedReason}` : `${name} found nothing to do`;
-}
 
 /** A button's icon that crossfades to a spinner in the same spot while its action runs. */
 function BusyIcon({ busy, children }: { busy: boolean; children: ReactNode }) {
@@ -262,57 +252,6 @@ function JobTypePage() {
 		</>
 	);
 }
-
-export const jobColumns: Array<Column<MaintenanceJob>> = [
-	{
-		accessorKey: "summary",
-		header: "Job",
-		cell: ({ row }) => (
-			<div className="min-w-0">
-				<Link
-					to="/maintenance/jobs/$jobId"
-					params={{ jobId: row.original.id }}
-					className="font-medium hover:text-primary"
-				>
-					{row.original.summary || humanize(row.original.jobType)}
-				</Link>
-				<p className="truncate text-[12px] text-muted-foreground">
-					{row.original.message || row.original.resultSummary}
-				</p>
-			</div>
-		),
-		size: 320,
-		meta: twoLineGhost,
-	},
-	{
-		accessorKey: "state",
-		header: "State",
-		cell: ({ row }) => <JobStateBadge state={row.original.state} progress={row.original.progress} />,
-		meta: cellGhost("w-20"),
-	},
-	{
-		accessorKey: "attempt",
-		header: "Attempt",
-		cell: ({ row }) => <span className="tabular">{row.original.attempt || 1}</span>,
-		meta: cellGhost("w-6"),
-	},
-	{
-		accessorKey: "createdAt",
-		header: "Created",
-		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.createdAt)}</span>
-		),
-		meta: cellGhost("w-16"),
-	},
-	{
-		accessorKey: "completedAt",
-		header: "Finished",
-		cell: ({ row }) => (
-			<span className="text-muted-foreground text-xs">{formatRelative(row.original.completedAt)}</span>
-		),
-		meta: cellGhost("w-16"),
-	},
-];
 
 function JobsTab({ jobType }: { jobType: string }) {
 	const { data, isPending, error, refetch } = useQuery(maintenanceQueries.jobs({ jobType }));
