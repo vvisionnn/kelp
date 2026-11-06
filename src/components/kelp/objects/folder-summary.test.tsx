@@ -4,12 +4,13 @@ import { entry } from "../../../../test/objects-fixtures.ts";
 import { FolderSummary } from "./folder-summary.tsx";
 
 describe("folder summary", () => {
-	test("says nothing for an empty folder", () => {
-		const { container } = render(<FolderSummary entries={[]} partial={false} onOpen={() => {}} />);
-		expect(container.innerHTML).toBe("");
+	test("an empty folder keeps the summary's shape and says it is empty", () => {
+		render(<FolderSummary entries={[]} partial={false} onOpen={() => {}} />);
+		expect(screen.getAllByText("This folder is empty.")).toHaveLength(2);
+		expect(screen.getByText("Counts every item in this folder.")).toBeTruthy();
 	});
 
-	test("small folders get counts and types; large ones also rank the largest files", () => {
+	test("every folder gets counts, types and its largest files", () => {
 		const onOpen = mock();
 		const files = Array.from({ length: 12 }, (_, i) => entry(`/f/file-${i}.png`, { size: (i + 1) * 1024 }));
 		const { rerender } = render(
@@ -18,7 +19,7 @@ describe("folder summary", () => {
 		const summary = screen.getByRole("region", { name: "Folder summary" });
 		expect(within(summary).getByText("Size of files here")).toBeTruthy();
 		expect(screen.getByRole("list", { name: "Bytes by file type" })).toBeTruthy();
-		expect(screen.queryByRole("list", { name: "Largest files" })).toBeNull();
+		expect(screen.getByRole("list", { name: "Largest files" })).toBeTruthy();
 
 		rerender(
 			<FolderSummary entries={[entry("/f/sub", { isDirectory: true }), ...files]} partial onOpen={onOpen} />,
@@ -29,10 +30,11 @@ describe("folder summary", () => {
 		expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ name: "file-11.png" }));
 	});
 
-	test("a folder of folders shows only the counts", () => {
+	test("a folder of folders says so where the file charts would be", () => {
 		render(
 			<FolderSummary entries={[entry("/f/a", { isDirectory: true })]} partial={false} onOpen={() => {}} />,
 		);
 		expect(screen.queryByRole("list", { name: "Bytes by file type" })).toBeNull();
+		expect(screen.getAllByText("Only folders here.")).toHaveLength(2);
 	});
 });

@@ -6,6 +6,17 @@ import { type ApiCall, renderApp, viewerUser } from "../../../../test/render-app
 import { settle } from "../../../../test/settle.ts";
 import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
 
+/** The folder list's entry for `name`; the summary's "Largest files" names files too. */
+function inList(name: string): Promise<HTMLElement> {
+	return waitFor(() => {
+		const found = screen
+			.getAllByText(name)
+			.filter((element) => !element.closest('[aria-label="Folder summary"]'));
+		if (found.length !== 1) throw new Error(`${name} is listed ${found.length} times`);
+		return found[0] as HTMLElement;
+	});
+}
+
 const ok = { ok: true };
 
 describe("bucket dashboard", () => {
@@ -50,7 +61,7 @@ describe("bucket page", () => {
 		renderApp("/buckets/media", routes);
 		expect(await screen.findByRole("heading", { name: "media" })).toBeTruthy();
 		expect(screen.getByText("Stored files")).toBeTruthy();
-		expect(await screen.findByText("config.json")).toBeTruthy();
+		expect(await inList("config.json")).toBeTruthy();
 		expect(screen.getByRole("navigation", { name: "Folder path" }).textContent).toBe("media");
 	});
 

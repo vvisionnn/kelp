@@ -27,14 +27,14 @@ export function LoadingRegion({
 const repeat = (count: number, render: (i: number) => ReactNode) =>
 	Array.from({ length: count }, (_, i) => render(i));
 
-/** Matches `Kpi`. Set `trend={false}` for tiles without a sparkline. */
+/** Matches `Kpi` line for line. Set `trend={false}` for tiles without a sparkline. */
 export function KpiGhost({ trend = true, className }: { trend?: boolean; className?: string }) {
 	return (
 		<div className={cn("group-sheet flex min-w-0 flex-col p-4", className)}>
-			<SkeletonBlock className="my-0.5 h-3.5 w-20" />
-			<SkeletonBlock className="mt-1.5 h-7 w-24" />
-			<SkeletonBlock className="mt-1.5 h-3 w-28" />
-			{trend && <SkeletonBlock className="mt-[18px] h-7 w-full" />}
+			<SkeletonBlock className="my-[2.75px] h-3.5 w-20" />
+			<SkeletonBlock className="mt-[6px] mb-0.5 h-7 w-24" />
+			<SkeletonBlock className="my-[3px] h-3 w-28" />
+			{trend && <SkeletonBlock className="mt-3 mb-[3px] h-7 w-full" />}
 		</div>
 	);
 }

@@ -29,21 +29,22 @@ export function TextMorph({ children, className }: { children: string; className
 	);
 	if (reduced) return <span className={className}>{children}</span>;
 	return (
-		<span className={cn("relative inline-block max-w-full align-baseline", className)}>
+		<span className={cn("relative", className)}>
 			<span className="sr-only">{children}</span>
-			<span aria-hidden="true" className="inline-flex whitespace-pre">
+			{/* Glyphs paint from an attribute, so the string exists once for search and for tests. */}
+			<span aria-hidden="true" className="whitespace-pre">
 				<AnimatePresence mode="popLayout" initial={false}>
 					{glyphs.map((glyph) => (
 						<motion.span
 							key={glyph.key}
+							data-glyph={glyph.part}
+							className="inline-block before:content-[attr(data-glyph)]"
 							layout="position"
 							initial={{ opacity: 0, filter: "blur(4px)", y: 3 }}
 							animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
 							exit={{ opacity: 0, filter: "blur(4px)", y: -3 }}
 							transition={{ duration: SPEED.base, ease: EASE }}
-						>
-							{glyph.part}
-						</motion.span>
+						/>
 					))}
 				</AnimatePresence>
 			</span>

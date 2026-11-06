@@ -7,6 +7,23 @@ import { details, entry, objectsApi } from "../../../test/objects-fixtures.ts";
 import { type ApiCall, renderApp, viewerUser } from "../../../test/render-app.tsx";
 import { settle } from "../../../test/settle.ts";
 
+/** How many times the folder list (not its summary) shows `name`. */
+function listed(name: string): number {
+	return screen.queryAllByText(name).filter((element) => !element.closest('[aria-label="Folder summary"]'))
+		.length;
+}
+
+/** The folder list's entry for `name`; the summary's "Largest files" names files too. */
+function inList(name: string): Promise<HTMLElement> {
+	return waitFor(() => {
+		const found = screen
+			.queryAllByText(name)
+			.filter((element) => !element.closest('[aria-label="Folder summary"]'));
+		if (found.length !== 1) throw new Error(`${name} is listed ${found.length} times`);
+		return found[0] as HTMLElement;
+	});
+}
+
 /** Stands in for XMLHttpRequest uploads; each test decides how the server answers. */
 class FakeXhr {
 	static sent: FakeXhr[] = [];
@@ -69,8 +86,8 @@ describe("files page", () => {
 		fireEvent.click(await screen.findByRole("button", { name: "projects" }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({ path: "/projects" }));
 		fireEvent.click(await screen.findByRole("button", { name: "kelp" }));
-		expect(await screen.findByText("data.json")).toBeTruthy();
-		await waitFor(() => expect(screen.getByText("notes.txt")).toBeTruthy());
+		expect(await inList("data.json")).toBeTruthy();
+		await inList("notes.txt");
 		expect(
 			app.api.calls
 				.filter((c) => c.path === "/files/list")
@@ -133,7 +150,7 @@ describe("files page", () => {
 		expect(screen.getByRole("status", { name: "Loading folder summary" })).toBeTruthy();
 		answer(null);
 		expect(await screen.findByRole("status", { name: "Loading more" })).toBeTruthy();
-		expect(await screen.findByText("data.json")).toBeTruthy();
+		expect(await inList("data.json")).toBeTruthy();
 	});
 
 	test("the refresh button only turns for the person who pressed it", async () => {
@@ -152,14 +169,14 @@ describe("files page", () => {
 		const { routes } = await objectsApi();
 		renderApp("/files?path=/buckets/media", routes);
 		const filter = await screen.findByLabelText("Filter this folder");
-		await screen.findByText("config.json");
+		await inList("config.json");
 		fireEvent.change(filter, { target: { value: "READ" } });
-		expect(screen.queryByText("config.json")).toBeNull();
-		expect(screen.getByText("README.md")).toBeTruthy();
+		await waitFor(() => expect(listed("config.json")).toBe(0));
+		expect(await inList("README.md")).toBeTruthy();
 		fireEvent.change(filter, { target: { value: "zzz" } });
 		expect(screen.getByText("Nothing matches that filter")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Clear filter" }));
-		expect(screen.getByText("config.json")).toBeTruthy();
+		expect(await inList("config.json")).toBeTruthy();
 	});
 
 	test("missing folders show the filer's message and can be retried", async () => {
@@ -521,7 +538,7 @@ describe("files page", () => {
 	test("uploads picked files with progress, then refreshes the folder", async () => {
 		const { routes } = await objectsApi();
 		const app = renderApp("/files?path=/buckets/media", routes);
-		await screen.findByText("config.json");
+		await inList("config.json");
 		FakeXhr.respond = (xhr) => {
 			if (xhr.url.includes("bad.txt"))
 				xhr.finish(507, { error: "Bucket is over its quota", upstream: "filer" });
@@ -559,14 +576,14 @@ describe("files page", () => {
 		await act(async () => {
 			fireEvent.drop(list, { dataTransfer: { files: [file("dropped.txt")] } });
 		});
-		expect(await screen.findByText("dropped.txt")).toBeTruthy();
+		expect(await inList("dropped.txt")).toBeTruthy();
 		expect(FakeXhr.sent[0]?.url).toContain("name=dropped.txt");
 	});
 
 	test("upload transport failures and expired sessions are reported", async () => {
 		const { routes } = await objectsApi();
 		renderApp("/files?path=/buckets/media", routes);
-		await screen.findByText("config.json");
+		await inList("config.json");
 		const expired = mock(() => {});
 		window.addEventListener(UNAUTHORIZED_EVENT, expired);
 		FakeXhr.respond = (xhr) => {
@@ -589,7 +606,7 @@ describe("files page", () => {
 	test("viewers browse and preview without write controls", async () => {
 		const { routes } = await objectsApi();
 		renderApp("/files?path=/buckets/media", routes, viewerUser);
-		expect(await screen.findByText("config.json")).toBeTruthy();
+		expect(await inList("config.json")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Upload" })).toBeNull();
 		expect(screen.queryByRole("checkbox", { name: "Select all" })).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: "Actions for photos" }));
@@ -600,7 +617,7 @@ describe("files page", () => {
 	test("refreshes on demand; dismissed dialogs do nothing", async () => {
 		const { routes } = await objectsApi();
 		const app = renderApp("/files?path=/buckets/media", routes);
-		await screen.findByText("config.json");
+		await inList("config.json");
 		const lists = app.api.calls.filter((c) => c.path === "/files/list").length;
 		fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 		await waitFor(() => expect(app.api.calls.filter((c) => c.path === "/files/list").length).toBe(lists + 1));

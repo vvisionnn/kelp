@@ -392,7 +392,7 @@ export function BucketDashboardGhost() {
 			<div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
 				{[true, false, false, false].map((trend, i) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: ghosts have no identity.
-					<KpiGhost key={i} trend={trend} className="pb-3" />
+					<KpiGhost key={i} trend={trend} />
 				))}
 			</div>
 			<div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-12">

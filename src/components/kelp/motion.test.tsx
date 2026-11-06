@@ -9,7 +9,7 @@ import { resample, useTween } from "./motion.ts";
 import { ChartGhost, KpiGhost, ListGhost, LoadingRegion, RingGhost, StatBandGhost } from "./skeletons.tsx";
 import { useSpotlight } from "./spotlight.ts";
 import { RollingValue, TextMorph } from "./text-morph.tsx";
-import { AutoHeight, allOf, Loaded, Swap } from "./transitions.tsx";
+import { allOf, Loaded, Swap } from "./transitions.tsx";
 
 /** Runs real animations for one test; the suite otherwise lands every value at once. */
 async function animated(run: () => Promise<void>) {
@@ -92,6 +92,7 @@ describe("text", () => {
 		setMedia("(prefers-reduced-motion: reduce)", false);
 		const { rerender } = render(<TextMorph>Healthy</TextMorph>);
 		expect(screen.getByText("Healthy").className).toContain("sr-only");
+		expect(document.body.textContent).toBe("Healthy");
 		rerender(<TextMorph>A long status sentence that morphs by the word</TextMorph>);
 		expect(screen.getByText("A long status sentence that morphs by the word")).toBeTruthy();
 		setMedia("(prefers-reduced-motion: reduce)", true);
@@ -190,29 +191,4 @@ test("the spotlight follows the pointer across sheets and leaves with it", () =>
 	expect(b.style.getPropertyValue("--spot")).toBe("1");
 	unmount();
 	expect(b.style.getPropertyValue("--spot")).toBe("");
-});
-
-test("AutoHeight glides to its content's height, and lands at once when motion is off", async () => {
-	const observers: Array<() => void> = [];
-	const original = globalThis.ResizeObserver;
-	globalThis.ResizeObserver = class {
-		constructor(callback: () => void) {
-			observers.push(callback);
-		}
-		observe() {}
-		disconnect() {}
-	} as unknown as typeof ResizeObserver;
-	try {
-		const { container, unmount } = render(<AutoHeight>content</AutoHeight>);
-		const inner = screen.getByText("content");
-		const outer = container.firstElementChild as HTMLElement;
-		expect(outer.style.height).toBe("");
-		Object.defineProperty(inner, "offsetHeight", { value: 120, configurable: true });
-		act(() => observers[0]?.());
-		await settle();
-		expect(outer.style.height).toBe("120px");
-		unmount();
-	} finally {
-		globalThis.ResizeObserver = original;
-	}
 });

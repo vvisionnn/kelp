@@ -35,7 +35,7 @@ import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.t
 import { EmptyState, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
-import { AutoHeight, Loaded, Swap } from "@/components/kelp/transitions.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
 import {
 	AlertDialog,
@@ -80,7 +80,7 @@ import {
 import { useCanWrite } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 import { FilePreviewSheet } from "./file-preview.tsx";
-import { FolderSummary, FolderSummaryGhost, summaryShape } from "./folder-summary.tsx";
+import { FolderSummary, FolderSummaryGhost } from "./folder-summary.tsx";
 import { UploadTray, useUploads } from "./uploads.tsx";
 
 /** Folders first, then names in natural order (file2 before file10). */
@@ -120,7 +120,6 @@ const ROW_HEIGHT = 40;
 const ROW_COLUMNS =
 	"grid grid-cols-[2.5rem_minmax(0,1fr)_2.75rem] sm:grid-cols-[2.5rem_minmax(0,1fr)_6rem_8rem_2.75rem] items-center border-border border-b px-3";
 /** Filer folders that only ever hold other folders. */
-const FOLDERS_ONLY = ["/", "/buckets"];
 
 export interface FileBrowserProps {
 	/** The folder the browser cannot leave, e.g. `/buckets/media`. */
@@ -217,20 +216,16 @@ export function FileBrowser({ root, rootLabel, path, onNavigate, ready = true }:
 	return (
 		<LayoutGroup>
 			{/* Until the listing answers there is nothing to summarize; a failed one reports below. */}
-			<AutoHeight>
-				<Loaded
-					query={{ data: listing.data ? loaded : listing.error ? [] : undefined, error: null }}
-					skeleton={<FolderSummaryGhost foldersOnly={FOLDERS_ONLY.includes(path)} />}
-				>
-					{(summarized) => (
-						<Swap id={summaryShape(summarized)}>
-							<StaleFade active={stale}>
-								<FolderSummary entries={summarized} partial={Boolean(listing.hasNextPage)} onOpen={open} />
-							</StaleFade>
-						</Swap>
-					)}
-				</Loaded>
-			</AutoHeight>
+			<Loaded
+				query={{ data: listing.data ? loaded : listing.error ? [] : undefined, error: null }}
+				skeleton={<FolderSummaryGhost />}
+			>
+				{(summarized) => (
+					<StaleFade active={stale}>
+						<FolderSummary entries={summarized} partial={Boolean(listing.hasNextPage)} onOpen={open} />
+					</StaleFade>
+				)}
+			</Loaded>
 			<div className="grid grid-cols-[minmax(0,1fr)] gap-3">
 				<motion.div layout={reduced ? false : "position"} className="flex flex-wrap items-center gap-2">
 					<Breadcrumbs crumbs={crumbsFor(root, path, rootLabel)} onNavigate={onNavigate} />
