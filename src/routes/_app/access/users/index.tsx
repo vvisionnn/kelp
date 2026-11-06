@@ -16,9 +16,22 @@ import { NameList, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateUserDialog } from "@/components/kelp/access/create-user-dialog.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { AccessMatrixView, AttentionList, ExposureBars } from "@/components/kelp/access/insights.tsx";
+import {
+	BarsGhost,
+	ColumnsGhost,
+	Expand,
+	MatrixGhost,
+	optional,
+	SmallRingGhost,
+	TableGhost,
+	TileGhost,
+} from "@/components/kelp/access/loading.tsx";
 import { BarList, Columns, dataColor, Kpi, Ring } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { accessQueries, describeActions } from "@/lib/access-queries.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -112,12 +125,13 @@ const KIND_SLICES: Array<{ kind: AccessKind; label: string; color: string }> = [
 function UsersPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(accessQueries.users());
-	const groups = useQuery(accessQueries.groups()).data;
-	const policies = useQuery(accessQueries.policies()).data;
-	const buckets = useQuery(objectQueries.buckets()).data;
-	const accounts = useQuery(accessQueries.serviceAccounts()).data;
-	const ready = data && groups && policies && data.length > 0;
+	const users = useQuery(accessQueries.users());
+	const insights = allOf({
+		groups: useQuery(accessQueries.groups()),
+		policies: useQuery(accessQueries.policies()),
+		buckets: optional(useQuery(objectQueries.buckets()), []),
+		accounts: optional(useQuery(accessQueries.serviceAccounts()), []),
+	});
 	return (
 		<>
 			<PageHeader
@@ -125,43 +139,94 @@ function UsersPage() {
 				description="People and apps that sign S3 requests with access keys, and what each of them can reach."
 				actions={canWrite && <CreateUserDialog />}
 			/>
-			{ready && (
-				<Reveal className="mb-8">
-					<UsersDashboard
-						users={data}
-						groups={groups}
-						policies={policies}
-						buckets={(buckets ?? []).map((b) => b.name)}
-						accounts={accounts ?? []}
-					/>
-				</Reveal>
-			)}
-			<Reveal delay={0.05}>
-				<DataTable
-					data={data}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					getRowId={(user) => user.username}
-					searchText={(user) =>
-						`${user.username} ${user.email} ${user.groups.join(" ")} ${user.policies.join(" ")} ${user.accessKeys.map((k) => k.accessKey).join(" ")}`
-					}
-					searchPlaceholder="Search users, emails or keys"
-					onRowClick={(user) =>
-						navigate({ to: "/access/users/$username", params: { username: user.username } })
-					}
-					empty={
-						<EmptyState
-							icon={<Users />}
-							title="No users yet"
-							description="Create a user to hand out S3 access keys."
-							action={canWrite ? <CreateUserDialog /> : undefined}
+			<Loaded query={users} skeleton={<UsersSkeleton />}>
+				{(list) => (
+					<Swap id={list.length > 0 ? "users" : "empty"}>
+						{list.length > 0 && (
+							<Loaded query={insights} skeleton={<UsersDashboardGhost />} className="mb-8">
+								{({ groups, policies, buckets, accounts }) => (
+									<UsersDashboard
+										users={list}
+										groups={groups}
+										policies={policies}
+										buckets={buckets.map((b) => b.name)}
+										accounts={accounts}
+									/>
+								)}
+							</Loaded>
+						)}
+						<DataTable
+							data={list}
+							getRowId={(user) => user.username}
+							searchText={(user) =>
+								`${user.username} ${user.email} ${user.groups.join(" ")} ${user.policies.join(" ")} ${user.accessKeys.map((k) => k.accessKey).join(" ")}`
+							}
+							searchPlaceholder="Search users, emails or keys"
+							onRowClick={(user) =>
+								navigate({ to: "/access/users/$username", params: { username: user.username } })
+							}
+							empty={
+								<EmptyState
+									icon={<Users />}
+									title="No users yet"
+									description="Create a user to hand out S3 access keys."
+									action={canWrite ? <CreateUserDialog /> : undefined}
+								/>
+							}
+							columns={userColumns}
 						/>
-					}
-					columns={userColumns}
-				/>
-			</Reveal>
+					</Swap>
+				)}
+			</Loaded>
 		</>
+	);
+}
+
+function UsersDashboardGhost() {
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<TileGhost key={i} />
+				))}
+			</div>
+			<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+				<Panel
+					title="Who can reach what"
+					description="The strongest access each user has to each bucket, from actions, policies and groups"
+					className="min-w-0 xl:col-span-8"
+				>
+					<MatrixGhost rows={6} />
+				</Panel>
+				<div className="grid min-w-0 gap-3 xl:col-span-4">
+					<Panel title="How users get access">
+						<SmallRingGhost className="size-[132px]" />
+					</Panel>
+				</div>
+			</div>
+			<div className="mt-3 grid gap-3 lg:grid-cols-2 xl:grid-cols-3 [&>*]:min-w-0">
+				<Panel title="Who can change each bucket" description="Users by their strongest access">
+					<BarsGhost rows={6} legend />
+				</Panel>
+				<Panel title="Access keys by age" description={`Rotate keys older than ${ROTATE_AFTER_DAYS} days`}>
+					<ColumnsGhost height={170} />
+				</Panel>
+				<Panel title="Users each policy reaches" description="Directly and through groups">
+					<BarsGhost rows={4} />
+				</Panel>
+			</div>
+		</>
+	);
+}
+
+function UsersSkeleton() {
+	return (
+		<LoadingRegion label="Loading users">
+			<div className="mb-8">
+				<UsersDashboardGhost />
+			</div>
+			<TableGhost columns={["User", "Access keys", "Permissions", "Policies", "Groups"]} twoLine />
+		</LoadingRegion>
 	);
 }
 
@@ -247,20 +312,24 @@ function UsersDashboard({
 							})}
 							center={
 								<>
-									<span className="font-rounded font-semibold text-[22px] leading-7">{users.length}</span>
+									<span className="font-rounded font-semibold text-[22px] leading-7">
+										<RollingValue text={String(users.length)} />
+									</span>
 									<span className="text-[12px] text-muted-foreground">users</span>
 								</>
 							}
 						/>
 					</Panel>
-					{attention.length > 0 && (
+					<Expand open={attention.length > 0}>
 						<Panel
 							title="Needs attention"
-							description={`${attention.length} ${attention.length === 1 ? "item" : "items"}`}
+							description={
+								<TextMorph>{`${attention.length} ${attention.length === 1 ? "item" : "items"}`}</TextMorph>
+							}
 						>
 							<AttentionList items={attention} />
 						</Panel>
-					)}
+					</Expand>
 				</div>
 			</div>
 

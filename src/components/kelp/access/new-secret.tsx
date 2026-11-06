@@ -1,6 +1,5 @@
 import type { NewSecret } from "@shared/iam.ts";
 import { KeyRound, ShieldAlert } from "lucide-react";
-import { motion } from "motion/react";
 import DecryptedText from "@/components/react-bits/DecryptedText.tsx";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "../copy-button.tsx";
@@ -52,12 +51,7 @@ export function NewSecretPanel({
 		...(endpoint ? [`AWS_ENDPOINT_URL=${endpoint}`] : []),
 	].join("\n");
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 4 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-			className="grid gap-3"
-		>
+		<div className="grid gap-3">
 			<p className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2.5 text-[13px]">
 				<ShieldAlert className="mt-px size-4 shrink-0 text-warning" />
 				<span>Copy the secret now. SeaweedFS will not show it again; if it is lost, create a new key.</span>
@@ -76,6 +70,6 @@ export function NewSecretPanel({
 			<Button onClick={onDone} className="mt-1 w-full">
 				{doneLabel}
 			</Button>
-		</motion.div>
+		</div>
 	);
 }

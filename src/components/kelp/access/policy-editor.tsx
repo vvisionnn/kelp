@@ -1,9 +1,11 @@
 import type { PolicyDocument, PolicyValidation } from "@shared/iam.ts";
-import { CircleAlert, CircleCheck, LoaderCircle } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "@/lib/api.ts";
 import { cn } from "@/lib/utils";
+import { SkeletonBlock } from "../page.tsx";
+import { TextMorph } from "../text-morph.tsx";
+import { Swap } from "../transitions.tsx";
 
 export type EditorState =
 	| { status: "checking" }
@@ -133,7 +135,7 @@ export function PolicyEditor({
 					Policy document
 				</label>
 				<span className="font-mono text-[11px] text-muted-foreground tabular">
-					{lines} {lines === 1 ? "line" : "lines"}
+					<TextMorph>{`${lines} ${lines === 1 ? "line" : "lines"}`}</TextMorph>
 				</span>
 			</div>
 			<div className="relative flex bg-raised/60">
@@ -165,25 +167,23 @@ export function PolicyEditor({
 			<div
 				role="status"
 				className={cn(
-					"flex min-h-9 items-center gap-1.5 border-border border-t px-4 text-[12px]",
+					"flex min-h-9 items-center gap-1.5 border-border border-t px-4 text-[12px] transition-colors",
 					state.status === "invalid" ? "bg-destructive/8 text-destructive" : "text-muted-foreground",
 				)}
 			>
-				<AnimatePresence mode="wait" initial={false}>
-					<motion.span
-						key={state.status}
-						initial={{ opacity: 0, y: 3 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: -3 }}
-						transition={{ duration: 0.15 }}
-						className="flex items-center gap-1.5"
-					>
-						{state.status === "checking" && <LoaderCircle className="size-3.5 animate-spin" />}
-						{state.status === "valid" && <CircleCheck className="size-3.5 text-success" />}
-						{state.status === "invalid" && <CircleAlert className="size-3.5" />}
-						{state.status === "checking" ? "Checking with SeaweedFS…" : state.message}
-					</motion.span>
-				</AnimatePresence>
+				<Swap id={state.status} className="size-3.5 shrink-0">
+					{state.status === "checking" && <SkeletonBlock className="size-3.5 rounded-full" />}
+					{state.status === "valid" && <CircleCheck className="size-3.5 text-success" />}
+					{state.status === "invalid" && <CircleAlert className="size-3.5" />}
+				</Swap>
+				{/* Problems can run long, so they wrap instead of morphing on one line. */}
+				<Swap id={state.status === "invalid" ? "problem" : "progress"} className="flex-1">
+					{state.status === "invalid" ? (
+						<span>{state.message}</span>
+					) : (
+						<TextMorph>{state.status === "checking" ? "Checking with SeaweedFS…" : state.message}</TextMorph>
+					)}
+				</Swap>
 			</div>
 		</div>
 	);

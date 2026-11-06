@@ -10,9 +10,18 @@ import {
 	policyReach,
 } from "@/components/kelp/access/analysis.ts";
 import { AccessMatrixView } from "@/components/kelp/access/insights.tsx";
+import {
+	BarsGhost,
+	MatrixGhost,
+	optional,
+	TableGhost,
+	TileGhost,
+} from "@/components/kelp/access/loading.tsx";
 import { BarList, dataColor, Kpi } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { accessQueries, describeUsage } from "@/lib/access-queries.ts";
 import { formatRelative } from "@/lib/format.ts";
@@ -180,12 +189,54 @@ function PolicyMatrix({ matrix }: { matrix: ReturnType<typeof accessMatrix> }) {
 	return <AccessMatrixView matrix={matrix} rows="policy" />;
 }
 
+function PoliciesDashboardGhost() {
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+				{[0, 1, 2, 3, 4].map((i) => (
+					<TileGhost key={i} />
+				))}
+			</div>
+			<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+				<Panel
+					title="What each policy grants"
+					description="The strongest access per bucket, before it reaches any user"
+					className="min-w-0 xl:col-span-8"
+				>
+					<MatrixGhost rows={4} />
+				</Panel>
+				<div className="grid gap-3 xl:col-span-4">
+					<Panel title="Users each policy reaches" description="Directly and through groups">
+						<BarsGhost rows={4} />
+					</Panel>
+					<Panel title="Most granted actions" description="How many policies allow each action">
+						<BarsGhost rows={4} />
+					</Panel>
+				</div>
+			</div>
+		</>
+	);
+}
+
+function PoliciesSkeleton() {
+	return (
+		<LoadingRegion label="Loading policies">
+			<div className="mb-8">
+				<PoliciesDashboardGhost />
+			</div>
+			<TableGhost columns={["Policy", "Statements", "Used by", "Updated"]} rows={4} />
+		</LoadingRegion>
+	);
+}
+
 function PoliciesPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(accessQueries.policies());
-	const groups = useQuery(accessQueries.groups()).data;
-	const buckets = useQuery(objectQueries.buckets()).data;
+	const policies = useQuery(accessQueries.policies());
+	const insights = allOf({
+		groups: useQuery(accessQueries.groups()),
+		buckets: optional(useQuery(objectQueries.buckets()), []),
+	});
 	return (
 		<>
 			<PageHeader
@@ -193,32 +244,35 @@ function PoliciesPage() {
 				description="IAM policy documents you attach to users and groups."
 				actions={canWrite && <NewPolicyButton />}
 			/>
-			{data && data.length > 0 && groups && (
-				<Reveal className="mb-8">
-					<PoliciesDashboard policies={data} groups={groups} buckets={(buckets ?? []).map((b) => b.name)} />
-				</Reveal>
-			)}
-			<Reveal delay={0.05}>
-				<DataTable
-					data={data}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					getRowId={(p) => p.name}
-					searchText={(p) => `${p.name} ${p.attachedTo.users.join(" ")} ${p.attachedTo.groups.join(" ")}`}
-					searchPlaceholder="Search policies"
-					onRowClick={(p) => navigate({ to: "/access/policies/$name", params: { name: p.name } })}
-					empty={
-						<EmptyState
-							icon={<ScrollText />}
-							title="No policies yet"
-							description="Start from a template: read-only bucket, read and write, or full access."
-							{...(canWrite ? { action: <NewPolicyButton /> } : {})}
+			<Loaded query={policies} skeleton={<PoliciesSkeleton />}>
+				{(list) => (
+					<Swap id={list.length > 0 ? "policies" : "empty"}>
+						{list.length > 0 && (
+							<Loaded query={insights} skeleton={<PoliciesDashboardGhost />} className="mb-8">
+								{({ groups, buckets }) => (
+									<PoliciesDashboard policies={list} groups={groups} buckets={buckets.map((b) => b.name)} />
+								)}
+							</Loaded>
+						)}
+						<DataTable
+							data={list}
+							getRowId={(p) => p.name}
+							searchText={(p) => `${p.name} ${p.attachedTo.users.join(" ")} ${p.attachedTo.groups.join(" ")}`}
+							searchPlaceholder="Search policies"
+							onRowClick={(p) => navigate({ to: "/access/policies/$name", params: { name: p.name } })}
+							empty={
+								<EmptyState
+									icon={<ScrollText />}
+									title="No policies yet"
+									description="Start from a template: read-only bucket, read and write, or full access."
+									{...(canWrite ? { action: <NewPolicyButton /> } : {})}
+								/>
+							}
+							columns={columns}
 						/>
-					}
-					columns={columns}
-				/>
-			</Reveal>
+					</Swap>
+				)}
+			</Loaded>
 		</>
 	);
 }

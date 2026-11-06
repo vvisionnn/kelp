@@ -4,6 +4,8 @@ import { type KeyboardEvent, useId, useState } from "react";
 import { FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { EASE, SPEED, usePrefersReducedMotion } from "../motion.ts";
+import { Expand } from "./loading.tsx";
 
 export interface TokenFieldProps {
 	label: string;
@@ -30,6 +32,7 @@ export function TokenField({
 	mono = false,
 }: TokenFieldProps) {
 	const id = useId();
+	const reduced = usePrefersReducedMotion();
 	const [draft, setDraft] = useState("");
 	const add = (token: string) => {
 		const clean = token.trim();
@@ -63,10 +66,10 @@ export function TokenField({
 						<motion.span
 							key={token}
 							layout
-							initial={{ opacity: 0, scale: 0.85 }}
+							initial={reduced ? false : { opacity: 0, scale: 0.85 }}
 							animate={{ opacity: 1, scale: 1 }}
 							exit={{ opacity: 0, scale: 0.85 }}
-							transition={{ duration: 0.15 }}
+							transition={{ duration: reduced ? 0 : SPEED.fast, ease: EASE }}
 							className={cn(
 								"inline-flex items-center gap-1 rounded-md bg-secondary py-0.5 pr-1 pl-2 text-secondary-foreground text-xs",
 								mono && "font-mono",
@@ -97,7 +100,7 @@ export function TokenField({
 					className="h-6 min-w-32 flex-1 border-0 px-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
 				/>
 			</div>
-			{!disabled && open.length > 0 && (
+			<Expand open={!disabled && open.length > 0}>
 				<div className="flex flex-wrap gap-1.5">
 					{open.map((suggestion) => (
 						<button
@@ -114,7 +117,7 @@ export function TokenField({
 						</button>
 					))}
 				</div>
-			)}
+			</Expand>
 			{description && <FieldDescription>{description}</FieldDescription>}
 		</div>
 	);

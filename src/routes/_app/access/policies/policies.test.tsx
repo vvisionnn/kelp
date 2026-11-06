@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { IamPolicy } from "@shared/iam.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { accessQueries } from "@/lib/access-queries.ts";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
 import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
@@ -145,6 +147,26 @@ describe("policy editor", () => {
 			expect(JSON.stringify(app.api.last("PUT", "/iam/policies/ro")?.body)).toContain("GetObjectVersion"),
 		);
 		expect(await screen.findByText("Policy ro saved")).toBeTruthy();
+	});
+
+	test("a change from elsewhere replaces the document in place, without remounting the editor", async () => {
+		const { routes, policies } = await accessApi();
+		const ro = policies[0] as IamPolicy;
+		let current = ro;
+		const app = renderApp("/access/policies/ro", {
+			...routes,
+			"GET /iam/policies/ro": () => ({ policy: current }),
+		});
+		await screen.findByRole("button", { name: "Save policy" });
+		const textarea = editor();
+		current = {
+			...ro,
+			updatedAt: "2031-01-01T00:00:00Z",
+			document: { Version: "2012-10-17", Statement: [] },
+		};
+		await app.queryClient.invalidateQueries({ queryKey: accessQueries.policy("ro").queryKey });
+		await waitFor(() => expect(textarea.value).toBe(JSON.stringify(current.document, null, 2)));
+		expect(editor()).toBe(textarea);
 	});
 
 	test("deletes an unused policy", async () => {

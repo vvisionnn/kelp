@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { IamUser } from "@shared/iam.ts";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { accessQueries } from "@/lib/access-queries.ts";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
 import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
@@ -200,6 +202,46 @@ describe("user details", () => {
 			}),
 		);
 		expect(await screen.findByText("Changes saved")).toBeTruthy();
+	});
+
+	test("new values from the server replace the form in place, without remounting it", async () => {
+		const { routes, users } = await accessApi();
+		const bob = users[1] as IamUser;
+		let current = bob;
+		const app = renderApp("/access/users/bob", {
+			...routes,
+			"GET /iam/users/bob": () => ({ user: current }),
+		});
+		const email = (await screen.findByLabelText("Email")) as HTMLInputElement;
+		fireEvent.change(email, { target: { value: "draft@example.com" } });
+		current = { ...bob, email: "robert@example.com" };
+		await app.queryClient.invalidateQueries({ queryKey: accessQueries.user("bob").queryKey });
+		await waitFor(() => expect(email.value).toBe("robert@example.com"));
+		expect(screen.getByLabelText("Email")).toBe(email);
+		await settle();
+		expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull();
+	});
+
+	test("a new key's dialog opens as a form again after the secret is dismissed", async () => {
+		const { routes } = await accessApi();
+		renderApp("/access/users/bob", {
+			...routes,
+			"POST /iam/users/bob/keys": {
+				accessKey: { accessKey: NEW_KEY.accessKey, status: "Active", createdAt: null },
+				key: NEW_KEY,
+			},
+		});
+		fireEvent.click(await screen.findByRole("button", { name: "Create access key" }));
+		fireEvent.click(
+			within(await screen.findByRole("dialog")).getByRole("button", { name: "Create access key" }),
+		);
+		fireEvent.click(await screen.findByRole("button", { name: "I saved the secret" }));
+		await settle();
+		expect(screen.queryByRole("dialog")).toBeNull();
+		fireEvent.click(screen.getByRole("button", { name: "Create access key" }));
+		const reopened = await screen.findByRole("dialog");
+		expect(within(reopened).queryByTestId("Secret key")).toBeNull();
+		expect(within(reopened).getByRole("button", { name: "Use my own key pair" })).toBeTruthy();
 	});
 
 	test("group membership can be changed", async () => {

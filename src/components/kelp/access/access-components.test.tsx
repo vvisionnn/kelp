@@ -1,11 +1,12 @@
 import { describe, expect, mock, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describeActions } from "@/lib/access-queries.ts";
 import { setMedia } from "../../../../test/media.ts";
 import { settle } from "../../../../test/settle.ts";
 import { NameList } from "./badges.tsx";
 import { AvatarStack } from "./identity.tsx";
+import { Expand, FadeText, optional, useLanding } from "./loading.tsx";
 import { NewSecretPanel } from "./new-secret.tsx";
 import { PolicyEditor } from "./policy-editor.tsx";
 import { TokenField } from "./token-field.tsx";
@@ -81,6 +82,51 @@ describe("helpers", () => {
 	test("NameList collapses long lists", () => {
 		render(<NameList names={["a", "b", "c", "d"]} max={2} />);
 		expect(screen.getByText("+2")).toBeTruthy();
+	});
+});
+
+describe("loading helpers", () => {
+	test("optional waits, then answers its fallback only once the query failed", () => {
+		expect(optional({ data: undefined, error: null }, []).data).toBeUndefined();
+		expect(optional({ data: undefined, error: new Error("no") }, []).data).toEqual([]);
+		expect(optional({ data: ["a"], error: new Error("stale") }, []).data).toEqual(["a"]);
+	});
+
+	test("useLanding holds data until the others answer, passes errors on, and stays landed", () => {
+		const refetch = () => {};
+		const error = new Error("no");
+		const { result, rerender } = renderHook(
+			({ data, isPending }) => useLanding({ data, error, refetch }, { isPending }),
+			{
+				initialProps: { data: 1 as number | undefined, isPending: true },
+			},
+		);
+		expect(result.current.data).toBeUndefined();
+		expect(result.current.error).toBe(error);
+		rerender({ data: 1, isPending: false });
+		expect(result.current.data).toBe(1);
+		rerender({ data: 2, isPending: true });
+		expect(result.current.data).toBe(2);
+	});
+
+	test("Expand and FadeText show and hide with motion on and off", async () => {
+		for (const reduced of [true, false]) {
+			setMedia("(prefers-reduced-motion: reduce)", reduced);
+			const view = render(
+				<Expand open>
+					<FadeText>Shown</FadeText>
+				</Expand>,
+			);
+			expect(screen.getByText("Shown")).toBeTruthy();
+			view.rerender(
+				<Expand open={false}>
+					<FadeText>Shown</FadeText>
+				</Expand>,
+			);
+			await settle();
+			expect(screen.queryByText("Shown")).toBeNull();
+			view.unmount();
+		}
 	});
 });
 

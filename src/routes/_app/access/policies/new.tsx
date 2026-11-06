@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PolicyForm } from "@/components/kelp/access/policy-form.tsx";
-import { PageHeader } from "@/components/kelp/page.tsx";
+import { PageHeader, Reveal } from "@/components/kelp/page.tsx";
 
 export const Route = createFileRoute("/_app/access/policies/new")({
 	staticData: { section: "Access", title: "New policy" },
@@ -10,7 +10,9 @@ export const Route = createFileRoute("/_app/access/policies/new")({
 				title="Create policy"
 				description="Pick a template, point it at a bucket, and adjust. SeaweedFS checks the document as you type."
 			/>
-			<PolicyForm />
+			<Reveal>
+				<PolicyForm />
+			</Reveal>
 		</>
 	),
 });
