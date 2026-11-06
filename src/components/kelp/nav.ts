@@ -12,8 +12,8 @@ import {
 	ScrollText,
 	Settings2,
 	Table2,
+	UserRound,
 	Users,
-	UsersRound,
 	Wrench,
 } from "lucide-react";
 
@@ -92,8 +92,8 @@ export const NAV: NavSection[] = [
 	{
 		title: "Access",
 		items: [
-			{ title: "Users", to: "/access/users", icon: Users, keywords: "iam access keys" },
-			{ title: "Groups", to: "/access/groups", icon: UsersRound },
+			{ title: "Users", to: "/access/users", icon: UserRound, keywords: "iam access keys" },
+			{ title: "Groups", to: "/access/groups", icon: Users },
 			{ title: "Service accounts", to: "/access/service-accounts", icon: Bot },
 			{ title: "Policies", to: "/access/policies", icon: ScrollText, keywords: "iam json" },
 		],
