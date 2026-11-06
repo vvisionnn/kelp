@@ -1,6 +1,8 @@
 import { expect, test, unique } from "./fixtures.ts";
 
 test("full access lifecycle: policy, user and key, group, service account", async ({ page }) => {
+	// About twenty pages in one journey, each making its first-visit entrance before it can be clicked.
+	test.slow();
 	const policy = unique("e2e-policy");
 	const user = unique("e2e-user");
 	const group = unique("e2e-group");
