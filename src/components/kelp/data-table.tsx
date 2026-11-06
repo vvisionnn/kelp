@@ -2,7 +2,7 @@ import type { ColumnDef, PaginationState, RowSelectionState, SortingState } from
 import { useTable } from "@tanstack/react-table";
 import { Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
 	DataGrid,
 	DataGridContainer,
@@ -76,6 +76,7 @@ export function DataTable<T extends object>({
 	bulkActions,
 }: DataTableProps<T>) {
 	const [query, setQuery] = useState("");
+	const sawLoading = useRef(false);
 	const [sorting, setSorting] = useState<SortingState>(initialSorting);
 	const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -142,12 +143,14 @@ export function DataTable<T extends object>({
 	if (error && !data) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
 
 	const showEmpty = !isLoading && data !== undefined && data.length === 0;
+	// Rows rise only when they replace this table's own skeleton, not on a revisit with cached rows.
+	if (isLoading) sawLoading.current = true;
 	// The skeleton matches what was here last time, so the page keeps its height when data lands.
 	const rowMemory = `${window.location.pathname}:${columns.length}`;
 	if (!isLoading && data) knownRows.set(rowMemory, Math.min(rows.length, pagination.pageSize));
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-3" data-arrived={sawLoading.current ? "" : undefined}>
 			{(searchText || toolbar) && (
 				<div className="flex flex-wrap items-center gap-2">
 					{searchText && (

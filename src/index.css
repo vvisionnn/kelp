@@ -260,7 +260,7 @@
 	animation: kelp-tide 1.8s linear infinite;
 }
 
-/* Rows rise into place the first time they appear; a row that is already there never moves. */
+/* Rows rise into place when they arrive after loading; cached tables and revisits stay still. */
 @keyframes kelp-row-in {
 	from {
 		opacity: 0;
@@ -268,7 +268,7 @@
 	}
 }
 
-[data-slot="data-grid-table-body"] > tr:not(:has([data-slot="skeleton"])) {
+[data-arrived] [data-slot="data-grid-table-body"] > tr:not(:has([data-slot="skeleton"])) {
 	animation: kelp-row-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -326,50 +326,20 @@
 	);
 }
 
-/* Moving between pages. The sidebar and toolbar hold still while the page crossfades. */
-[data-page] {
-	view-transition-name: kelp-page;
-}
-aside.glass {
-	view-transition-name: kelp-sidebar;
-}
-[data-toolbar] {
-	view-transition-name: kelp-toolbar;
-}
-::view-transition-old(root),
-::view-transition-new(root) {
-	animation: none;
-}
-::view-transition-group(kelp-sidebar),
-::view-transition-group(kelp-toolbar) {
-	animation: none;
-	z-index: 2;
-}
-::view-transition-old(kelp-page) {
-	animation: kelp-page-out 0.14s ease-out both;
-}
-::view-transition-new(kelp-page) {
-	animation: kelp-page-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes kelp-page-out {
-	to {
-		opacity: 0;
-	}
-}
+/* Moving between pages: only the page's own content fades up. The sidebar and toolbar are never
+   captured or redrawn, so their glass and shadows hold perfectly still. */
 @keyframes kelp-page-in {
 	from {
 		opacity: 0;
-		transform: translateY(6px);
-		filter: blur(4px);
+		transform: translateY(4px);
 	}
+}
+[data-page] > * {
+	/* `backwards`, so no transform lingers to trap fixed or sticky children afterwards. */
+	animation: kelp-page-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* Changing theme: the new one spreads from the click over the whole window. */
-html[data-transition="theme"] [data-page],
-html[data-transition="theme"] aside.glass,
-html[data-transition="theme"] [data-toolbar] {
-	view-transition-name: none;
-}
 html[data-transition="theme"]::view-transition-old(root) {
 	animation: none;
 }

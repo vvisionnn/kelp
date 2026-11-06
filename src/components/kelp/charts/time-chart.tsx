@@ -12,7 +12,7 @@ import {
 	useState,
 } from "react";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, useInstantMotion, usePrefersReducedMotion } from "../motion.ts";
+import { EASE, SPEED, useArriving, useInstantMotion } from "../motion.ts";
 import { clock, clockSeconds, compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
@@ -208,7 +208,7 @@ export function TimeChart({
 }) {
 	const [ref, width] = useWidth<HTMLDivElement>();
 	const [active, setActive] = useState<number | null>(null);
-	const reduced = usePrefersReducedMotion();
+	const arriving = useArriving();
 	const clip = useId();
 	const innerWidth = Math.max(10, width - MARGIN.left - MARGIN.right);
 	const innerHeight = height - MARGIN.top - MARGIN.bottom;
@@ -312,7 +312,7 @@ export function TimeChart({
 							x={-4}
 							y={-MARGIN.top}
 							height={height}
-							initial={reduced ? false : { width: 0 }}
+							initial={arriving ? { width: 0 } : false}
 							animate={{ width: innerWidth + 8 }}
 							transition={{ duration: SPEED.data * 1.4, ease: EASE }}
 						/>

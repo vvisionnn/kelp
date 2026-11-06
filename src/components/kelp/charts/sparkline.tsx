@@ -2,7 +2,7 @@ import { area, line } from "d3-shape";
 import { motion } from "motion/react";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, usePrefersReducedMotion, useTween } from "../motion.ts";
+import { EASE, SPEED, useArriving, useTween } from "../motion.ts";
 
 /**
  * A word-sized trend: a 2px line over a faint wash, ending in a dot. For stat tiles; the tile's
@@ -25,7 +25,7 @@ export function Sparkline({
 	label: string;
 }) {
 	const gradient = useId();
-	const reduced = usePrefersReducedMotion();
+	const arriving = useArriving();
 	const glided = useTween(values.map((v) => v ?? 0));
 	const points = values
 		.map((v, i) => [i, v === null ? null : (glided[i] as number)] as const)
@@ -64,7 +64,7 @@ export function Sparkline({
 			<motion.path
 				d={fill ?? ""}
 				fill={`url(#${gradient})`}
-				initial={reduced ? false : { opacity: 0 }}
+				initial={arriving ? { opacity: 0 } : false}
 				animate={{ opacity: 1 }}
 				transition={{ duration: SPEED.data, ease: EASE, delay: 0.2 }}
 			/>
@@ -75,7 +75,7 @@ export function Sparkline({
 				strokeWidth={2}
 				strokeLinecap="round"
 				strokeLinejoin="round"
-				initial={reduced ? false : { pathLength: 0 }}
+				initial={arriving ? { pathLength: 0 } : false}
 				animate={{ pathLength: 1 }}
 				transition={{ duration: SPEED.data, ease: EASE }}
 			/>

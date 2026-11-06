@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api.ts";
 import { formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
+import { EASE, SPEED, useArriving, usePrefersReducedMotion } from "./motion.ts";
 import { RollingValue } from "./text-morph.tsx";
 
 export function PageHeader({
@@ -19,11 +19,15 @@ export function PageHeader({
 	actions?: ReactNode;
 }) {
 	return (
+		// The title block claims a fixed share before the actions, and its description stays on one
+		// line beside them, so whether the actions wrap never depends on what the description says.
 		<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-2 pb-6">
-			<div className="min-w-0">
+			<div className="min-w-0 flex-1 basis-64">
 				<h1 className="truncate font-semibold text-[26px] leading-8 tracking-[-0.022em]">{title}</h1>
 				{description && (
-					<div className="mt-0.5 text-[13px] text-muted-foreground leading-[18px]">{description}</div>
+					<div className="mt-0.5 text-[13px] text-muted-foreground leading-[18px] sm:truncate">
+						{description}
+					</div>
 				)}
 			</div>
 			{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -225,6 +229,7 @@ export function AuroraCard({ children, className }: { children: ReactNode; class
 
 /** Used/total bar. Turns amber past 80% and red past 95%, always with a text value beside it. */
 export function CapacityBar({ used, total, className }: { used: number; total: number; className?: string }) {
+	const arriving = useArriving();
 	const fraction = ratio(used, total);
 	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "spectrum";
 	return (
@@ -239,7 +244,7 @@ export function CapacityBar({ used, total, className }: { used: number; total: n
 		>
 			<motion.div
 				className={cn("h-full rounded-full", tone)}
-				initial={{ width: 0 }}
+				initial={arriving ? { width: 0 } : false}
 				animate={{ width: `${fraction * 100}%` }}
 				transition={{ duration: SPEED.data, ease: EASE }}
 			/>

@@ -314,10 +314,10 @@ Big-screen operations dashboard: floating glass sidebar with quiet line icons an
 Nothing on screen jumps. Data arrives, it doesn't appear.
 
 - **Loading**: `Loaded` holds skeleton, error and content in one grid cell and crossfades between them. The header stays mounted. The skeleton is the page's real structure, with real `Panel` and `Section` titles around ghosts from `skeletons.tsx`, so content lands where its placeholder stood. It stays hidden for the first 120 ms, so a fast answer shows none.
-- **Reveal**: content sharpens in from a 6 px blur over `SPEED.slow`. Content that was cached when the page opened shows at once.
+- **Once**: entrances play when data first arrives, never again for the same view. Content replacing its skeleton sharpens in from a 6 px blur, bars grow, lines draw, digits spin and rows rise (`ArrivalContext`, `useArriving`). A revisit with cached data, a tab switch or a re-render shows everything already in place.
 - **Refresh**: a refetch with no news changes nothing. New numbers roll, charts morph one frame across lines, window and axis, and a failed refresh keeps the data on screen. The toolbar edge lights only for requests that take longer than 700 ms.
 - **Text**: changing short text goes through `TextMorph`, per letter (per word above 32 characters). Numbers with units go through `RollingValue`.
 - **Swaps**: tabs, modes and empty states crossfade through `Swap`.
-- **Pages**: path changes use a native view transition; sidebar and toolbar stay outside it. Filters in the URL don't animate the page. The theme spreads from the pointer in a circle.
+- **Pages**: a new page's content fades up 4 px in 220 ms. The sidebar and toolbar are never captured or redrawn, so their glass and shadows hold still. Filters in the URL don't animate the page. The theme spreads from the pointer in a circle (the one native view transition).
 - **Measure**: `scripts/motion-qa.ts` screenshots each route loading and loaded, and `e2e/motion.spec.ts` fails a route whose layout shift reaches 0.03.
 - **Tokens**: `EASE`, `SPEED` and `SPRING` in `motion.ts`. Never hard-code a curve or duration in a component.

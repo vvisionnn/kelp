@@ -1,7 +1,7 @@
 import { AnimatePresence, type HTMLMotionProps, motion, useIsPresent } from "motion/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
+import { ARRIVAL_MS, ArrivalContext, EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
 import { ErrorState } from "./page.tsx";
 
 const SHARPEN = {
@@ -17,6 +17,26 @@ const SHARPEN = {
 function Layer(props: HTMLMotionProps<"div">) {
 	const leaving = !useIsPresent();
 	return <motion.div {...props} {...(leaving ? { "aria-hidden": true, inert: true } : {})} />;
+}
+
+/**
+ * Marks content that just replaced its skeleton, for the length of its entrance: charts inside grow
+ * and rows rise. Content that was already cached never arrives, so revisits and tab switches are still.
+ */
+function Arrival({ arriving, children }: { arriving: boolean; children: ReactNode }) {
+	const [on, setOn] = useState(arriving);
+	useEffect(() => {
+		if (!on) return;
+		const timer = setTimeout(() => setOn(false), ARRIVAL_MS);
+		return () => clearTimeout(timer);
+	}, [on]);
+	return (
+		<ArrivalContext.Provider value={on}>
+			<div data-arrived={arriving ? "" : undefined} className="contents">
+				{children}
+			</div>
+		</ArrivalContext.Provider>
+	);
 }
 
 interface QueryLike<T> {
@@ -63,6 +83,12 @@ export function Loaded<T>({
 	const reduced = usePrefersReducedMotion();
 	const state = query.data !== undefined ? "data" : query.error ? "error" : "pending";
 	const refetch = query.refetch;
+	// What this rendered last time: content arrives only when it replaces something else.
+	const last = useRef<string | null>(null);
+	const arriving = state === "data" && last.current !== null && last.current !== "data";
+	useEffect(() => {
+		last.current = state;
+	});
 	return (
 		<div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] *:col-start-1 *:row-start-1", className)}>
 			<AnimatePresence initial={false}>
@@ -101,7 +127,7 @@ export function Loaded<T>({
 						exit={{ opacity: 0, transition: { duration: SPEED.fast } }}
 						transition={{ duration: SPEED.slow, ease: EASE }}
 					>
-						{children(query.data as T)}
+						<Arrival arriving={arriving}>{children(query.data as T)}</Arrival>
 					</Layer>
 				)}
 			</AnimatePresence>

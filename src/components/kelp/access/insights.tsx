@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import type { CSSProperties } from "react";
 import { Legend } from "@/components/kelp/charts/index.ts";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, usePrefersReducedMotion } from "../motion.ts";
+import { EASE, SPEED, useArriving } from "../motion.ts";
 import { Swap } from "../transitions.tsx";
 import {
 	type AccessLevel,
@@ -200,7 +200,7 @@ export function AttentionList({ items, limit = 6 }: { items: Attention[]; limit?
  * indigo ramp as the matrix, so "more reach" always reads darker.
  */
 export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
-	const reduced = usePrefersReducedMotion();
+	const arriving = useArriving();
 	const levels: AccessLevel[] = ["admin", "write", "read", "list"];
 	const rows = matrix.buckets
 		.map((bucket) => {
@@ -224,7 +224,7 @@ export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
 						<span className="truncate font-mono">{row.bucket}</span>
 						<motion.span
 							className="flex h-2 gap-0.5"
-							initial={reduced ? false : { width: 0 }}
+							initial={arriving ? { width: 0 } : false}
 							animate={{ width: `${(row.total / max) * 100}%` }}
 							transition={{ duration: SPEED.data, ease: EASE }}
 						>

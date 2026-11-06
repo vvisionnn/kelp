@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 import Counter from "@/components/react-bits/Counter.tsx";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
+import { EASE, SPEED, useArriving, usePrefersReducedMotion } from "./motion.ts";
 
 /** Text longer than this stops morphing by letter; it would only read as noise. */
 const LETTER_LIMIT = 32;
@@ -56,10 +56,12 @@ const NUMBER = /^([-−]?)([\d,]*\.?\d+)\s*(.*)$/;
 
 /**
  * A formatted value ("6.73 MiB", "1,204", "Ready"): the number rolls digit by digit and its unit
- * sits lighter beside it; anything else morphs as text.
+ * sits lighter beside it; anything else morphs as text. Later changes always roll.
  */
 export function RollingValue({ text, className }: { text: string; className?: string }) {
 	const reduced = usePrefersReducedMotion();
+	// Digits spin in only when the number first arrives; on a revisit it is simply there.
+	const arriving = useArriving();
 	const match = NUMBER.exec(text);
 	if (!match) return <TextMorph className={cn("tabular", className)}>{text}</TextMorph>;
 	const [, sign, number, unit] = match as unknown as [string, string, string, string];
@@ -83,6 +85,7 @@ export function RollingValue({ text, className }: { text: string; className?: st
 					textColor="currentColor"
 					tabular
 					motionBlur={false}
+					intro={arriving}
 				/>
 			)}
 			{unit && (

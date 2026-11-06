@@ -1,5 +1,5 @@
 import { animate, MotionGlobalConfig } from "motion/react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /** Kelp's motion vocabulary. Everything that moves uses these, so the app feels like one thing. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
@@ -34,6 +34,23 @@ export function canUseWebGL2(): boolean {
 	}
 }
 
+/**
+ * True inside content that is arriving: data that just replaced its skeleton. Bars grow, lines draw
+ * and rows rise only then. Content that was already there, cached on a revisit or shown on a tab
+ * switch, appears as it is, so an animation plays once, when the data first appears.
+ */
+export const ArrivalContext = createContext(false);
+
+/** How long after data lands its parts still count as arriving: long enough for nested charts to mount. */
+export const ARRIVAL_MS = 1200;
+
+/** Whether this component mounted as part of an arrival. Read once, at mount. */
+export function useArriving(): boolean {
+	const instant = useInstantMotion();
+	const arriving = useContext(ArrivalContext);
+	return useState(arriving && !instant)[0];
+}
+
 /** Reduced motion, or tests, where every value lands at once. */
 export function useInstantMotion(): boolean {
 	return usePrefersReducedMotion() || MotionGlobalConfig.skipAnimations === true;
@@ -53,16 +70,17 @@ export function resample(from: number[], length: number): number[] {
 }
 
 /**
- * Numbers that glide to their new values instead of jumping. `intro` starts them from zero, for
- * bars and rings that grow in. Identical refreshes do nothing, so a refetch with no news stays still.
+ * Numbers that glide to their new values instead of jumping. `intro` starts them from zero when
+ * they arrive (see `ArrivalContext`), for bars and rings that grow in. Identical refreshes do nothing, so a refetch with no news stays still.
  */
 export function useTween(
 	target: number[],
 	{ intro = false, duration = SPEED.data as number } = {},
 ): number[] {
 	const instant = useInstantMotion();
+	const arriving = useArriving();
 	const [shown, setShown] = useState(() =>
-		intro && !instant ? new Array<number>(target.length).fill(0) : target,
+		intro && arriving ? new Array<number>(target.length).fill(0) : target,
 	);
 	const current = useRef(shown);
 	const key = target.join(",");

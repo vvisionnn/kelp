@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { EASE, SPEED, usePrefersReducedMotion } from "../motion.ts";
 import { SkeletonBlock } from "../page.tsx";
@@ -74,10 +74,15 @@ export function Expand({
 /** Prose that can wrap fades when it changes, where `TextMorph` would hold it on one line. */
 export function FadeText({ children }: { children: string }) {
 	const reduced = usePrefersReducedMotion();
+	// Only a change fades; the first text is simply there.
+	const mounted = useRef(false);
+	useEffect(() => {
+		mounted.current = true;
+	}, []);
 	return (
 		<motion.span
 			key={children}
-			initial={reduced ? false : { opacity: 0 }}
+			initial={reduced || !mounted.current ? false : { opacity: 0 }}
 			animate={{ opacity: 1 }}
 			transition={{ duration: SPEED.base, ease: EASE }}
 		>

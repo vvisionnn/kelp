@@ -5,7 +5,7 @@ import { setMedia } from "../../../test/media.ts";
 import { settle } from "../../../test/settle.ts";
 import { Button } from "../ui/button";
 import { TimeChart } from "./charts/index.ts";
-import { resample, useTween } from "./motion.ts";
+import { resample, useArriving, useTween } from "./motion.ts";
 import { ChartGhost, KpiGhost, ListGhost, LoadingRegion, RingGhost, StatBandGhost } from "./skeletons.tsx";
 import { useSpotlight } from "./spotlight.ts";
 import { RollingValue, TextMorph } from "./text-morph.tsx";
@@ -195,4 +195,31 @@ test("the spotlight follows the pointer across sheets and leaves with it", () =>
 	expect(b.style.getPropertyValue("--spot")).toBe("1");
 	unmount();
 	expect(b.style.getPropertyValue("--spot")).toBe("");
+});
+
+function ArrivalProbe() {
+	return <p>{useArriving() ? "arriving" : "already here"}</p>;
+}
+
+test("content arrives only when it replaces a skeleton, so revisits and cached views stay still", async () => {
+	setMedia("(prefers-reduced-motion: reduce)", false);
+	MotionGlobalConfig.skipAnimations = false;
+	try {
+		const view = (data: string | undefined) => (
+			<Loaded query={{ data, error: null }} skeleton={<p>skeleton</p>}>
+				{() => <ArrivalProbe />}
+			</Loaded>
+		);
+		const cached = render(view("ready"));
+		expect(screen.getByText("already here")).toBeTruthy();
+		cached.unmount();
+
+		const fresh = render(view(undefined));
+		fresh.rerender(view("ready"));
+		expect(screen.getByText("arriving")).toBeTruthy();
+		expect(document.querySelector("[data-arrived]")).toBeTruthy();
+		fresh.unmount();
+	} finally {
+		MotionGlobalConfig.skipAnimations = true;
+	}
 });

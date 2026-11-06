@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EASE, SPEED, useArriving } from "@/components/kelp/motion.ts";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { formatBytes, formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { PARITY_TEXTURE } from "./shard-map.tsx";
  * Values are spelled out underneath, so color is never the only cue.
  */
 export function FillGauge({ size, deleted, limit }: { size: number; deleted: number; limit: number }) {
-	const reduced = usePrefersReducedMotion();
+	const arriving = useArriving();
 	const live = Math.max(0, size - deleted);
 	const capacity = Math.max(limit, size);
 	const segments = [
@@ -33,7 +33,7 @@ export function FillGauge({ size, deleted, limit }: { size: number; deleted: num
 						<motion.span
 							key={segment.key}
 							className={cn("block h-full first:rounded-l-full", segment.fill)}
-							initial={reduced ? false : { width: 0 }}
+							initial={arriving ? { width: 0 } : false}
 							animate={{ width: `${ratio(segment.value, capacity) * 100}%` }}
 							transition={{ duration: SPEED.data, delay: index * 0.1, ease: EASE }}
 						/>
