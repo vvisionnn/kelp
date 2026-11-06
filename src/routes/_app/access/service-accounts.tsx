@@ -22,6 +22,12 @@ import {
 	TileGhost,
 } from "@/components/kelp/access/loading.tsx";
 import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
+import {
+	accountStats,
+	describeExpiry,
+	EXPIRY_PRESETS,
+	expiryFrom,
+} from "@/components/kelp/access/service-accounts.ts";
 import { BarList, Columns, dataColor, Kpi, Ring } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
@@ -54,7 +60,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
-import { formatDateTime, formatRelative } from "@/lib/format.ts";
+import { formatDateTime } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { text } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -67,47 +73,6 @@ export const Route = createFileRoute("/_app/access/service-accounts")({
 });
 
 const invalidate = [[...ACCESS_KEY]];
-const DAY = 86_400_000;
-export const EXPIRY_PRESETS = [
-	{ value: "never", label: "Never", days: 0 },
-	{ value: "30", label: "In 30 days", days: 30 },
-	{ value: "90", label: "In 90 days", days: 90 },
-	{ value: "365", label: "In a year", days: 365 },
-	{ value: "custom", label: "On a date", days: 0 },
-] as const;
-
-/** Turns an expiry choice into an ISO timestamp, or undefined for "never". */
-export function expiryFrom(choice: string, customDate: string, now = Date.now()): string | undefined {
-	if (choice === "custom") return customDate ? new Date(`${customDate}T23:59:59`).toISOString() : undefined;
-	const preset = EXPIRY_PRESETS.find((p) => p.value === choice);
-	return preset?.days ? new Date(now + preset.days * DAY).toISOString() : undefined;
-}
-
-/** "Never", "Expired 3 days ago" or "in 2 months", for the expiry column. */
-export function describeExpiry(
-	expiresAt: string | null,
-	now = Date.now(),
-): { text: string; expired: boolean } {
-	if (!expiresAt) return { text: "Never", expired: false };
-	const expired = new Date(expiresAt).getTime() <= now;
-	return { text: expired ? `Expired ${formatRelative(expiresAt)}` : formatRelative(expiresAt), expired };
-}
-
-/** Headline numbers for the service accounts page, with expiry as the thing to watch. */
-export function accountStats(accounts: ServiceAccount[], now = Date.now()) {
-	const expiry = (a: ServiceAccount) =>
-		a.expiresAt ? new Date(a.expiresAt).getTime() : Number.POSITIVE_INFINITY;
-	return [
-		{ label: "Service accounts", value: accounts.length },
-		{ label: "Can sign", value: accounts.filter((a) => a.status === "Active" && expiry(a) > now).length },
-		{
-			label: "Expire within 30 days",
-			value: accounts.filter((a) => expiry(a) > now && expiry(a) <= now + 30 * DAY).length,
-		},
-		{ label: "Already expired", value: accounts.filter((a) => expiry(a) <= now).length },
-	];
-}
-
 const columns: Array<Column<ServiceAccount>> = [
 	{
 		id: "account",

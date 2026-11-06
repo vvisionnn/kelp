@@ -5,6 +5,7 @@ import { AmbientRays } from "@/components/kelp/ambient.tsx";
 import { KelpMark } from "@/components/kelp/brand.tsx";
 import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import { Reveal } from "@/components/kelp/page.tsx";
+import { safeRedirect } from "@/components/kelp/safe-redirect.ts";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,6 @@ export const Route = createFileRoute("/login")({
 	},
 	component: LoginPage,
 });
-
-/** Only allow in-app paths as post-login destinations. */
-export function safeRedirect(target: string | undefined): string {
-	return target?.startsWith("/") && !target.startsWith("//") ? target : "/";
-}
 
 function LoginPage() {
 	const { redirect: target } = Route.useSearch();

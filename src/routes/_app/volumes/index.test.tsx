@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { volumesSummary } from "@/components/kelp/storage/insights.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { pickSegment } from "../../../../test/segment.ts";
 import { busyInventory, realInventory } from "../../../../test/storage-fixtures.ts";
 import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
-import { volumesSummary } from "./index.tsx";
 
 const ok = { ok: true };
 

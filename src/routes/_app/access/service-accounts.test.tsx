@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describeExpiry, expiryFrom } from "@/components/kelp/access/service-accounts.ts";
 import { accessApi } from "../../../../test/access-fixtures.ts";
 import { dataTable } from "../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../test/render-app.tsx";
 import { choose } from "../../../../test/select.ts";
 import { settle } from "../../../../test/settle.ts";
-import { describeExpiry, expiryFrom } from "./service-accounts.tsx";
 
 const SECRET = { accessKey: "ABIANEW", secretKey: "sa-secret-value" };
 const ID = "sa:bob:002800232799";

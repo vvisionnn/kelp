@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { safeRedirect } from "@/components/kelp/safe-redirect.ts";
 import { clusterApi } from "../../test/client-fixtures.ts";
 import { adminUser, renderApp } from "../../test/render-app.tsx";
-import { safeRedirect } from "./login.tsx";
 
 describe("login", () => {
 	test("signed-out visitors land on sign-in, then reach the page they asked for", async () => {

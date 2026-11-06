@@ -17,6 +17,7 @@ import {
 	TableGhost,
 	TileGhost,
 } from "@/components/kelp/access/loading.tsx";
+import { policyStats } from "@/components/kelp/access/stats.ts";
 import { BarList, dataColor, Kpi } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
@@ -69,17 +70,6 @@ const columns: Array<Column<IamPolicy>> = [
 		),
 	},
 ];
-
-/** Headline numbers for the policies page. */
-export function policyStats(policies: IamPolicy[]) {
-	const used = policies.filter((p) => p.attachedTo.users.length + p.attachedTo.groups.length > 0).length;
-	return [
-		{ label: "Policies", value: policies.length },
-		{ label: "Attached somewhere", value: used },
-		{ label: "Not attached", value: policies.length - used },
-		{ label: "Statements in all", value: policies.reduce((sum, p) => sum + p.statementCount, 0) },
-	];
-}
 
 function NewPolicyButton() {
 	return (

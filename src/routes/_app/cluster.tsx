@@ -1,29 +1,13 @@
-import type {
-	ClusterNode,
-	MasterNode,
-	MountClient,
-	Overview,
-	TopologyDataCenter,
-	VolumeServer,
-} from "@shared/api.ts";
-import type { Telemetry, TelemetryPoint, TrafficSample } from "@shared/telemetry.ts";
+import type { ClusterNode, MasterNode, MountClient, Overview } from "@shared/api.ts";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Cable, Crown, Network, Server } from "lucide-react";
-import {
-	dataColor,
-	latest,
-	millis,
-	perSecond,
-	Sparkline,
-	TimeChart,
-	type TimeSeries,
-	useRange,
-} from "@/components/kelp/charts/index.ts";
+import { useRange } from "@/components/kelp/charts/index.ts";
+import { NodeActivity } from "@/components/kelp/cluster/node-activity.tsx";
+import { TopologyMap } from "@/components/kelp/cluster/topology-map.tsx";
+import { volumeServerColumns } from "@/components/kelp/cluster/volume-server-columns.tsx";
 import { type Column, DataTable, type DataTableProps } from "@/components/kelp/data-table.tsx";
 import {
-	AuroraCard,
-	CapacityBar,
 	EmptyState,
 	PageHeader,
 	Panel,
@@ -33,17 +17,12 @@ import {
 } from "@/components/kelp/page.tsx";
 import { LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
 import { Frozen, ghostCells, PlotGhost, SearchGhost, StatsGhost } from "@/components/kelp/storage/common.tsx";
-import {
-	MetricsOffNote,
-	RangeControl,
-	useTelemetry,
-	withTelemetry,
-} from "@/components/kelp/storage/live.tsx";
-import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { RangeControl, useTelemetry, withTelemetry } from "@/components/kelp/storage/live.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatBytes, formatCount, formatRelative, plural } from "@/lib/format.ts";
+import { formatCount, formatRelative } from "@/lib/format.ts";
 import { queries } from "@/lib/queries.ts";
 import { oneOf } from "@/lib/search.ts";
 
@@ -160,229 +139,6 @@ function NodeCounts({ data }: { data: Overview }) {
 				{ label: "Mounts", value: data.totalMountClients },
 			]}
 		/>
-	);
-}
-
-/** Request rates and latency per component, and what the SeaweedFS processes cost to run. */
-export function NodeActivity({
-	overview,
-	telemetry,
-}: {
-	overview: Overview;
-	telemetry: Telemetry | undefined;
-}) {
-	const points = telemetry?.points ?? [];
-	const times = points.map((p) => p.t);
-	const cpu = points.map((p) => p.process.cpuPercent);
-	const memory = points.map((p) => p.process.memoryBytes);
-	const goroutines = points.map((p) => p.process.goroutines);
-	return (
-		<>
-			<div className="mt-3 grid gap-3 xl:grid-cols-12">
-				<Panel title="Requests" description="Per second, by component" className="min-w-0 xl:col-span-8">
-					{telemetry?.enabled ? (
-						<TimeChart
-							times={times}
-							series={componentSeries(points, (t) => t.rps)}
-							height={200}
-							format={perSecond}
-							label="Requests per second by component"
-						/>
-					) : (
-						<MetricsOffNote />
-					)}
-				</Panel>
-				<Panel
-					title="Processes"
-					description="Summed over every SeaweedFS process"
-					className="min-w-0 xl:col-span-4"
-				>
-					<dl className="divide-y divide-border">
-						<ProcessStat label="CPU" value={cores(latest(cpu) ?? 0)} trend={cpu} color={dataColor(1)} />
-						<ProcessStat
-							label="Memory"
-							value={formatBytes(latest(memory) ?? 0)}
-							trend={memory}
-							color={dataColor(3)}
-						/>
-						<ProcessStat
-							label="Goroutines"
-							value={formatCount(latest(goroutines) ?? 0)}
-							trend={goroutines}
-							color={dataColor(2)}
-						/>
-					</dl>
-				</Panel>
-			</div>
-			<div className="mt-3 grid gap-3 xl:grid-cols-12">
-				<Panel title="Latency" description="95th percentile, by component" className="min-w-0 xl:col-span-7">
-					{telemetry?.enabled ? (
-						<TimeChart
-							times={times}
-							series={componentSeries(points, (t) => t.p95)}
-							height={180}
-							format={millis}
-							label="95th percentile latency by component"
-						/>
-					) : (
-						<MetricsOffNote />
-					)}
-				</Panel>
-				<Panel
-					title="Volume slots"
-					description="Volumes each server holds, of its maximum"
-					className="min-w-0 xl:col-span-5"
-				>
-					<ul aria-label="Volume slots by server" className="space-y-3">
-						{overview.volumeServers.map((server) => (
-							<li key={server.id} className="text-[13px]">
-								<div className="flex items-center justify-between gap-3">
-									<span className="truncate font-mono">{server.address}</span>
-									<span className="shrink-0 text-muted-foreground tabular">
-										<TextMorph>{`${formatCount(server.volumes)} of ${formatCount(server.maxVolumes)}`}</TextMorph>
-									</span>
-								</div>
-								<CapacityBar used={server.volumes} total={server.maxVolumes} className="mt-1.5" />
-							</li>
-						))}
-					</ul>
-				</Panel>
-			</div>
-		</>
-	);
-}
-
-/** S3, filer and volume servers as three series of one measure, in fixed colors. */
-export function componentSeries(
-	points: TelemetryPoint[],
-	measure: (t: TrafficSample) => number | null,
-): TimeSeries[] {
-	return [
-		{ label: "S3", color: dataColor(0), values: points.map((p) => measure(p.s3)) },
-		{ label: "Filer", color: dataColor(1), values: points.map((p) => measure(p.filer)) },
-		{ label: "Volume servers", color: dataColor(2), values: points.map((p) => measure(p.volume)) },
-	];
-}
-
-function ProcessStat({
-	label,
-	value,
-	trend,
-	color,
-}: {
-	label: string;
-	value: string;
-	trend: number[];
-	color: string;
-}) {
-	return (
-		<div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-			<div>
-				<dt className="text-[13px] text-muted-foreground">{label}</dt>
-				<dd className="font-rounded font-semibold text-[20px] leading-6">
-					<RollingValue text={value} />
-				</dd>
-			</div>
-			<Sparkline values={trend} color={color} width={120} height={32} label={`${label} trend`} />
-		</div>
-	);
-}
-
-/**
- * The cluster's shape: data centers side by side, racks inside them, and every volume server as a
- * row with its live fill level.
- */
-export function TopologyMap() {
-	const { data, error } = useQuery(queries.topology());
-	return (
-		<Loaded className="mt-3" query={{ data, error }} skeleton={<TopologySkeleton />}>
-			{(dataCenters) => <Topology dataCenters={dataCenters} />}
-		</Loaded>
-	);
-}
-
-function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
-	const racks = dataCenters.reduce((sum, dc) => sum + dc.racks.length, 0);
-	return (
-		<AuroraCard className="p-4">
-			<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-				<h2 className="font-semibold text-[13px]">Topology</h2>
-				<p className="text-[12px] text-muted-foreground">
-					<TextMorph>
-						{`${dataCenters.length} ${dataCenters.length === 1 ? "data center" : "data centers"}, ${racks} ${racks === 1 ? "rack" : "racks"}`}
-					</TextMorph>
-				</p>
-			</div>
-			<div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-				{dataCenters.map((dc) => (
-					<section key={dc.id} className="min-w-0">
-						<h3 className="font-medium text-[13px]">{dc.id}</h3>
-						<div className="mt-2 space-y-3">
-							{dc.racks.map((rack) => (
-								<div key={rack.id}>
-									<p className="mb-1 text-[12px] text-muted-foreground">{rack.id}</p>
-									<ul className="space-y-1">
-										{rack.nodes.map((node) => (
-											<li key={node.id} className="rounded-lg bg-raised px-3 py-2">
-												<div className="flex items-center justify-between gap-2 text-[13px]">
-													<span className="flex min-w-0 items-center gap-1.5">
-														<Server className="size-3.5 shrink-0 text-muted-foreground" />
-														<span className="truncate font-mono">{node.address}</span>
-													</span>
-													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
-														<TextMorph>{plural(node.volumes, "volume")}</TextMorph>
-													</span>
-												</div>
-												<div className="mt-2 flex items-center gap-3">
-													<CapacityBar used={node.diskUsage} total={node.diskCapacity} />
-													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
-														<TextMorph>
-															{`${formatBytes(node.diskUsage)} of ${formatBytes(node.diskCapacity)}`}
-														</TextMorph>
-													</span>
-												</div>
-											</li>
-										))}
-									</ul>
-								</div>
-							))}
-						</div>
-					</section>
-				))}
-			</div>
-		</AuroraCard>
-	);
-}
-
-/** One rack with one node: the smallest real shape, so a cluster only ever grows from the ghost. */
-function TopologySkeleton() {
-	return (
-		<LoadingRegion label="Loading topology">
-			<AuroraCard className="p-4">
-				<div className="flex items-baseline justify-between gap-4">
-					<h2 className="font-semibold text-[13px]">Topology</h2>
-					<SkeletonBlock className="h-3 w-32" />
-				</div>
-				<div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-					<div>
-						<div className="flex h-5 items-center">
-							<SkeletonBlock className="h-3.5 w-36" />
-						</div>
-						<div className="mt-2 mb-1 flex h-5 items-center">
-							<SkeletonBlock className="h-3 w-24" />
-						</div>
-						<div className="space-y-2 rounded-lg bg-raised px-3 py-2">
-							<div className="flex h-5 items-center">
-								<SkeletonBlock className="h-3.5 w-full" />
-							</div>
-							<div className="flex h-5 items-center">
-								<SkeletonBlock className="h-1.5 w-full" />
-							</div>
-						</div>
-					</div>
-				</div>
-			</AuroraCard>
-		</LoadingRegion>
 	);
 }
 
@@ -528,64 +284,6 @@ function MastersTab() {
 	);
 }
 
-export const volumeServerColumns: Array<Column<VolumeServer>> = [
-	{
-		accessorKey: "address",
-		header: "Address",
-		cell: ({ row }) => (
-			<div>
-				<p className="font-mono">{row.original.address}</p>
-				<p className="text-[12px] text-muted-foreground">
-					{row.original.dataCenter} / {row.original.rack}
-				</p>
-			</div>
-		),
-		size: 220,
-	},
-	{
-		accessorKey: "volumes",
-		header: "Volumes",
-		cell: ({ row }) => (
-			<span className="tabular">
-				{formatCount(row.original.volumes)} / {formatCount(row.original.maxVolumes)}
-			</span>
-		),
-	},
-	{
-		accessorKey: "ecShards",
-		header: "EC shards",
-		cell: ({ row }) => <span className="tabular">{formatCount(row.original.ecShards)}</span>,
-	},
-	{
-		id: "disk",
-		accessorFn: (row) => row.diskUsage / (row.diskCapacity || 1),
-		header: "Disk",
-		cell: ({ row }) => (
-			<div className="w-40">
-				<CapacityBar used={row.original.diskUsage} total={row.original.diskCapacity} />
-				<p className="mt-1 text-[12px] text-muted-foreground tabular">
-					{formatBytes(row.original.diskUsage)} / {formatBytes(row.original.diskCapacity)}
-				</p>
-			</div>
-		),
-		size: 200,
-	},
-	{
-		accessorKey: "version",
-		header: "Version",
-		cell: ({ row }) => (
-			<span className="font-mono text-[12px]">{row.original.version.split(" ")[0] || "—"}</span>
-		),
-	},
-	{
-		accessorKey: "lastHeartbeat",
-		header: "Heartbeat",
-		cell: ({ row }) => (
-			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.lastHeartbeat)}</span>
-		),
-	},
-];
-
 function VolumeServersTab() {
 	return (
 		<TabTable
@@ -701,10 +399,4 @@ function MountsTab() {
 			columns={mountColumns}
 		/>
 	);
-}
-
-/** CPU summed over processes, as cores in use: 166% reads as "1.66 cores", never a percentage past 100. */
-export function cores(percent: number): string {
-	const value = percent / 100;
-	return `${value < 10 ? value.toFixed(2) : value.toFixed(1)} ${value === 1 ? "core" : "cores"}`;
 }

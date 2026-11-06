@@ -6,15 +6,12 @@ import {
 	type AccessKind,
 	accessKind,
 	accessMatrix,
-	ageInDays,
 	attentionItems,
 	keyAges,
 	policyReach,
 	ROTATE_AFTER_DAYS,
 } from "@/components/kelp/access/analysis.ts";
-import { NameList, StaticBadge } from "@/components/kelp/access/badges.tsx";
 import { CreateUserDialog } from "@/components/kelp/access/create-user-dialog.tsx";
-import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { AccessMatrixView, AttentionList, ExposureBars } from "@/components/kelp/access/insights.tsx";
 import {
 	BarsGhost,
@@ -26,13 +23,15 @@ import {
 	TableGhost,
 	TileGhost,
 } from "@/components/kelp/access/loading.tsx";
+import { userStats } from "@/components/kelp/access/stats.ts";
+import { userColumns } from "@/components/kelp/access/user-columns.tsx";
 import { BarList, Columns, dataColor, Kpi, Ring } from "@/components/kelp/charts/index.ts";
-import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
-import { accessQueries, describeActions } from "@/lib/access-queries.ts";
+import { accessQueries } from "@/lib/access-queries.ts";
 import { plural } from "@/lib/format.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -42,79 +41,6 @@ export const Route = createFileRoute("/_app/access/users/")({
 	loader: ({ context }) => void context.queryClient.prefetchQuery(accessQueries.users()),
 	component: UsersPage,
 });
-
-export const userColumns: Array<Column<IamUser>> = [
-	{
-		accessorKey: "username",
-		header: "User",
-		cell: ({ row }) => (
-			<div className="flex min-w-0 items-center gap-3">
-				<Avatar name={row.original.username} size="md" />
-				<div className="min-w-0">
-					<p className="flex items-center gap-2 font-medium">
-						<span className="truncate">{row.original.username}</span>
-						{row.original.isStatic && <StaticBadge />}
-					</p>
-					<p className="truncate text-[12px] text-muted-foreground">{row.original.email || "No email"}</p>
-				</div>
-			</div>
-		),
-		size: 280,
-	},
-	{
-		id: "keys",
-		accessorFn: (user) => user.accessKeys.length,
-		header: "Access keys",
-		cell: ({ row }) => {
-			const keys = row.original.accessKeys;
-			const inactive = keys.filter((k) => k.status === "Inactive").length;
-			return (
-				<span className="tabular">
-					{keys.length}
-					{inactive > 0 && <span className="text-[12px] text-muted-foreground"> ({inactive} inactive)</span>}
-				</span>
-			);
-		},
-	},
-	{
-		id: "permissions",
-		accessorFn: (user) => describeActions(user.actions),
-		header: "Permissions",
-		cell: ({ row }) => <span>{describeActions(row.original.actions)}</span>,
-		size: 220,
-	},
-	{
-		id: "policies",
-		accessorFn: (user) => user.policies.join(" "),
-		header: "Policies",
-		cell: ({ row }) => <NameList names={row.original.policies} />,
-	},
-	{
-		id: "groups",
-		accessorFn: (user) => user.groups.join(" "),
-		header: "Groups",
-		cell: ({ row }) => <NameList names={row.original.groups} />,
-	},
-];
-
-/** Headline numbers for the users page: who exists, which keys sign, and what needs care. */
-export function userStats(users: IamUser[], groups: IamGroup[], policies: IamPolicy[], now = Date.now()) {
-	const keys = users.flatMap((user) => user.accessKeys);
-	const active = keys.filter((key) => key.status === "Active");
-	const ages = active
-		.map((key) => ageInDays(key.createdAt, now))
-		.filter((age): age is number => age !== null);
-	const kinds = users.map((user) => accessKind(user, groups, policies));
-	return {
-		users: users.length,
-		active: active.length,
-		paused: keys.length - active.length,
-		rotate: ages.filter((age) => age >= ROTATE_AFTER_DAYS).length,
-		oldest: ages.length > 0 ? Math.max(...ages) : null,
-		admins: kinds.filter((kind) => kind === "admin").length,
-		reachNothing: kinds.filter((kind) => kind === "none").length,
-	};
-}
 
 const KIND_SLICES: Array<{ kind: AccessKind; label: string; color: string }> = [
 	{ kind: "admin", label: "Full control", color: dataColor(1) },

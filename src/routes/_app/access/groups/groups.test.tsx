@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { groupStats } from "@/components/kelp/access/stats.ts";
 import { accessApi } from "../../../../../test/access-fixtures.ts";
 import { dataTable } from "../../../../../test/data-table.ts";
 import { renderApp, viewerUser } from "../../../../../test/render-app.tsx";
 import { choose } from "../../../../../test/select.ts";
-import { groupStats } from "./index.tsx";
 
 describe("groups list", () => {
 	test("shows status, members and policies, and opens a group", async () => {

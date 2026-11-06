@@ -194,3 +194,13 @@ export function volumesPerServer(volumes: StorageVolume[]): BarListItem[] {
 		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 		.map(([server, count]) => ({ key: server, label: server, value: count, display: formatCount(count) }));
 }
+
+/** One sentence that sizes up the volume fleet for the page header. */
+export function volumesSummary(inventory: StorageInventory): string {
+	const servers = new Set(inventory.volumes.flatMap((v) => v.replicas.map((r) => r.server))).size;
+	const count = inventory.volumes.length;
+	if (count === 0) return "No volumes yet. SeaweedFS creates them as data arrives.";
+	return `${formatCount(count)} ${count === 1 ? "volume" : "volumes"} on ${servers} ${
+		servers === 1 ? "server" : "servers"
+	}. Each grows to ${formatBytes(inventory.volumeSizeLimitBytes)} before SeaweedFS opens another.`;
+}

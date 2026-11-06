@@ -6,6 +6,7 @@ import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { EmptyState, PageHeader, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { ListGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { CreateBucketDialog } from "@/components/kelp/tables/create-dialogs.tsx";
+import { catalogUri } from "@/components/kelp/tables/insights.ts";
 import { DashboardGhost, WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
@@ -21,26 +22,6 @@ export const Route = createFileRoute("/_app/tables/")({
 	},
 	component: TablesPage,
 });
-
-/** Where engines reach the Iceberg REST catalog: the S3 host on the catalog port. */
-export function catalogUri(
-	s3Endpoint: string | null | undefined,
-	port: number | null,
-	fallbackHost: string,
-): string {
-	let protocol = "http:";
-	let host = fallbackHost;
-	if (s3Endpoint) {
-		try {
-			const url = new URL(s3Endpoint);
-			protocol = url.protocol;
-			host = url.hostname;
-		} catch {
-			// Not a URL; keep the fallback.
-		}
-	}
-	return `${protocol}//${host}:${port ?? 8181}`;
-}
 
 function TablesPage() {
 	const query = useQuery(streamsQueries.tableBuckets());

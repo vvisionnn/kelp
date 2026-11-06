@@ -1,7 +1,7 @@
 import type { StorageCollection, StorageInventory } from "@shared/storage.ts";
 import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Layers } from "lucide-react";
 import {
 	BarList,
@@ -12,10 +12,11 @@ import {
 	splitUnit,
 	useRange,
 } from "@/components/kelp/charts/index.ts";
-import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { DataTable } from "@/components/kelp/data-table.tsx";
 import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
+import { collectionColumns } from "@/components/kelp/storage/collection-columns.tsx";
 import {
 	BarsGhost,
 	Frozen,
@@ -28,7 +29,6 @@ import { averageObject, collectionBars, collectionSlices } from "@/components/ke
 import { RangeControl, useTelemetry, withTelemetry } from "@/components/kelp/storage/live.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
-import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, plural, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, collectionParam, storageQueries } from "@/lib/storage-queries.ts";
@@ -38,81 +38,6 @@ export const Route = createFileRoute("/_app/collections/")({
 	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: CollectionsPage,
 });
-
-export const collectionColumns: Array<Column<StorageCollection>> = [
-	{
-		accessorKey: "name",
-		header: "Collection",
-		cell: ({ row }) => (
-			<Link
-				to="/collections/$name"
-				params={{ name: collectionParam(row.original.name) }}
-				className={
-					row.original.name ? "font-medium hover:underline" : "text-muted-foreground hover:underline"
-				}
-				onClick={(event) => event.stopPropagation()}
-			>
-				{collectionLabel(row.original.name)}
-			</Link>
-		),
-	},
-	{
-		accessorKey: "size",
-		header: "Size",
-		cell: ({ row }) => <span className="tabular">{formatBytes(row.original.size)}</span>,
-	},
-	{
-		accessorKey: "fileCount",
-		header: "Files",
-		cell: ({ row }) => <span className="tabular">{formatCount(row.original.fileCount)}</span>,
-	},
-	{
-		accessorKey: "volumeCount",
-		header: "Volumes",
-		cell: ({ row }) => (
-			<span className="tabular">
-				{row.original.volumeCount}
-				{row.original.ecVolumeCount > 0 && (
-					<span className="text-muted-foreground"> + {row.original.ecVolumeCount} EC</span>
-				)}
-			</span>
-		),
-	},
-	{
-		id: "garbage",
-		accessorFn: (c) => ratio(c.deletedBytes, c.size),
-		header: "Garbage",
-		cell: ({ row }) => (
-			<span className="text-muted-foreground tabular">
-				{row.original.deletedBytes > 0
-					? formatPercent(ratio(row.original.deletedBytes, row.original.size))
-					: "None"}
-			</span>
-		),
-	},
-	{
-		id: "placement",
-		header: "Placement",
-		cell: ({ row }) => (
-			<div className="flex flex-wrap items-center gap-1">
-				{row.original.replications.map((r) => (
-					<Badge key={r} variant="outline" className="font-mono">
-						{r}
-					</Badge>
-				))}
-				{row.original.diskTypes.map((d) => (
-					<Badge key={d} variant="secondary">
-						{d}
-					</Badge>
-				))}
-				<span className="text-[12px] text-muted-foreground">
-					{row.original.servers.length} {row.original.servers.length === 1 ? "server" : "servers"}
-				</span>
-			</div>
-		),
-		enableSorting: false,
-	},
-];
 
 function CollectionTable({
 	collections,

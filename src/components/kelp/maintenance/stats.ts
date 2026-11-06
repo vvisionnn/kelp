@@ -1,4 +1,10 @@
-import type { JobRun, MaintenanceActivity, MaintenanceJob } from "@shared/maintenance.ts";
+import type {
+	DetectionResult,
+	JobRun,
+	MaintenanceActivity,
+	MaintenanceJob,
+	MaintenanceOverview,
+} from "@shared/maintenance.ts";
 
 const HOUR = 3_600_000;
 
@@ -149,4 +155,55 @@ export function waitProgress(lastAt: string | null, nextAt: string | null, now: 
 	const next = time(nextAt);
 	if (!Number.isFinite(last) || !Number.isFinite(next) || next <= last) return null;
 	return Math.min(1, Math.max(0, (now - last) / (next - last)));
+}
+
+export const PROGRESS = /\bprogress\b/i;
+
+/**
+ * The job's story, oldest first: repeated messages are dropped, and progress ticks are hidden once
+ * the job has finished (while it runs, only the latest tick is kept).
+ */
+export function timeline(activities: MaintenanceActivity[], active: boolean): MaintenanceActivity[] {
+	const sorted = [...activities].sort((a, b) => (a.occurredAt ?? "").localeCompare(b.occurredAt ?? ""));
+	const lastProgress = sorted.findLast((a) => PROGRESS.test(a.message));
+	const seen = new Set<string>();
+	return sorted.filter((activity) => {
+		if (PROGRESS.test(activity.message) && (!active || activity !== lastProgress)) return false;
+		if (seen.has(activity.message)) return false;
+		seen.add(activity.message);
+		return true;
+	});
+}
+
+/** Toast text for a detection: what was found, or why nothing was. */
+export function detectionMessage(result: DetectionResult, name: string): string {
+	if (result.error) return `${name} check failed: ${result.error}`;
+	if (result.totalProposals > 0) {
+		return `${name} found ${result.totalProposals} ${result.totalProposals === 1 ? "job" : "jobs"} to run`;
+	}
+	return result.skippedReason ? `${name} skipped: ${result.skippedReason}` : `${name} found nothing to do`;
+}
+
+/** One sentence describing whether automated maintenance is working. */
+export function maintenanceSummary(overview: MaintenanceOverview): {
+	tone: "good" | "warn" | "bad" | "idle";
+	text: string;
+} {
+	if (!overview.enabled)
+		return { tone: "idle", text: "Automated maintenance is turned off on the admin server." };
+	if (overview.workerCount === 0) {
+		return { tone: "bad", text: "No workers are connected, so nothing can run. Start `weed worker`." };
+	}
+	// "skipped" (cooldown, nothing to do) is normal; only errors count as failures.
+	const failing = overview.jobTypes.filter(
+		(t) => t.lastRunStatus === "error" || t.lastRunStatus === "failed",
+	);
+	if (failing.length > 0) {
+		return { tone: "warn", text: `${failing.map((t) => t.displayName).join(", ")} failed on the last run.` };
+	}
+	const enabled = overview.jobTypes.filter((t) => t.enabled).length;
+	return {
+		tone: "good",
+		text: `Running. ${enabled} of ${overview.jobTypes.length} job types are scheduled.`,
+	};
 }
