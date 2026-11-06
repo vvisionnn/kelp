@@ -16,7 +16,10 @@ import type { ReactNode } from "react";
 import StatusMark, { type StatusMarkStatus } from "@/components/react-bits/StatusMark.tsx";
 import { formatRelative } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
-import { usePrefersReducedMotion } from "../motion.ts";
+import { EASE, SPEED, usePrefersReducedMotion } from "../motion.ts";
+import { SkeletonBlock } from "../page.tsx";
+import { RowsGhost } from "../skeletons.tsx";
+import { TextMorph } from "../text-morph.tsx";
 
 const ICONS: Record<string, LucideIcon> = {
 	vacuum: Brush,
@@ -27,6 +30,106 @@ const ICONS: Record<string, LucideIcon> = {
 	s3_lifecycle: Recycle,
 	iceberg_maintenance: Snowflake,
 };
+
+/** `PageHeader`, except the title can be a node: these pages learn their title from the data. */
+export function DataHeader({
+	title,
+	description,
+	actions,
+}: {
+	title: ReactNode;
+	description?: ReactNode;
+	actions?: ReactNode;
+}) {
+	return (
+		<div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pt-2 pb-6">
+			<div className="min-w-0">
+				<h1 className="truncate font-semibold text-[26px] leading-8 tracking-[-0.022em]">{title}</h1>
+				{description && (
+					<div className="mt-0.5 text-[13px] text-muted-foreground leading-[18px]">{description}</div>
+				)}
+			</div>
+			{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+		</div>
+	);
+}
+
+/** A block that comes and goes inline: its height glides, so what sits below it never jumps. */
+export function Collapse({
+	open,
+	children,
+	className,
+}: {
+	open: boolean;
+	children: ReactNode;
+	className?: string;
+}) {
+	const reduced = usePrefersReducedMotion();
+	return (
+		<AnimatePresence initial={false}>
+			{open && (
+				<motion.div
+					key="open"
+					{...(className ? { className } : {})}
+					initial={reduced ? false : { height: 0, opacity: 0, overflow: "hidden" }}
+					// Clips only while moving: a resting block keeps its focus rings and sheet edges.
+					animate={{ height: "auto", opacity: 1, transitionEnd: { overflow: "visible" } }}
+					exit={
+						reduced
+							? { opacity: 0, transition: { duration: 0 } }
+							: { height: 0, opacity: 0, overflow: "hidden" }
+					}
+					transition={{ duration: SPEED.base, ease: EASE }}
+				>
+					{children}
+				</motion.div>
+			)}
+		</AnimatePresence>
+	);
+}
+
+/**
+ * A secondary query for `Loaded`: it waits while pending, but a failure shows `fallback` instead of
+ * an error, for panels the page can do without.
+ */
+export function settled<T>(query: { data: T | undefined; error: unknown }, fallback: T) {
+	return { data: query.data ?? (query.error ? fallback : undefined), error: null };
+}
+
+/** Holds a `KpiGhost` without a trend to the height of a real tile, whose hint line runs taller. */
+export const KPI_TILE = "min-h-[113px]";
+
+/** Matches a `BarList`: its rows sit further apart than plain label and value rows. */
+export function BarsGhost({ rows }: { rows: number }) {
+	return <RowsGhost rows={rows} className="space-y-4 py-[3px]" />;
+}
+
+/** What a table column shows while its rows load; pass as the column's `meta`. */
+export const cellGhost = (width: string) => ({ skeleton: <SkeletonBlock className={cn("h-3.5", width)} /> });
+
+/** The same for a cell of two lines: a name above its detail. */
+export const twoLineGhost = {
+	skeleton: (
+		<div className="space-y-1.5 py-0.5">
+			<SkeletonBlock className="h-3.5 w-2/5" />
+			<SkeletonBlock className="h-3 w-3/5" />
+		</div>
+	),
+};
+
+/** Matches an `InfoList` or any sheet of label and value rows. */
+export function InfoGhost({ rows, className }: { rows: number; className?: string }) {
+	return (
+		<div className={cn("group-sheet divide-y divide-border", className)}>
+			{Array.from({ length: rows }, (_, i) => i).map((row) => (
+				<div key={row} className="flex min-h-10 items-center justify-between gap-4 px-4 py-2">
+					<SkeletonBlock className="h-3.5 w-24" />
+					<SkeletonBlock className="h-3.5 w-32 max-w-1/2" />
+				</div>
+			))}
+		</div>
+	);
+}
 
 export function JobTypeIcon({ jobType, className }: { jobType: string; className?: string }) {
 	const Icon = ICONS[jobType] ?? Cog;
@@ -113,7 +216,8 @@ export function stateLabel(state: JobState): string {
 
 /**
  * A job's state as a React Bits StatusMark and a word: a ring that fills with progress while
- * running, then draws a check or a cross. Color appears only for running, success and failure.
+ * running, then draws a check or a cross, with the word and percentage morphing along with it.
+ * Color appears only for running, success and failure.
  */
 export function JobStateBadge({
 	state,
@@ -132,8 +236,10 @@ export function JobStateBadge({
 			{...(showProgress ? { progress: progress / 100 } : {})}
 			label={
 				<span className="inline-flex items-center gap-1.5">
-					{style.label}
-					{showProgress && <span className="tabular text-muted-foreground">{Math.round(progress)}%</span>}
+					<TextMorph>{style.label}</TextMorph>
+					<TextMorph className="tabular text-muted-foreground">
+						{showProgress ? `${Math.round(progress)}%` : ""}
+					</TextMorph>
 				</span>
 			}
 			color={state === "running" || state === "assigned" ? "var(--primary)" : "var(--muted-foreground)"}
@@ -282,7 +388,7 @@ export function ActivityFeed({
 						initial={reduced ? false : { opacity: 0, y: -8 }}
 						animate={{ opacity: 1, y: 0 }}
 						exit={{ opacity: 0 }}
-						transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+						transition={{ duration: SPEED.base, ease: EASE }}
 						className="grid grid-cols-[auto_1fr_auto] items-start gap-3 px-4 py-2.5"
 					>
 						<span className="mt-px flex size-6 items-center justify-center rounded-md bg-raised text-muted-foreground">

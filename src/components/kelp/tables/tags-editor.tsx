@@ -1,6 +1,8 @@
 import { Plus, Tag, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { Collapse } from "@/components/kelp/maintenance/parts.tsx";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +52,7 @@ export function TagsEditor({
 }) {
 	const [rows, setRows] = useState<Row[]>(() => toRows(tags));
 	const [saving, setSaving] = useState(false);
+	const reduced = usePrefersReducedMotion();
 	const savedKey = JSON.stringify(tags);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: follow the saved tags when they change.
 	useEffect(() => setRows(toRows(tags)), [savedKey]);
@@ -93,10 +96,11 @@ export function TagsEditor({
 				{rows.map((row) => (
 					<motion.div
 						key={row.id}
-						layout
-						initial={{ opacity: 0, height: 0 }}
+						layout={!reduced}
+						initial={reduced ? false : { opacity: 0, height: 0 }}
 						animate={{ opacity: 1, height: "auto" }}
 						exit={{ opacity: 0, height: 0 }}
+						transition={{ duration: reduced ? 0 : SPEED.base, ease: EASE }}
 						className="flex items-center gap-2"
 					>
 						<Input
@@ -125,13 +129,15 @@ export function TagsEditor({
 					</motion.div>
 				))}
 			</AnimatePresence>
-			{rows.length === 0 && (
+			<Collapse open={rows.length === 0}>
 				<p className="flex items-center gap-2 text-muted-foreground text-sm">
 					<Tag className="size-3.5" />
 					No tags yet.
 				</p>
-			)}
-			{error && <p className="text-destructive text-xs">{error}</p>}
+			</Collapse>
+			<Collapse open={Boolean(error)}>
+				<p className="text-destructive text-xs">{error}</p>
+			</Collapse>
 			<div className="flex items-center justify-between gap-2 pt-1">
 				<Button
 					type="button"

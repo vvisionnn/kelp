@@ -1,18 +1,15 @@
+import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/kelp/brand.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import {
-	ErrorState,
-	InfoList,
-	PageHeader,
-	Reveal,
-	Section,
-	SkeletonBlock,
-	StatusDot,
-} from "@/components/kelp/page.tsx";
+import { InfoGhost } from "@/components/kelp/maintenance/parts.tsx";
+import { InfoList, PageHeader, Section, SkeletonBlock, StatusDot } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { type Theme, useTheme } from "@/components/theme-provider.tsx";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -38,7 +35,7 @@ function SettingsPage() {
 	return (
 		<>
 			<PageHeader title="Settings" description="How Kelp looks for you, and how it connects to SeaweedFS." />
-			<Reveal className="max-w-3xl">
+			<div className="max-w-3xl">
 				<Section title="Appearance" description="Saved in this browser." className="mt-0">
 					<div className="group-sheet p-4">
 						<ThemePicker />
@@ -66,7 +63,7 @@ function SettingsPage() {
 					</dl>
 				</Section>
 				<AboutPanel />
-			</Reveal>
+			</div>
 		</>
 	);
 }
@@ -129,55 +126,77 @@ function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 /** Whether Kelp is sampling SeaweedFS's metrics for live charts, and from where. */
 function MetricsPanel() {
 	const { data, error } = useQuery(queries.telemetry("1h"));
+	// A failed refresh keeps the last answer; only a first failure replaces the rows.
+	const metrics = { data: data ?? (error ? null : undefined), error: null };
 	return (
 		<Section
 			title="Live metrics"
 			description="Kelp samples SeaweedFS's Prometheus endpoints every 15 seconds for the live charts."
 		>
-			{error ? (
-				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
-					Kelp could not read its metrics status: {error.message}
-				</p>
-			) : (
-				<InfoList
-					items={[
-						{
-							label: "Status",
-							value: !data ? (
-								"Checking"
-							) : data.enabled ? (
-								<StatusDot
-									tone={data.unreachable.length ? "warn" : "good"}
-									label={data.unreachable.length ? "Some endpoints are unreachable" : "Sampling"}
-								/>
-							) : (
-								<StatusDot tone="idle" label="Off. Set KELP_METRICS_URLS to turn on live charts." />
-							),
-						},
-						{
-							label: "Sampling since",
-							value: data?.since ? formatDateTime(new Date(data.since).toISOString()) : "Not started",
-						},
-						{
-							label: "Points in the last hour",
-							value: <span className="tabular">{data?.points.length ?? 0}</span>,
-						},
-						{
-							label: "Growth samples",
-							value: <span className="tabular">{data?.inventory.length ?? 0}</span>,
-						},
-						...(data?.unreachable.length
-							? [
-									{
-										label: "Unreachable",
-										value: <span className="font-mono text-[12px]">{data.unreachable.join(", ")}</span>,
-									},
-								]
-							: []),
-					]}
-				/>
-			)}
+			<Loaded
+				query={metrics}
+				skeleton={
+					<LoadingRegion label="Loading">
+						<InfoGhost rows={4} />
+					</LoadingRegion>
+				}
+			>
+				{(telemetry) =>
+					telemetry ? (
+						<InfoList
+							items={[
+								{ label: "Status", value: <MetricsStatus telemetry={telemetry} /> },
+								{
+									label: "Sampling since",
+									value: (
+										<TextMorph>
+											{telemetry.since
+												? formatDateTime(new Date(telemetry.since).toISOString())
+												: "Not started"}
+										</TextMorph>
+									),
+								},
+								{
+									label: "Points in the last hour",
+									value: <RollingValue text={String(telemetry.points.length)} />,
+								},
+								{
+									label: "Growth samples",
+									value: <RollingValue text={String(telemetry.inventory.length)} />,
+								},
+								...(telemetry.unreachable.length
+									? [
+											{
+												label: "Unreachable",
+												value: (
+													<span className="font-mono text-[12px]">{telemetry.unreachable.join(", ")}</span>
+												),
+											},
+										]
+									: []),
+							]}
+						/>
+					) : (
+						<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">
+							Kelp could not read its metrics status: {(error as Error).message}
+						</p>
+					)
+				}
+			</Loaded>
 		</Section>
+	);
+}
+
+function MetricsStatus({ telemetry }: { telemetry: Telemetry }) {
+	const [tone, label] = !telemetry.enabled
+		? (["idle", "Off. Set KELP_METRICS_URLS to turn on live charts."] as const)
+		: telemetry.unreachable.length
+			? (["warn", "Some endpoints are unreachable"] as const)
+			: (["good", "Sampling"] as const);
+	return (
+		<Swap id={label}>
+			<StatusDot tone={tone} label={label} />
+		</Swap>
 	);
 }
 
@@ -252,93 +271,98 @@ function NotSet() {
 }
 
 function ClusterPanel() {
-	const { data, error, isPending, refetch } = useQuery(maintenanceQueries.systemConfig());
+	const query = useQuery(maintenanceQueries.systemConfig());
 	return (
 		<Section title="Cluster" description="Read from the SeaweedFS admin server">
-			{isPending ? (
-				<PanelSkeleton rows={5} />
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : (
-				<dl className="group-sheet divide-y divide-border">
-					<Row label="Master" copy={data.masterAddress}>
-						<Mono>{data.masterAddress}</Mono>
-					</Row>
-					<Row label="Admin data folder">{data.dataDir ? <Mono>{data.dataDir}</Mono> : <NotSet />}</Row>
-					<Row label="Automated maintenance">
-						<StatusDot
-							tone={data.maintenanceEnabled ? (data.maintenanceRunning ? "good" : "warn") : "idle"}
-							label={
-								data.maintenanceEnabled
-									? data.maintenanceRunning
-										? "On and running"
-										: "On, but not running"
-									: "Off"
-							}
-						/>
-					</Row>
-					<Row label="Cache lifetime">
-						{data.cacheExpiration || <NotSet />}
-						{data.filerCacheExpiration && (
-							<span className="text-muted-foreground"> (filer {data.filerCacheExpiration})</span>
-						)}
-					</Row>
-					<Row label="Public S3 endpoint" {...(data.s3PublicEndpoint ? { copy: data.s3PublicEndpoint } : {})}>
-						{data.s3PublicEndpoint ? <Mono>{data.s3PublicEndpoint}</Mono> : <NotSet />}
-					</Row>
-				</dl>
-			)}
+			<Loaded query={query} skeleton={<PanelSkeleton rows={5} />}>
+				{(data) => (
+					<dl className="group-sheet divide-y divide-border">
+						<Row label="Master" copy={data.masterAddress}>
+							<Mono>{data.masterAddress}</Mono>
+						</Row>
+						<Row label="Admin data folder">{data.dataDir ? <Mono>{data.dataDir}</Mono> : <NotSet />}</Row>
+						<Row label="Automated maintenance">
+							<Swap id={String(data.maintenanceEnabled && data.maintenanceRunning)}>
+								<StatusDot
+									tone={data.maintenanceEnabled ? (data.maintenanceRunning ? "good" : "warn") : "idle"}
+									label={
+										data.maintenanceEnabled
+											? data.maintenanceRunning
+												? "On and running"
+												: "On, but not running"
+											: "Off"
+									}
+								/>
+							</Swap>
+						</Row>
+						<Row label="Cache lifetime">
+							{data.cacheExpiration || <NotSet />}
+							{data.filerCacheExpiration && (
+								<span className="text-muted-foreground"> (filer {data.filerCacheExpiration})</span>
+							)}
+						</Row>
+						<Row
+							label="Public S3 endpoint"
+							{...(data.s3PublicEndpoint ? { copy: data.s3PublicEndpoint } : {})}
+						>
+							{data.s3PublicEndpoint ? <Mono>{data.s3PublicEndpoint}</Mono> : <NotSet />}
+						</Row>
+					</dl>
+				)}
+			</Loaded>
 		</Section>
 	);
 }
 
 function KelpPanel() {
 	const user = useSession();
-	const { data, error, isPending, refetch } = useQuery(maintenanceQueries.kelpSettings());
+	const query = useQuery(maintenanceQueries.kelpSettings());
 	return (
 		<Section title="Kelp" description="Set with environment variables when Kelp starts">
-			{isPending ? (
-				<PanelSkeleton rows={6} />
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : (
-				<dl className="group-sheet divide-y divide-border">
-					<Row label="Signed in as">
-						{user.name}{" "}
-						<span className="text-muted-foreground">
-							({user.role === "admin" ? "administrator" : "read-only"})
-						</span>
-					</Row>
-					<Row label="Sessions last">
-						{data.sessionTtlHours} {data.sessionTtlHours === 1 ? "hour" : "hours"}
-					</Row>
-					<Row label="Read-only account">{data.viewerEnabled ? "Enabled" : "Not configured"}</Row>
-					<Row label="S3 endpoint for users" {...(data.s3Endpoint ? { copy: data.s3Endpoint } : {})}>
-						{data.s3Endpoint ? <Mono>{data.s3Endpoint}</Mono> : <NotSet />}
-					</Row>
-					{data.upstreams.map((upstream) => (
-						<Row key={upstream.label} label={upstream.label}>
-							<Mono>{upstream.url}</Mono>
+			<Loaded query={query} skeleton={<PanelSkeleton rows={6} />}>
+				{(data) => (
+					<dl className="group-sheet divide-y divide-border">
+						<Row label="Signed in as">
+							{user.name}{" "}
+							<span className="text-muted-foreground">
+								({user.role === "admin" ? "administrator" : "read-only"})
+							</span>
 						</Row>
-					))}
-				</dl>
-			)}
+						<Row label="Sessions last">
+							{data.sessionTtlHours} {data.sessionTtlHours === 1 ? "hour" : "hours"}
+						</Row>
+						<Row label="Read-only account">{data.viewerEnabled ? "Enabled" : "Not configured"}</Row>
+						<Row label="S3 endpoint for users" {...(data.s3Endpoint ? { copy: data.s3Endpoint } : {})}>
+							{data.s3Endpoint ? <Mono>{data.s3Endpoint}</Mono> : <NotSet />}
+						</Row>
+						{data.upstreams.map((upstream) => (
+							<Row key={upstream.label} label={upstream.label}>
+								<Mono>{upstream.url}</Mono>
+							</Row>
+						))}
+					</dl>
+				)}
+			</Loaded>
 		</Section>
 	);
 }
 
 function AboutPanel() {
-	const { data } = useQuery(maintenanceQueries.kelpSettings());
+	const { data, error } = useQuery(maintenanceQueries.kelpSettings());
 	return (
 		<Section title="About">
 			<div className="group-sheet divide-y divide-border text-[13px]">
 				<div className="flex items-center gap-3 px-4 py-3">
 					<Wordmark className="text-[15px]" />
-					{data && (
-						<span className="rounded-sm bg-secondary px-1.5 font-mono text-[12px] text-muted-foreground">
-							v{data.version}
-						</span>
-					)}
+					<Swap id={data ? "version" : "loading"}>
+						{data ? (
+							<span className="rounded-sm bg-secondary px-1.5 font-mono text-[12px] text-muted-foreground">
+								v{data.version}
+							</span>
+						) : (
+							!error && <SkeletonBlock className="h-[18px] w-14" />
+						)}
+					</Swap>
 					<p className="ml-auto hidden text-[12px] text-muted-foreground sm:block">
 						Never changes how SeaweedFS stores data.
 					</p>
@@ -377,10 +401,8 @@ function Shortcut({ label, children }: { label: string; children: ReactNode }) {
 
 function PanelSkeleton({ rows }: { rows: number }) {
 	return (
-		<div className="group-sheet space-y-3 p-4" role="status" aria-busy="true" aria-label="Loading">
-			{Array.from({ length: rows }, (_, i) => i).map((row) => (
-				<SkeletonBlock key={row} className="h-5" />
-			))}
-		</div>
+		<LoadingRegion label="Loading">
+			<InfoGhost rows={rows} />
+		</LoadingRegion>
 	);
 }

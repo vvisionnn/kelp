@@ -4,11 +4,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight, FolderOpen, Table2, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { CreateNamespaceDialog, CreateTableDialog } from "@/components/kelp/tables/create-dialogs.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
-import { WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
+import { DashboardGhost, WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api.ts";
@@ -37,7 +40,8 @@ export function groupTables(namespaces: TableNamespace[], tables: TableSummary[]
 
 function BucketPage() {
 	const { bucket } = Route.useParams();
-	const { data, isPending, error, refetch } = useQuery(streamsQueries.tableBucket(bucket));
+	const query = useQuery(streamsQueries.tableBucket(bucket));
+	const { data, isPending } = query;
 	const canWrite = useCanWrite();
 	return (
 		<>
@@ -45,25 +49,30 @@ function BucketPage() {
 				title={bucket}
 				description="Namespaces and the Iceberg tables in them, with the rules that guard them."
 				actions={
-					canWrite && data ? (
-						<>
-							<DeleteBucket bucket={bucket} empty={data.tables.length === 0} />
-							<CreateNamespaceDialog bucket={bucket} />
-							<CreateTableDialog bucket={bucket} namespaces={data.namespaces.map((n) => n.name)} />
-						</>
-					) : null
+					canWrite && (
+						<Swap id={data ? "actions" : isPending ? "loading" : "none"}>
+							{data ? (
+								<div className="flex flex-wrap items-center gap-2">
+									<DeleteBucket bucket={bucket} empty={data.tables.length === 0} />
+									<CreateNamespaceDialog bucket={bucket} />
+									<CreateTableDialog bucket={bucket} namespaces={data.namespaces.map((n) => n.name)} />
+								</div>
+							) : (
+								isPending && (
+									<div className="flex flex-wrap items-center gap-2">
+										<SkeletonBlock className="h-8 w-[132px]" />
+										<SkeletonBlock className="h-8 w-[163px]" />
+										<SkeletonBlock className="h-8 w-[122px]" />
+									</div>
+								)
+							)}
+						</Swap>
+					)
 				}
 			/>
-			{isPending ? (
-				<div className="grid gap-x-6 gap-y-3 lg:grid-cols-12" role="status" aria-label="Loading table bucket">
-					<SkeletonBlock className="h-80 rounded-xl lg:col-span-8" />
-					<SkeletonBlock className="h-80 rounded-xl lg:col-span-4" />
-				</div>
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : (
-				<BucketBody detail={data} />
-			)}
+			<Loaded query={query} skeleton={<BucketSkeleton />}>
+				{(detail) => <BucketBody detail={detail} />}
+			</Loaded>
 		</>
 	);
 }
@@ -91,28 +100,32 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 	});
 
 	return (
-		<Reveal className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-12">
+		<div className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-12">
 			<div className="space-y-3 lg:col-span-8">
 				<WarehouseDashboard
 					namespaces={detail.namespaces.length}
 					tables={detail.tables.map((table) => ({ bucket: name, table }))}
 				/>
-				{groups.length === 0 ? (
-					<EmptyState
-						icon={<FolderOpen />}
-						title="No namespaces yet"
-						description="Create a namespace, then add tables to it. Engines can also create both through the catalog."
-					/>
-				) : (
-					groups.map((group) => (
-						<NamespaceSection
-							key={group.namespace}
-							bucket={name}
-							namespace={group.namespace}
-							tables={group.tables}
+				<Swap id={groups.length === 0 ? "empty" : "list"}>
+					{groups.length === 0 ? (
+						<EmptyState
+							icon={<FolderOpen />}
+							title="No namespaces yet"
+							description="Create a namespace, then add tables to it. Engines can also create both through the catalog."
 						/>
-					))
-				)}
+					) : (
+						<div className="space-y-3">
+							{groups.map((group) => (
+								<NamespaceSection
+									key={group.namespace}
+									bucket={name}
+									namespace={group.namespace}
+									tables={group.tables}
+								/>
+							))}
+						</div>
+					)}
+				</Swap>
 			</div>
 			<div className="space-y-3 lg:col-span-4">
 				<section className="group-sheet p-4">
@@ -141,7 +154,7 @@ function BucketBody({ detail }: { detail: TableBucketDetail }) {
 					/>
 				</Panel>
 			</div>
-		</Reveal>
+		</div>
 	);
 }
 
@@ -167,9 +180,9 @@ function NamespaceSection({
 				<h2 className="flex items-center gap-2 font-semibold text-[13px]">
 					<FolderOpen className="size-4 text-muted-foreground" />
 					<span className="font-mono">{namespace}</span>
-					<span className="font-normal text-[12px] text-muted-foreground tabular">
-						{tables.length} {tables.length === 1 ? "table" : "tables"}
-					</span>
+					<TextMorph className="font-normal text-[12px] text-muted-foreground tabular">
+						{`${tables.length} ${tables.length === 1 ? "table" : "tables"}`}
+					</TextMorph>
 				</h2>
 				{canWrite && tables.length === 0 && (
 					<ConfirmDialog
@@ -244,5 +257,43 @@ function DeleteBucket({ bucket, empty }: { bucket: string; empty: boolean }) {
 			typeToConfirm={bucket}
 			onConfirm={() => remove.mutateAsync()}
 		/>
+	);
+}
+
+function BucketSkeleton() {
+	return (
+		<LoadingRegion label="Loading table bucket">
+			<div className="grid items-start gap-x-6 gap-y-3 lg:grid-cols-12">
+				<div className="space-y-3 lg:col-span-8">
+					<DashboardGhost />
+					<div className="space-y-3">
+						{[0, 1, 2].map((group) => (
+							<div key={group} className="group-sheet">
+								<div className="flex h-11 items-center border-border border-b px-4">
+									<SkeletonBlock className="h-3.5 w-32" />
+								</div>
+								<div className="flex h-10 items-center justify-between px-4">
+									<SkeletonBlock className="h-3.5 w-40" />
+									<SkeletonBlock className="h-3 w-28" />
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+				<div className="space-y-3 lg:col-span-4">
+					<div className="group-sheet p-4">
+						<SkeletonBlock className="my-0.5 h-3.5 w-20" />
+						<SkeletonBlock className="mt-1.5 h-5 w-3/5" />
+						<SkeletonBlock className="mt-3 h-[85px]" />
+					</div>
+					<Panel title="Tags">
+						<SkeletonBlock className="h-[113px]" />
+					</Panel>
+					<Panel title="Bucket policy" description="Grants or denies access to every table in this bucket.">
+						<SkeletonBlock className="h-[300px]" />
+					</Panel>
+				</div>
+			</div>
+		</LoadingRegion>
 	);
 }
