@@ -542,6 +542,16 @@ export function AppShell() {
 	useSpotlight();
 	const [sheetOpen, setSheetOpen] = useState(false);
 	const [rail, toggleRail] = useSidebarCollapsed();
+	// Warm the command menu once the page is idle, so the first ⌘K opens at once.
+	useEffect(() => {
+		const warm = () => void loadCommandMenu();
+		if ("requestIdleCallback" in window) {
+			const id = window.requestIdleCallback(warm, { timeout: 4000 });
+			return () => window.cancelIdleCallback(id);
+		}
+		const timer = setTimeout(warm, 2000);
+		return () => clearTimeout(timer);
+	}, []);
 	return (
 		<div data-rail={rail ? "" : undefined} className="group/shell min-h-svh">
 			{/* Docked full height on a flat surface of its own, set apart from the page by a hairline and

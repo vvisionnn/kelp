@@ -89,7 +89,7 @@ Series take colors in this order and keep them when filters change; a sixth seri
 ### Surface & Overlay
 
 - Glass (floating save bars only): canvas color at 72% (light) / 64% (dark) with `backdrop-filter: blur(24px) saturate(180%)`, a 0.5px edge and a 1px inner top highlight. The sidebar and toolbar are solid: a blur under a sticky bar repaints on every scrolled frame.
-- Overlay behind dialogs and sheets: black at 24% (light) / 48% (dark) with 2px blur.
+- Overlay behind dialogs and sheets: black at 30% (light) / 50% (dark), flat. A blur over the whole window repaints all of it on every frame of the fade.
 
 ### Shadows & Depth
 
