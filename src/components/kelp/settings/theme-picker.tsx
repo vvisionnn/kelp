@@ -11,14 +11,14 @@ const THEMES: Array<{ value: Theme; label: string }> = [
 const PREVIEW = {
 	light: {
 		canvas: "#f5f5f7",
-		sidebar: "#ffffff",
+		current: "#ffffff",
 		sheet: "#ffffff",
 		line: "rgb(0 0 0 / 0.1)",
 		edge: "rgb(0 0 0 / 0.08)",
 	},
 	dark: {
 		canvas: "#0e0e10",
-		sidebar: "#2c2c2e",
+		current: "#2c2c2e",
 		sheet: "#1c1c1e",
 		line: "rgb(255 255 255 / 0.14)",
 		edge: "rgb(255 255 255 / 0.08)",
@@ -27,25 +27,25 @@ const PREVIEW = {
 
 const ROWS = [0, 1, 2, 3];
 
-/** A tiny drawing of Kelp in a palette: the floating sidebar with its spectrum marker, and sheets. */
+/** A tiny drawing of Kelp in a palette: the docked sidebar with the current page on a sheet, and sheets. */
 function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 	const c = PREVIEW[mode];
 	const edge = { boxShadow: `0 0 0 0.5px ${c.edge}` };
 	return (
-		<div className="flex h-full w-full gap-1.5 p-1.5" style={{ background: c.canvas }}>
-			<div
-				className="flex w-[30%] flex-col gap-1 rounded-[5px] p-1.5"
-				style={{ background: c.sidebar, ...edge }}
-			>
+		<div className="flex h-full w-full" style={{ background: c.canvas }}>
+			<div className="flex w-[30%] flex-col gap-1 p-1.5 pt-2" style={{ boxShadow: `0.5px 0 0 ${c.edge}` }}>
 				{ROWS.map((row) => (
-					<span key={row} className="relative flex items-center gap-1">
-						{row === 0 && <span className="spectrum absolute -left-1 h-2 w-0.5 rounded-full" />}
+					<span
+						key={row}
+						className="flex items-center gap-1 rounded-[3px] px-0.5 py-[1px]"
+						style={row === 1 ? { background: c.current, ...edge } : undefined}
+					>
 						<span className="size-1.5 rounded-[2px]" style={{ background: c.line }} />
 						<span className="h-1 flex-1 rounded-full" style={{ background: c.line }} />
 					</span>
 				))}
 			</div>
-			<div className="flex flex-1 flex-col gap-1.5 pt-1">
+			<div className="flex flex-1 flex-col gap-1.5 p-1.5 pt-2">
 				<span className="h-1.5 w-1/2 rounded-full" style={{ background: c.line }} />
 				<div className="flex gap-1.5">
 					{[0, 1].map((i) => (
