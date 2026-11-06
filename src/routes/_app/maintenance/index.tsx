@@ -31,7 +31,7 @@ import {
 	Pill,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { successRate, waitProgress } from "@/components/kelp/maintenance/stats.ts";
-import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EASE, useDataDuration } from "@/components/kelp/motion.ts";
 import {
 	CapacityBar,
 	EmptyState,
@@ -433,7 +433,8 @@ function JobTypeList({ jobTypes }: { jobTypes: JobTypeSummary[] }) {
 
 /** How far a job type is through its wait for the next check, as a hairline meter. */
 function NextCheckMeter({ type }: { type: JobTypeSummary }) {
-	const reduced = usePrefersReducedMotion();
+	// The wait advances with the clock; it only moves once someone is watching the page.
+	const duration = useDataDuration();
 	const progress = type.enabled ? waitProgress(type.lastDetectedAt, type.nextDetectionAt, Date.now()) : null;
 	if (progress === null) return null;
 	return (
@@ -446,7 +447,7 @@ function NextCheckMeter({ type }: { type: JobTypeSummary }) {
 				className="spectrum block h-full rounded-full"
 				initial={false}
 				animate={{ width: `${progress * 100}%` }}
-				transition={{ duration: reduced ? 0 : SPEED.data, ease: EASE }}
+				transition={{ duration, ease: EASE }}
 			/>
 		</span>
 	);

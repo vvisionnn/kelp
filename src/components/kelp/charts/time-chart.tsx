@@ -321,7 +321,8 @@ export function TimeChart({
 							height={height}
 							initial={arriving ? { width: 0 } : false}
 							animate={{ width: innerWidth + 8 }}
-							transition={{ duration: SPEED.data * 1.4, ease: EASE }}
+							// Wipes in once, as the chart arrives; afterwards it just follows the chart's width.
+							transition={{ duration: arriving ? SPEED.data * 1.4 : 0, ease: EASE }}
 						/>
 					</clipPath>
 				</defs>

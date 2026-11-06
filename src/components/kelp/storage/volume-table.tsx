@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EASE, useDataDuration } from "@/components/kelp/motion.ts";
 import { EmptyState, StatusDot } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export function matchesFilter(volume: StorageVolume, filter: VolumeFilter): bool
 
 /** Thin fill bar for a volume's size against the cluster volume size limit. */
 function FillBar({ fullness }: { fullness: number }) {
-	const reduced = usePrefersReducedMotion();
+	const duration = useDataDuration();
 	const width = Math.min(1, fullness) * 100;
 	return (
 		<span
@@ -58,7 +58,7 @@ function FillBar({ fullness }: { fullness: number }) {
 				className={cn("block h-full rounded-full", fullness >= 0.95 ? "bg-warning" : "bg-area")}
 				initial={false}
 				animate={{ width: `${width}%` }}
-				transition={{ duration: reduced ? 0 : SPEED.data, ease: EASE }}
+				transition={{ duration, ease: EASE }}
 			/>
 		</span>
 	);
