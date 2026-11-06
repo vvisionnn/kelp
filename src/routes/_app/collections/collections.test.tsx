@@ -59,7 +59,7 @@ describe("collection detail", () => {
 	test("lists its volumes and erasure-coded volumes", async () => {
 		renderApp("/collections/archive", { "GET /storage": busyInventory() });
 		expect(await screen.findByRole("heading", { name: "archive" })).toBeTruthy();
-		expect(screen.getByText("Erasure-coded volumes")).toBeTruthy();
+		expect(await screen.findByText("Erasure-coded volumes")).toBeTruthy();
 		expect(screen.getByRole("link", { name: "20" })).toBeTruthy();
 		expect(screen.getByRole("img", { name: "Share of the cluster's stored bytes" })).toBeTruthy();
 	});
@@ -100,7 +100,8 @@ describe("collection detail", () => {
 
 	test("viewers cannot delete", async () => {
 		renderApp("/collections/media", { "GET /storage": busyInventory() }, viewerUser);
-		await screen.findByRole("heading", { name: "media" });
+		await screen.findByText("Volume copies held by each server");
+		await screen.findByRole("list", { name: "Volume copies by server" });
 		expect(screen.queryByRole("button", { name: "Delete collection" })).toBeNull();
 	});
 
@@ -120,6 +121,6 @@ describe("collection detail", () => {
 		expect(await screen.findByText("SeaweedFS admin reported a problem")).toBeTruthy();
 		fail = false;
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-		expect(await screen.findByRole("heading", { name: "media" })).toBeTruthy();
+		expect(await screen.findByRole("list", { name: "Volume copies by server" })).toBeTruthy();
 	});
 });

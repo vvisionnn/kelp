@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
@@ -42,8 +42,12 @@ describe("nodes page", () => {
 		expect(await screen.findByLabelText("Search volume servers")).toBeTruthy();
 		expect(screen.getAllByText("127.0.0.1:18080").length).toBeGreaterThan(0);
 
+		// Switching tabs keeps the reader where they were: the router never scrolls the page back to the top.
+		const scrolls = spyOn(window, "scrollTo");
 		fireEvent.click(screen.getByRole("tab", { name: "Filers" }));
-		await waitFor(() => expect(app.router.state.location.search).toEqual({ tab: "filers" }));
+		await waitFor(() => expect(app.router.state.resolvedLocation?.search).toEqual({ tab: "filers" }));
+		expect(scrolls).not.toHaveBeenCalled();
+		scrolls.mockRestore();
 		expect(await screen.findByText("127.0.0.1:18888")).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("tab", { name: "S3 gateways" }));

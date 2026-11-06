@@ -1,4 +1,4 @@
-import type { StorageVolume, VolumeReplica } from "@shared/storage.ts";
+import type { StorageInventory, StorageVolume, VolumeReplica } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Eraser, HardDrive, Lock, LockOpen } from "lucide-react";
@@ -7,19 +7,28 @@ import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
 	EmptyState,
-	ErrorState,
 	InfoList,
 	PageHeader,
-	Reveal,
 	Section,
+	SkeletonBlock,
 	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { describeReplication } from "@/components/kelp/storage/cluster-actions.tsx";
-import { PageSkeleton, SheetCaption } from "@/components/kelp/storage/common.tsx";
+import {
+	DescriptionGhost,
+	Frozen,
+	ghostCells,
+	SheetCaption,
+	StatsGhost,
+	ValueGhost,
+} from "@/components/kelp/storage/common.tsx";
 import { fleetRank } from "@/components/kelp/storage/insights.ts";
 import { FillGauge } from "@/components/kelp/storage/visuals.tsx";
 import { useVolumeActions } from "@/components/kelp/storage/volume-actions.ts";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes, formatCount, formatDateTime, formatPercent, formatRelative } from "@/lib/format.ts";
@@ -126,16 +135,22 @@ function VolumeActions({ volume }: { volume: StorageVolume }) {
 	const { vacuum, setReadOnly } = useVolumeActions();
 	return (
 		<>
-			<Button variant="secondary" disabled={vacuum.isPending} onClick={() => vacuum.mutate([volume])}>
+			<Button
+				variant="secondary"
+				disabled={vacuum.isPending}
+				pending={vacuum.isPending}
+				onClick={() => vacuum.mutate([volume])}
+			>
 				<Eraser />
 				Vacuum volume
 			</Button>
 			<Button
 				disabled={setReadOnly.isPending}
+				pending={setReadOnly.isPending}
 				onClick={() => setReadOnly.mutate({ volumes: [volume], readOnly: !volume.readOnly })}
 			>
 				{volume.readOnly ? <LockOpen /> : <Lock />}
-				{volume.readOnly ? "Make writable" : "Make read-only"}
+				<TextMorph>{volume.readOnly ? "Make writable" : "Make read-only"}</TextMorph>
 			</Button>
 		</>
 	);
@@ -145,90 +160,148 @@ function VolumePage() {
 	const { volumeId } = Route.useParams();
 	const id = Number(volumeId);
 	const canWrite = useCanWrite();
-	const { data, error, refetch } = useQuery(storageQueries.inventory());
+	const inventory = useQuery(storageQueries.inventory());
+	const { data, error } = inventory;
+	const volume = data?.volumes.find((v) => v.id === id);
+	const loading = !data && !error;
+	const health = volume && volumeHealth(volume);
 
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data) return <PageSkeleton />;
-
-	const volume = data.volumes.find((v) => v.id === id);
-	if (!volume) {
-		const ec = data.ecVolumes.find((v) => v.id === id);
-		return (
-			<EmptyState
-				icon={<HardDrive />}
-				title={ec ? `Volume ${volumeId} is erasure coded` : `Volume ${volumeId} is not in the cluster`}
-				description={
-					ec
-						? "Its data now lives in shards spread across servers."
-						: "It may have been deleted, or its server stopped reporting."
-				}
-				action={
-					ec ? (
-						<Button
-							size="sm"
-							variant="outline"
-							render={<Link to="/erasure-coding/$volumeId" params={{ volumeId: String(ec.id) }} />}
-						>
-							View its shards
-						</Button>
-					) : (
-						<Button size="sm" variant="outline" render={<Link to="/volumes" />}>
-							<ArrowLeft />
-							All volumes
-						</Button>
-					)
-				}
-			/>
-		);
-	}
-
-	const health = volumeHealth(volume);
-	const rank = fleetRank(volume, data);
 	return (
 		<>
 			<PageHeader
-				title={`Volume ${volume.id}`}
+				title={`Volume ${volumeId}`}
 				description={
-					<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-						<StatusDot tone={health.tone} label={health.label} />
-						<span>
-							In{" "}
-							<Link
-								to="/collections/$name"
-								params={{ name: collectionParam(volume.collection) }}
-								className="text-primary hover:underline"
-							>
-								{collectionLabel(volume.collection)}
-							</Link>{" "}
-							collection
-						</span>
-					</span>
+					<Swap id={volume ? "volume" : loading ? "pending" : "none"}>
+						{volume && health ? (
+							<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+								<StatusDot tone={health.tone} label={health.label} />
+								<span>
+									In{" "}
+									<Link
+										to="/collections/$name"
+										params={{ name: collectionParam(volume.collection) }}
+										className="text-primary hover:underline"
+									>
+										{collectionLabel(volume.collection)}
+									</Link>{" "}
+									collection
+								</span>
+							</span>
+						) : (
+							loading && <DescriptionGhost width="w-56" />
+						)}
+					</Swap>
 				}
-				actions={canWrite && <VolumeActions volume={volume} />}
+				actions={
+					canWrite && (
+						<Swap id={volume ? "actions" : loading ? "pending" : "none"}>
+							{volume ? (
+								<div className="flex flex-wrap items-center gap-2">
+									<VolumeActions volume={volume} />
+								</div>
+							) : (
+								loading && (
+									<div className="flex items-center gap-2">
+										<SkeletonBlock className="h-8 w-36" />
+										<SkeletonBlock className="h-8 w-36" />
+									</div>
+								)
+							)}
+						</Swap>
+					)
+				}
 			/>
-			<Reveal>
-				<StatBand
-					stats={[
-						{ label: "Files", value: volume.fileCount, hint: `${formatCount(volume.deleteCount)} deleted` },
-						{
-							label: "Reclaimable",
-							value: volume.deletedBytes,
-							format: formatBytes,
-							hint: `${formatPercent(volume.garbageRatio)} garbage`,
-						},
-						{ label: "Copies", value: volume.replicas.length, hint: `${volume.expectedReplicas} expected` },
-						{ label: "Compactions", value: volume.replicas[0]?.compactRevision ?? 0, hint: "Vacuums so far" },
-					]}
-				/>
-			</Reveal>
+			<Loaded query={inventory} skeleton={<VolumeSkeleton canWrite={canWrite} />}>
+				{(inv) => (
+					<Swap id={volume ? "volume" : "missing"}>
+						{volume ? (
+							<VolumeDetail volume={volume} inventory={inv} canWrite={canWrite} />
+						) : (
+							<VolumeMissing id={volumeId} inventory={inv} />
+						)}
+					</Swap>
+				)}
+			</Loaded>
+		</>
+	);
+}
+
+function VolumeMissing({ id, inventory }: { id: string; inventory: StorageInventory }) {
+	const ec = inventory.ecVolumes.find((v) => v.id === Number(id));
+	return (
+		<EmptyState
+			icon={<HardDrive />}
+			title={ec ? `Volume ${id} is erasure coded` : `Volume ${id} is not in the cluster`}
+			description={
+				ec
+					? "Its data now lives in shards spread across servers."
+					: "It may have been deleted, or its server stopped reporting."
+			}
+			action={
+				ec ? (
+					<Button
+						size="sm"
+						variant="outline"
+						render={<Link to="/erasure-coding/$volumeId" params={{ volumeId: String(ec.id) }} />}
+					>
+						View its shards
+					</Button>
+				) : (
+					<Button size="sm" variant="outline" render={<Link to="/volumes" />}>
+						<ArrowLeft />
+						All volumes
+					</Button>
+				)
+			}
+		/>
+	);
+}
+
+function VolumeDetail({
+	volume,
+	inventory,
+	canWrite,
+}: {
+	volume: StorageVolume;
+	inventory: StorageInventory;
+	canWrite: boolean;
+}) {
+	const rank = fleetRank(volume, inventory);
+	return (
+		<>
+			<StatBand
+				stats={[
+					{ label: "Files", value: volume.fileCount, hint: `${formatCount(volume.deleteCount)} deleted` },
+					{
+						label: "Reclaimable",
+						value: volume.deletedBytes,
+						format: formatBytes,
+						hint: `${formatPercent(volume.garbageRatio)} garbage`,
+					},
+					{ label: "Copies", value: volume.replicas.length, hint: `${volume.expectedReplicas} expected` },
+					{ label: "Compactions", value: volume.replicas[0]?.compactRevision ?? 0, hint: "Vacuums so far" },
+				]}
+			/>
 			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<Section title="Fill" className="mt-0 min-w-0 lg:col-span-8">
 					<AuroraCard className="p-4">
-						<SheetCaption title={<span className="metric text-[20px]">{formatBytes(volume.size)}</span>}>
-							{formatPercent(volume.fullness)} of the {formatBytes(data.volumeSizeLimitBytes)} limit
+						<SheetCaption
+							title={
+								<span className="metric text-[20px]">
+									<RollingValue text={formatBytes(volume.size)} />
+								</span>
+							}
+						>
+							<TextMorph>
+								{`${formatPercent(volume.fullness)} of the ${formatBytes(inventory.volumeSizeLimitBytes)} limit`}
+							</TextMorph>
 						</SheetCaption>
 						<div className="mt-3">
-							<FillGauge size={volume.size} deleted={volume.deletedBytes} limit={data.volumeSizeLimitBytes} />
+							<FillGauge
+								size={volume.size}
+								deleted={volume.deletedBytes}
+								limit={inventory.volumeSizeLimitBytes}
+							/>
 						</div>
 					</AuroraCard>
 					{volume.replicas.length > 1 && (
@@ -270,7 +343,10 @@ function VolumePage() {
 					<h3 className="mt-6 mb-2 font-semibold text-[13px]">In the fleet</h3>
 					<InfoList
 						items={[
-							{ label: "Size rank", value: `#${rank.rank} of ${formatCount(rank.of)}` },
+							{
+								label: "Size rank",
+								value: <TextMorph>{`#${rank.rank} of ${formatCount(rank.of)}`}</TextMorph>,
+							},
 							{
 								label: "Share of its collection",
 								value: `${formatPercent(rank.shareOfCollection)} of ${formatCount(rank.peers)} ${rank.peers === 1 ? "volume" : "volumes"}`,
@@ -295,5 +371,66 @@ function VolumePage() {
 				/>
 			</Section>
 		</>
+	);
+}
+
+const NO_VOLUME = {} as StorageVolume;
+
+function VolumeSkeleton({ canWrite }: { canWrite: boolean }) {
+	return (
+		<LoadingRegion label="Loading">
+			{/* The tile with both a unit and a hint stands a little taller. */}
+			<StatsGhost className="[&>:nth-child(-n+2)]:pb-[18px]" />
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section title="Fill" className="mt-0 min-w-0 lg:col-span-8">
+					<AuroraCard className="p-4">
+						<div className="flex h-[30px] items-center justify-between gap-4">
+							<SkeletonBlock className="h-6 w-24" />
+							<SkeletonBlock className="h-3 w-36" />
+						</div>
+						<SkeletonBlock className="mt-3 h-2 w-full rounded-full" />
+						<div className="mt-3 grid grid-cols-3 gap-4">
+							{[0, 1, 2].map((i) => (
+								<div key={i}>
+									<SkeletonBlock className="my-0.5 h-3 w-20" />
+									<SkeletonBlock className="mt-[7px] h-3.5 w-16" />
+								</div>
+							))}
+						</div>
+					</AuroraCard>
+				</Section>
+				<Section title="Details" className="mt-0 lg:col-span-4">
+					<InfoList
+						items={["Replication", "Time to live", "Disk type", "Format", "Last write", "Remote tier"].map(
+							(label) => ({ label, value: <ValueGhost /> }),
+						)}
+					/>
+					<div className="mt-2 flex h-5 items-center px-4">
+						<SkeletonBlock className="h-3 w-4/5" />
+					</div>
+					<h3 className="mt-6 mb-2 font-semibold text-[13px]">In the fleet</h3>
+					<InfoList
+						items={["Size rank", "Share of its collection", "Garbage"].map((label) => ({
+							label,
+							value: <ValueGhost />,
+						}))}
+					/>
+				</Section>
+			</div>
+			<Section
+				title="Copies"
+				description="Each server holding this volume. Turn off writes on a copy to freeze it."
+			>
+				<Frozen>
+					<DataTable
+						data={undefined}
+						isLoading
+						columns={ghostCells(replicaColumns(NO_VOLUME, canWrite), 34)}
+						getRowId={(r) => r.server}
+						empty={null}
+					/>
+				</Frozen>
+			</Section>
+		</LoadingRegion>
 	);
 }

@@ -13,11 +13,21 @@ import {
 	useRange,
 } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { GrowVolumesDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import {
+	BarsGhost,
+	Frozen,
+	ghostCells,
+	KpiRowGhost,
+	RingLegendGhost,
+	SearchGhost,
+} from "@/components/kelp/storage/common.tsx";
 import { averageObject, collectionBars, collectionSlices } from "@/components/kelp/storage/insights.ts";
-import { RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
+import { RangeControl, useTelemetry, withTelemetry } from "@/components/kelp/storage/live.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -104,11 +114,41 @@ export const collectionColumns: Array<Column<StorageCollection>> = [
 	},
 ];
 
+function CollectionTable({
+	collections,
+	isLoading,
+}: {
+	collections: StorageCollection[] | undefined;
+	isLoading?: boolean;
+}) {
+	const navigate = useNavigate();
+	return (
+		<DataTable
+			data={collections}
+			columns={isLoading ? ghostCells(collectionColumns) : collectionColumns}
+			getRowId={(c) => collectionParam(c.name)}
+			isLoading={isLoading}
+			{...(isLoading
+				? { toolbar: <SearchGhost /> }
+				: { searchText: (c: StorageCollection) => collectionLabel(c.name) })}
+			searchPlaceholder="Search collections"
+			initialSorting={[{ id: "size", desc: true }]}
+			onRowClick={(c) => navigate({ to: "/collections/$name", params: { name: collectionParam(c.name) } })}
+			empty={
+				<EmptyState
+					icon={<Layers />}
+					title="No collections yet"
+					description="A collection appears when its first volume is created, for example when you create a bucket."
+				/>
+			}
+		/>
+	);
+}
+
 function CollectionsPage() {
 	const canWrite = useCanWrite();
-	const navigate = useNavigate();
 	const [range, setRange] = useRange();
-	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
+	const inventory = useQuery(storageQueries.inventory());
 	const telemetry = useTelemetry(range);
 	return (
 		<>
@@ -118,41 +158,23 @@ function CollectionsPage() {
 				actions={
 					<>
 						<RangeControl telemetry={telemetry} range={range} onChange={setRange} />
-						{canWrite && <GrowVolumesDialog inventory={data} />}
+						{canWrite && <GrowVolumesDialog inventory={inventory.data} />}
 					</>
 				}
 			/>
-			{data ? (
-				<Reveal>
-					<CollectionNumbers inventory={data} telemetry={telemetry} />
-					{data.collections.length > 0 && <CollectionCharts collections={data.collections} />}
-				</Reveal>
-			) : (
-				!error && <HeroSkeleton />
-			)}
-			<div className="mt-8">
-				<DataTable
-					data={data?.collections}
-					columns={collectionColumns}
-					getRowId={(c) => collectionParam(c.name)}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					searchText={(c) => collectionLabel(c.name)}
-					searchPlaceholder="Search collections"
-					initialSorting={[{ id: "size", desc: true }]}
-					onRowClick={(c) =>
-						navigate({ to: "/collections/$name", params: { name: collectionParam(c.name) } })
-					}
-					empty={
-						<EmptyState
-							icon={<Layers />}
-							title="No collections yet"
-							description="A collection appears when its first volume is created, for example when you create a bucket."
-						/>
-					}
-				/>
-			</div>
+			<Loaded query={withTelemetry(inventory, telemetry)} skeleton={<CollectionsSkeleton />}>
+				{(data) => (
+					<>
+						<CollectionNumbers inventory={data} telemetry={telemetry.data} />
+						<Swap id={data.collections.length > 0 ? "charts" : "none"}>
+							{data.collections.length > 0 && <CollectionCharts collections={data.collections} />}
+						</Swap>
+						<div className="mt-8">
+							<CollectionTable collections={data.collections} />
+						</div>
+					</>
+				)}
+			</Loaded>
 		</>
 	);
 }
@@ -227,9 +249,11 @@ function CollectionCharts({ collections }: { collections: StorageCollection[] })
 					slices={collectionSlices(collections)}
 					center={
 						<>
-							<span className="font-rounded font-semibold text-[20px] leading-6">{formatBytes(total)}</span>
+							<span className="font-rounded font-semibold text-[20px] leading-6">
+								<RollingValue text={formatBytes(total)} />
+							</span>
 							<span className="text-[12px] text-muted-foreground">
-								{formatCount(collections.length)} collections
+								<TextMorph>{`${formatCount(collections.length)} collections`}</TextMorph>
 							</span>
 						</>
 					}
@@ -250,5 +274,33 @@ function CollectionCharts({ collections }: { collections: StorageCollection[] })
 				/>
 			</Panel>
 		</div>
+	);
+}
+
+function CollectionsSkeleton() {
+	return (
+		<LoadingRegion label="Loading storage">
+			<KpiRowGhost />
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="Stored bytes"
+					description="Share of the cluster by collection"
+					className="min-w-0 xl:col-span-5"
+				>
+					<RingLegendGhost size={152} rows={5} />
+				</Panel>
+				<Panel title="Files" description="Objects stored, most first" className="min-w-0 xl:col-span-4">
+					<BarsGhost rows={6} />
+				</Panel>
+				<Panel title="Object size" description="Average bytes per file" className="min-w-0 xl:col-span-3">
+					<BarsGhost rows={6} />
+				</Panel>
+			</div>
+			<div className="mt-8">
+				<Frozen>
+					<CollectionTable collections={undefined} isLoading />
+				</Frozen>
+			</div>
+		</LoadingRegion>
 	);
 }

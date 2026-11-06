@@ -1,9 +1,11 @@
 import type { StorageVolume } from "@shared/storage.ts";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eraser, HardDrive, Lock, LockOpen, MoreHorizontal } from "lucide-react";
+import { motion } from "motion/react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
 import { EmptyState, StatusDot } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,7 @@ import { formatBytes, formatCount, formatPercent, formatRelative } from "@/lib/f
 import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
+import { ghostCells, SearchGhost } from "./common.tsx";
 import { useVolumeActions } from "./volume-actions.ts";
 
 export type VolumeFilter = "all" | "attention" | "read-only" | "vacuum";
@@ -44,15 +47,18 @@ export function matchesFilter(volume: StorageVolume, filter: VolumeFilter): bool
 
 /** Thin fill bar for a volume's size against the cluster volume size limit. */
 function FillBar({ fullness }: { fullness: number }) {
+	const reduced = usePrefersReducedMotion();
 	const width = Math.min(1, fullness) * 100;
 	return (
 		<span
 			className="mt-1.5 block h-1 w-24 overflow-hidden rounded-full bg-foreground/[0.08]"
 			aria-hidden="true"
 		>
-			<span
+			<motion.span
 				className={cn("block h-full rounded-full", fullness >= 0.95 ? "bg-warning" : "bg-area")}
-				style={{ width: `${width}%` }}
+				initial={false}
+				animate={{ width: `${width}%` }}
+				transition={{ duration: reduced ? 0 : SPEED.data, ease: EASE }}
 			/>
 		</span>
 	);
@@ -201,8 +207,6 @@ export function volumeColumns({
 export interface VolumeTableProps {
 	volumes: StorageVolume[] | undefined;
 	isLoading?: boolean;
-	error?: unknown;
-	onRetry?: () => void;
 	showCollection?: boolean;
 	empty?: ReactNode;
 	toolbar?: ReactNode;
@@ -213,8 +217,6 @@ export interface VolumeTableProps {
 export function VolumeTable({
 	volumes,
 	isLoading,
-	error,
-	onRetry,
 	showCollection = true,
 	empty,
 	toolbar,
@@ -224,7 +226,10 @@ export function VolumeTable({
 	const navigate = useNavigate();
 	const [filter, setFilter] = useState<VolumeFilter>(initialFilter);
 	const { vacuum, setReadOnly } = useVolumeActions();
-	const columns = useMemo(() => volumeColumns({ showCollection, canWrite }), [showCollection, canWrite]);
+	const columns = useMemo(() => {
+		const all = volumeColumns({ showCollection, canWrite });
+		return isLoading ? ghostCells(all, 29) : all;
+	}, [showCollection, canWrite, isLoading]);
 	const rows = useMemo(() => volumes?.filter((v) => matchesFilter(v, filter)), [volumes, filter]);
 
 	return (
@@ -233,16 +238,18 @@ export function VolumeTable({
 			columns={columns}
 			getRowId={(v) => String(v.id)}
 			isLoading={isLoading}
-			error={error}
-			{...(onRetry ? { onRetry } : {})}
-			searchText={(v) =>
-				`${v.id} ${v.collection} ${v.replication} ${v.replicas.map((r) => r.server).join(" ")}`
-			}
+			{...(isLoading
+				? {}
+				: {
+						searchText: (v: StorageVolume) =>
+							`${v.id} ${v.collection} ${v.replication} ${v.replicas.map((r) => r.server).join(" ")}`,
+					})}
 			searchPlaceholder="Search volumes"
 			initialSorting={[{ id: "id", desc: false }]}
 			onRowClick={(v) => navigate({ to: "/volumes/$volumeId", params: { volumeId: String(v.id) } })}
 			toolbar={
 				<>
+					{isLoading && <SearchGhost />}
 					<div className="max-w-[calc(100vw-2rem)] overflow-x-auto lg:max-w-none">
 						<Segmented
 							label="Filter volumes"
@@ -281,6 +288,7 @@ export function VolumeTable({
 									variant="outline"
 									onClick={() => vacuum.mutate(selected, { onSuccess: clear })}
 									disabled={vacuum.isPending}
+									pending={vacuum.isPending}
 								>
 									<Eraser />
 									Vacuum

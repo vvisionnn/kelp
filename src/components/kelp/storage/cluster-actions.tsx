@@ -2,6 +2,9 @@ import type { GrowVolumesInput, StorageInventory } from "@shared/storage.ts";
 import { Eraser, Plus } from "lucide-react";
 import { type FormEvent, useId, useState } from "react";
 import { Segmented } from "@/components/kelp/controls.tsx";
+import { SkeletonBlock } from "@/components/kelp/page.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -17,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { formatBytes, formatPercent } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { storageApi, storageKey, VACUUM_THRESHOLD } from "@/lib/storage-queries.ts";
+import { Collapse } from "./common.tsx";
 
 /** Plain-language reading of a replication setting like "011". */
 export function describeReplication(replication: string): string {
@@ -105,8 +109,8 @@ export function GrowVolumesDialog({
 					<DialogHeader>
 						<DialogTitle>Grow volumes</DialogTitle>
 						<DialogDescription>
-							Create empty volumes ahead of time so writes never wait for one. Each holds up to{" "}
-							{formatBytes(inventory?.volumeSizeLimitBytes ?? 0)}.
+							Create empty volumes ahead of time so writes never wait for one.
+							{inventory && ` Each holds up to ${formatBytes(inventory.volumeSizeLimitBytes)}.`}
 						</DialogDescription>
 					</DialogHeader>
 					<FieldGroup className="my-5 grid gap-4 sm:grid-cols-2">
@@ -119,7 +123,9 @@ export function GrowVolumesDialog({
 								onChange={set("count")}
 								aria-invalid={Boolean(countError)}
 							/>
-							{countError && <FieldError>{countError}</FieldError>}
+							<Collapse open={Boolean(countError)}>
+								<FieldError>{countError}</FieldError>
+							</Collapse>
 						</Field>
 						<Field>
 							<FieldLabel htmlFor="grow-collection">Collection</FieldLabel>
@@ -141,11 +147,13 @@ export function GrowVolumesDialog({
 								onChange={set("replication")}
 								aria-invalid={Boolean(replicationError)}
 							/>
-							{replicationError ? (
-								<FieldError>{replicationError}</FieldError>
-							) : (
-								<FieldDescription>{describeReplication(form.replication)}</FieldDescription>
-							)}
+							<Swap id={replicationError ? "error" : "hint"}>
+								{replicationError ? (
+									<FieldError>{replicationError}</FieldError>
+								) : (
+									<FieldDescription>{describeReplication(form.replication)}</FieldDescription>
+								)}
+							</Swap>
 						</Field>
 						<Field data-invalid={Boolean(ttlError)}>
 							<FieldLabel htmlFor="grow-ttl">Time to live</FieldLabel>
@@ -156,11 +164,13 @@ export function GrowVolumesDialog({
 								onChange={set("ttl")}
 								aria-invalid={Boolean(ttlError)}
 							/>
-							{ttlError ? (
-								<FieldError>{ttlError}</FieldError>
-							) : (
-								<FieldDescription>For example 7d or 12h.</FieldDescription>
-							)}
+							<Swap id={ttlError ? "error" : "hint"}>
+								{ttlError ? (
+									<FieldError>{ttlError}</FieldError>
+								) : (
+									<FieldDescription>For example 7d or 12h.</FieldDescription>
+								)}
+							</Swap>
 						</Field>
 						<Field>
 							<FieldLabel htmlFor="grow-disk">Disk type</FieldLabel>
@@ -244,11 +254,15 @@ export function VacuumClusterDialog({ inventory }: { inventory: StorageInventory
 						onChange={(value) => setThreshold(Number(value))}
 						className="w-full"
 					/>
-					<p className="text-[13px] text-muted-foreground" aria-live="polite">
-						{candidates.length === 0
-							? "No volume is over this threshold right now."
-							: `${candidates.length} ${candidates.length === 1 ? "volume" : "volumes"} qualify, about ${formatBytes(reclaim)} to reclaim.`}
-					</p>
+					<div className="min-h-[18px] text-[13px] text-muted-foreground" aria-live="polite">
+						{!inventory ? (
+							<SkeletonBlock className="h-3.5 w-64 max-w-full" />
+						) : candidates.length === 0 ? (
+							<TextMorph>No volume is over this threshold right now.</TextMorph>
+						) : (
+							<TextMorph>{`${candidates.length} ${candidates.length === 1 ? "volume" : "volumes"} qualify, about ${formatBytes(reclaim)} to reclaim.`}</TextMorph>
+						)}
+					</div>
 				</div>
 				<DialogFooter>
 					<Button onClick={() => vacuum.mutate()} disabled={vacuum.isPending} pending={vacuum.isPending}>

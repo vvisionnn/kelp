@@ -16,9 +16,18 @@ import {
 	TimeChart,
 	useRange,
 } from "@/components/kelp/charts/index.ts";
-import { PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
+import { PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { GrowVolumesDialog, VacuumClusterDialog } from "@/components/kelp/storage/cluster-actions.tsx";
-import { HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import {
+	BarsGhost,
+	ColumnsGhost,
+	DescriptionGhost,
+	Frozen,
+	KpiRowGhost,
+	PlotGhost,
+	RingLegendGhost,
+} from "@/components/kelp/storage/common.tsx";
 import {
 	collectionSlices,
 	fillColumns,
@@ -29,8 +38,15 @@ import {
 	volumeTraffic,
 	writes,
 } from "@/components/kelp/storage/insights.ts";
-import { MetricsOffNote, RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
+import {
+	MetricsOffNote,
+	RangeControl,
+	useTelemetry,
+	withTelemetry,
+} from "@/components/kelp/storage/live.tsx";
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
+import { RollingValue } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { storageQueries, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
@@ -56,44 +72,44 @@ function VolumesPage() {
 	const { filter } = Route.useSearch();
 	const canWrite = useCanWrite();
 	const [range, setRange] = useRange();
-	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
+	const inventory = useQuery(storageQueries.inventory());
 	const telemetry = useTelemetry(range);
-	const volumes = data?.volumes;
+	const summary = inventory.data && volumesSummary(inventory.data);
 
 	return (
 		<>
 			<PageHeader
 				title="Volumes"
-				description={data ? volumesSummary(data) : "Where your data lives."}
+				description={
+					<Swap id={summary ?? (inventory.error ? "error" : "pending")}>
+						{summary ?? (inventory.error ? "Where your data lives." : <DescriptionGhost wraps />)}
+					</Swap>
+				}
 				actions={
 					<>
 						<RangeControl telemetry={telemetry} range={range} onChange={setRange} />
 						{canWrite && (
 							<>
-								<VacuumClusterDialog inventory={data} />
-								<GrowVolumesDialog inventory={data} />
+								<VacuumClusterDialog inventory={inventory.data} />
+								<GrowVolumesDialog inventory={inventory.data} />
 							</>
 						)}
 					</>
 				}
 			/>
-			{data ? (
-				<Reveal>
-					<VolumeNumbers inventory={data} telemetry={telemetry} />
-					{data.volumes.length > 0 && <VolumeCharts inventory={data} telemetry={telemetry} />}
-				</Reveal>
-			) : (
-				!error && <HeroSkeleton />
-			)}
-			<div className="mt-8">
-				<VolumeTable
-					volumes={volumes}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					{...(filter ? { initialFilter: filter } : {})}
-				/>
-			</div>
+			<Loaded query={withTelemetry(inventory, telemetry)} skeleton={<VolumesSkeleton />}>
+				{(data) => (
+					<>
+						<VolumeNumbers inventory={data} telemetry={telemetry.data} />
+						<Swap id={data.volumes.length > 0 ? "charts" : "none"}>
+							{data.volumes.length > 0 && <VolumeCharts inventory={data} telemetry={telemetry.data} />}
+						</Swap>
+						<div className="mt-8">
+							<VolumeTable volumes={data.volumes} {...(filter ? { initialFilter: filter } : {})} />
+						</div>
+					</>
+				)}
+			</Loaded>
 		</>
 	);
 }
@@ -227,7 +243,7 @@ function VolumeCharts({
 						center={
 							<>
 								<span className="font-rounded font-semibold text-[20px] leading-6">
-									{formatBytes(stored)}
+									<RollingValue text={formatBytes(stored)} />
 								</span>
 								<span className="text-[12px] text-muted-foreground">stored</span>
 							</>
@@ -274,5 +290,53 @@ function VolumeCharts({
 				</Panel>
 			</div>
 		</>
+	);
+}
+
+function VolumesSkeleton() {
+	return (
+		<LoadingRegion label="Loading storage">
+			<KpiRowGhost />
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="Volume server traffic"
+					description="Reads and writes per second"
+					className="min-w-0 xl:col-span-8"
+				>
+					<PlotGhost height={200} />
+				</Panel>
+				<Panel title="Fill" description="Volumes by how full they are" className="min-w-0 xl:col-span-4">
+					<ColumnsGhost height={200} />
+				</Panel>
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="By collection"
+					description="Where the stored bytes are"
+					className="min-w-0 xl:col-span-5"
+				>
+					<RingLegendGhost size={144} rows={5} />
+				</Panel>
+				<Panel
+					title="Last write"
+					description="Hot volumes take data; cold ones only serve it"
+					className="min-w-0 xl:col-span-4"
+				>
+					<ColumnsGhost height={160} count={5} />
+				</Panel>
+				<Panel
+					title="Most garbage"
+					description="Where a vacuum frees the most"
+					className="min-w-0 xl:col-span-3"
+				>
+					<BarsGhost rows={5} />
+				</Panel>
+			</div>
+			<div className="mt-8">
+				<Frozen>
+					<VolumeTable volumes={undefined} isLoading />
+				</Frozen>
+			</div>
+		</LoadingRegion>
 	);
 }
