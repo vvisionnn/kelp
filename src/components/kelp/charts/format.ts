@@ -24,14 +24,22 @@ export function millis(value: number): string {
 	return `${trim(value)} ms`;
 }
 
+// Built once: every chart formats each of its samples, and a formatter is costly to create.
+const TIME = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+const TIME_SECONDS = new Intl.DateTimeFormat("en-GB", {
+	hour: "2-digit",
+	minute: "2-digit",
+	second: "2-digit",
+});
+const DAY = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+
 /** A clock time for axes and tooltips: "14:05". Includes the day for ranges over a day. */
 export function clock(t: number, withDay = false): string {
-	const date = new Date(t);
-	const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-	return withDay ? `${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })} ${time}` : time;
+	const time = TIME.format(t);
+	return withDay ? `${DAY.format(t)} ${time}` : time;
 }
 
 /** A clock time with seconds, for axes spanning only a few minutes: "14:05:30". */
 export function clockSeconds(t: number): string {
-	return new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+	return TIME_SECONDS.format(t);
 }

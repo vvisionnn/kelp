@@ -120,6 +120,9 @@
 	--sheet-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
 	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.14), 0 0 0 0.5px rgb(0 0 0 / 0.08);
 	--thumb: #ffffff;
+	/* The current page in the sidebar rests on a sheet, like the groups on the page. */
+	--nav-current: #ffffff;
+	--nav-current-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 0 0 0.5px rgb(0 0 0 / 0.08);
 	/* The x.ai spectrum: the one gradient, for meters and the brand moments. */
 	--spectrum: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316, #eab308);
 	--radius: 0.75rem;
@@ -169,6 +172,8 @@
 	--sheet-shadow: none;
 	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(255 255 255 / 0.1);
 	--thumb: #636366;
+	--nav-current: #222225;
+	--nav-current-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
 }
 
 @layer base {

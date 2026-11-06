@@ -4,10 +4,14 @@ import { cn } from "@/lib/utils";
 import { ARRIVAL_MS, ArrivalContext, EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
 import { ErrorState } from "./page.tsx";
 
+/**
+ * Content rises a few pixels as it fades in. Only opacity and transform move, so the compositor runs
+ * it: a blur over a whole page would repaint every chart and row on every frame. The transform is
+ * cleared afterwards, because a lasting one would trap fixed and sticky children.
+ */
 const SHARPEN = {
-	from: { opacity: 0, filter: "blur(6px)", y: 4 },
-	// `filter: none` afterwards, because a lasting filter would trap fixed and sticky children.
-	to: { opacity: 1, filter: "blur(0px)", y: 0, transitionEnd: { filter: "none" } },
+	from: { opacity: 0, y: 6 },
+	to: { opacity: 1, y: 0, transitionEnd: { transform: "none" } },
 };
 
 /**

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import Counter from "@/components/react-bits/Counter.tsx";
 import { cn } from "@/lib/utils";
 import { EASE, SPEED, useArriving, usePrefersReducedMotion, useWatching } from "./motion.ts";
@@ -19,9 +19,17 @@ function pieces(text: string, by: "letter" | "word") {
 
 /**
  * Text that morphs when it changes: letters both versions share glide to their new place, the rest
- * blur in and out. For short, single-line strings such as titles, statuses and button labels.
+ * fade and drift in and out. For short, single-line strings such as titles, statuses and button
+ * labels. Memoized: every glyph tracks its layout, so a parent re-rendering with the same text must
+ * not make each of them measure itself again.
  */
-export function TextMorph({ children, className }: { children: string; className?: string }) {
+export const TextMorph = memo(function TextMorph({
+	children,
+	className,
+}: {
+	children: string;
+	className?: string;
+}) {
 	const reduced = usePrefersReducedMotion();
 	// While the view catches up, new text simply replaces the old.
 	const watching = useWatching();
@@ -43,9 +51,9 @@ export function TextMorph({ children, className }: { children: string; className
 							data-glyph={glyph.part}
 							className="inline-block before:content-[attr(data-glyph)]"
 							layout="position"
-							initial={{ opacity: 0, filter: "blur(4px)", y: 3 }}
-							animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-							exit={{ opacity: 0, filter: "blur(4px)", y: -3 }}
+							initial={{ opacity: 0, y: 3 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -3 }}
 							transition={{ duration, ease: EASE }}
 						/>
 					))}
@@ -53,7 +61,7 @@ export function TextMorph({ children, className }: { children: string; className
 			</span>
 		</span>
 	);
-}
+});
 
 const NUMBER = /^([-−]?)([\d,]*\.?\d+)\s*(.*)$/;
 
@@ -61,7 +69,13 @@ const NUMBER = /^([-−]?)([\d,]*\.?\d+)\s*(.*)$/;
  * A formatted value ("6.73 MiB", "1,204", "Ready"): the number rolls digit by digit and its unit
  * sits lighter beside it; anything else morphs as text. Later changes always roll.
  */
-export function RollingValue({ text, className }: { text: string; className?: string }) {
+export const RollingValue = memo(function RollingValue({
+	text,
+	className,
+}: {
+	text: string;
+	className?: string;
+}) {
 	const reduced = usePrefersReducedMotion();
 	// Digits spin in only when the number first arrives; on a revisit it is simply there, and a
 	// refresh that lands while the view catches up settles in a blink instead of rolling.
@@ -103,4 +117,4 @@ export function RollingValue({ text, className }: { text: string; className?: st
 			)}
 		</span>
 	);
-}
+});

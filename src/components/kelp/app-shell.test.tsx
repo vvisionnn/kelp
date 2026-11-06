@@ -56,18 +56,49 @@ describe("app shell", () => {
 		expect(within(banner).queryByText("vacuum")).toBeNull();
 	});
 
-	test("the toolbar title appears once the page header scrolls away", async () => {
+	test("the toolbar says where you are: the section, then the page", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/cluster", routes);
+		await screen.findByText("Leader");
+		const crumbs = within(toolbar()).getByRole("navigation", { name: "Breadcrumb" });
+		expect(within(crumbs).getByText("Cluster")).toBeTruthy();
+		expect(crumbs.querySelector('[aria-current="page"]')?.textContent).toBe("Nodes");
+	});
+
+	test("the toolbar gains an edge once the page scrolls under it", async () => {
 		const { routes } = await clusterApi();
 		renderApp("/", routes);
 		await screen.findByText("Disk used");
-		const title = within(toolbar()).getByText("Overview").closest("p") as HTMLElement;
-		expect(title.getAttribute("aria-hidden")).toBe("true");
+		expect(toolbar().className).not.toContain("shadow-");
 		await act(async () => {
 			Object.defineProperty(window, "scrollY", { configurable: true, value: 200 });
 			window.dispatchEvent(new Event("scroll"));
 		});
-		expect(title.getAttribute("aria-hidden")).toBe("false");
+		expect(toolbar().className).toContain("shadow-");
 		Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+	});
+
+	test("the sidebar folds to an icon rail with ⌘B, names its pages in tooltips, and remembers", async () => {
+		localStorage.removeItem("kelp-sidebar-collapsed");
+		const { routes } = await clusterApi();
+		const first = renderApp("/cluster", routes);
+		await screen.findByText("Leader");
+		fireEvent.keyDown(window, { key: "b", metaKey: true });
+		const expand = await screen.findByRole("button", { name: "Expand sidebar" });
+		expect(localStorage.getItem("kelp-sidebar-collapsed")).toBe("1");
+		const pages = screen.getAllByRole("navigation", { name: "Pages" })[0] as HTMLElement;
+		expect(pages.closest("[data-rail]")).toBeTruthy();
+		fireEvent.mouseEnter(within(pages).getByRole("link", { name: "Volumes" }));
+		fireEvent.pointerEnter(within(pages).getByRole("link", { name: "Volumes" }));
+		first.unmount();
+
+		// A new visit opens folded, and the toolbar button unfolds it.
+		renderApp("/cluster", routes);
+		await screen.findByText("Leader");
+		fireEvent.click(await screen.findByRole("button", { name: "Expand sidebar" }));
+		expect(await screen.findByRole("button", { name: "Collapse sidebar" })).toBeTruthy();
+		expect(localStorage.getItem("kelp-sidebar-collapsed")).toBe("0");
+		expect(expand).toBeTruthy();
 	});
 
 	test("on narrow screens the sidebar opens as a sheet and closes after navigating", async () => {

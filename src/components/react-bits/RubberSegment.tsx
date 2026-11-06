@@ -1,4 +1,5 @@
-// From React Bits (https://reactbits.dev), MIT + Commons Clause. Vendored unmodified unless noted.
+// From React Bits (https://reactbits.dev), MIT + Commons Clause. Vendored unmodified unless noted:
+// the first measurement waits for the ResizeObserver (see the layout effect).
 'use client';
 
 import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -157,10 +158,12 @@ const RubberSegment: React.FC<RubberSegmentProps> = ({
 
   const listKey = list.map(item => item.value).join('|');
   useLayoutEffect(() => {
-    measure();
+    // Kelp: no synchronous measure() here. Reading geometry during the commit forces the browser to
+    // lay out the whole new page early; the observer's first callback arrives after layout and
+    // before paint, so the thumb is still in place in the first frame. A web font arriving later
+    // resizes the track, which the observer also sees, so no document.fonts.ready (another forced layout).
     const observer = new ResizeObserver(measure);
     if (trackRef.current) observer.observe(trackRef.current);
-    if (typeof document !== 'undefined' && document.fonts) document.fonts.ready.then(measure);
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listKey, size, inset, equalSlots]);

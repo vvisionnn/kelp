@@ -1,9 +1,8 @@
 import { type QueryClient, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
-import { ChevronLeft, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useEffect, useState } from "react";
-import GradualBlur from "@/components/react-bits/GradualBlur.tsx";
+import { lazy, type ReactElement, type ReactNode, Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
 import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
@@ -25,7 +25,6 @@ import { sessionQuery, useSession, useSignOut } from "@/lib/session.ts";
 import { cn } from "@/lib/utils";
 import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
-import { CommandMenu, useCommandMenu } from "./command-menu.tsx";
 import { SPRING } from "./motion.ts";
 import { itemFor, NAV } from "./nav.ts";
 import { useSpotlight } from "./spotlight.ts";
@@ -62,116 +61,199 @@ function useDetailName(): string | undefined {
 	return leaf?.staticData?.crumb?.(params, queryClient) ?? Object.values(params)[0];
 }
 
-function ClusterStatus() {
+/** The command menu's code loads the first time someone reaches for it, not with every page. */
+const loadCommandMenu = () => import("./command-menu.tsx");
+const CommandMenu = lazy(() => loadCommandMenu().then((m) => ({ default: m.CommandMenu })));
+
+/** Open state for the command menu, toggled with ⌘K / Ctrl+K anywhere in the app. */
+function useCommandMenu() {
+	const [open, setOpen] = useState(false);
+	// Mounted from the first opening on, so it can animate closed.
+	const [wanted, setWanted] = useState(false);
+	if (open && !wanted) setWanted(true);
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
+				event.preventDefault();
+				setOpen((value) => !value);
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, []);
+	return { open, setOpen, wanted };
+}
+
+/** The cluster's health in a few words, and the dot color that goes with it. */
+function useClusterStatus() {
 	const { data, error } = useQuery(queries.overview());
 	const health = data ? healthSummary(data) : undefined;
 	// With nothing loaded, a failed request means Kelp can't reach the cluster at all.
 	const unreachable = !data && Boolean(error);
-	const color = { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[
-		unreachable ? "bad" : (health?.tone ?? "good")
-	];
+	const dot =
+		health || unreachable
+			? { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[
+					unreachable ? "bad" : (health?.tone ?? "good")
+				]
+			: "bg-tertiary";
+	const text = `${health ? health.text.split(".")[0] : unreachable ? "Can't reach the cluster" : "Connecting"}${data ? `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}` : ""}`;
+	return { dot, text };
+}
+
+const COLLAPSED_KEY = "kelp-sidebar-collapsed";
+
+/** Whether the sidebar is folded to its icon rail. Remembered across visits; ⌘B / Ctrl+B toggles it. */
+export function useSidebarCollapsed(): [boolean, () => void] {
+	const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === "1");
+	useEffect(() => {
+		localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
+	}, [collapsed]);
+	useEffect(() => {
+		const onKey = (event: KeyboardEvent) => {
+			if (event.key.toLowerCase() === "b" && (event.metaKey || event.ctrlKey) && !event.shiftKey) {
+				event.preventDefault();
+				setCollapsed((value) => !value);
+			}
+		};
+		window.addEventListener("keydown", onKey);
+		return () => window.removeEventListener("keydown", onKey);
+	}, []);
+	return [collapsed, () => setCollapsed((value) => !value)];
+}
+
+/** On the icon rail a control names itself in a tooltip; in the full sidebar its label already does. */
+function RailTip({ rail, label, children }: { rail: boolean; label: ReactNode; children: ReactElement }) {
+	if (!rail) return children;
 	return (
-		<span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-			<span
-				className={cn(
-					"size-1.5 shrink-0 rounded-full transition-colors duration-500",
-					health || unreachable ? color : "bg-tertiary",
-				)}
-			/>
-			<span className="truncate">
-				<TextMorph>
-					{`${health ? health.text.split(".")[0] : unreachable ? "Can't reach the cluster" : "Connecting"}${data ? `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}` : ""}`}
-				</TextMorph>
-			</span>
-		</span>
+		<Tooltip>
+			<TooltipTrigger render={children} />
+			<TooltipContent side="right" sideOffset={10}>
+				{label}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 
-/** Sidebar contents, shared by the floating sidebar and the compact-width sheet. */
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+/**
+ * Sidebar contents, shared by the docked sidebar and the compact-width sheet. Every icon, the
+ * brand tile and the avatar sit on one vertical line, so folding to the rail only hides the words.
+ */
+function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; rail?: boolean }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const current = itemFor(pathname);
+	const status = useClusterStatus();
 	const [hovered, setHovered] = useState<string | null>(null);
+	// Words fade out before the rail narrows under them, and back in once it has widened.
+	const fade = cn(
+		"overflow-hidden whitespace-nowrap transition-opacity",
+		rail ? "pointer-events-none opacity-0 duration-100" : "delay-100 duration-200",
+	);
 	return (
-		<div className="flex h-full min-h-0 flex-col">
-			<Link
-				to="/"
-				onClick={onNavigate}
-				className="mx-2 mt-2 flex items-center gap-2.5 rounded-lg px-2 py-2 hover:bg-accent/60"
-			>
-				<span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(180deg,#2c2c2e,#0e0e10)] text-white shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.2)]">
-					<KelpMark className="size-5" />
-				</span>
-				<span className="grid min-w-0 leading-tight">
-					<span className="font-semibold text-[15px] tracking-[-0.01em]">Kelp</span>
-					<ClusterStatus />
-				</span>
-			</Link>
+		<TooltipProvider delay={350}>
+			<div data-rail={rail ? "" : undefined} className="flex h-full min-h-0 flex-col">
+				<RailTip rail={rail} label={`Kelp: ${status.text}`}>
+					<Link
+						to="/"
+						onClick={onNavigate}
+						className="mx-2 mt-2.5 flex h-12 items-center gap-2.5 rounded-lg px-1 transition-colors hover:bg-accent/60"
+					>
+						<span className="relative flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(180deg,#2c2c2e,#0e0e10)] text-white shadow-[inset_0_0_0_0.5px_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.2)]">
+							<KelpMark className="size-5" />
+							<span
+								className={cn(
+									"absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-background transition-[opacity,background-color] duration-300",
+									status.dot,
+									!rail && "opacity-0",
+								)}
+							/>
+						</span>
+						<span className={cn("grid min-w-0 leading-tight", fade)}>
+							<span className="font-semibold text-[15px] tracking-[-0.01em]">Kelp</span>
+							<span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+								<span
+									className={cn("size-1.5 shrink-0 rounded-full transition-colors duration-500", status.dot)}
+								/>
+								<span className="truncate">
+									<TextMorph>{status.text}</TextMorph>
+								</span>
+							</span>
+						</span>
+					</Link>
+				</RailTip>
 
-			<nav
-				aria-label="Pages"
-				className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-3"
-				onPointerLeave={() => setHovered(null)}
-			>
-				{NAV.map((section) => (
-					<div key={section.title}>
-						{section.title !== "Overview" && (
-							<p className="px-2.5 pb-1 font-medium text-[11px] text-muted-foreground tracking-[0.01em]">
-								{section.title}
-							</p>
-						)}
-						<ul className="space-y-px">
-							{section.items.map((item) => {
-								const active = current?.to === item.to;
-								return (
-									<li key={item.to}>
-										<Link
-											to={item.to as "/"}
-											onClick={onNavigate}
-											onPointerEnter={() => setHovered(item.to)}
-											data-active={active ? "" : undefined}
-											aria-current={active ? "page" : undefined}
-											className="group/nav relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/80 transition-colors hover:text-foreground data-active:font-medium data-active:text-foreground"
-										>
-											<AnimatePresence>
-												{hovered === item.to && !active && (
-													<motion.span
-														layoutId="sidebar-hover"
-														className="absolute inset-0 -z-10 rounded-md bg-accent/60"
-														initial={{ opacity: 0 }}
-														animate={{ opacity: 1 }}
-														exit={{ opacity: 0 }}
-														transition={SPRING}
-													/>
-												)}
-											</AnimatePresence>
-											{active && (
-												<motion.span
-													layoutId="sidebar-active"
-													className="absolute inset-0 -z-10 rounded-md bg-accent"
-													transition={SPRING}
+				<nav
+					aria-label="Pages"
+					className="mt-3 min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-2 pb-3"
+					onPointerLeave={() => setHovered(null)}
+				>
+					{NAV.map((section, index) => (
+						<div key={section.title} className={cn(index > 0 && "mt-3")}>
+							{section.title !== "Overview" && (
+								<div className="relative flex h-6 items-center px-3">
+									<p className={cn("font-medium text-[11px] text-muted-foreground", fade)}>{section.title}</p>
+									<span
+										aria-hidden="true"
+										className={cn(
+											"absolute inset-x-3 top-1/2 h-px bg-border transition-opacity duration-150",
+											!rail && "opacity-0",
+										)}
+									/>
+								</div>
+							)}
+							<ul className="space-y-px">
+								{section.items.map((item) => {
+									const active = current?.to === item.to;
+									return (
+										<li key={item.to}>
+											<RailTip rail={rail} label={item.title}>
+												<Link
+													to={item.to as "/"}
+													onClick={onNavigate}
+													onPointerEnter={() => setHovered(item.to)}
+													data-active={active ? "" : undefined}
+													aria-current={active ? "page" : undefined}
+													className="group/nav relative isolate flex h-8 items-center gap-2.5 rounded-lg px-3 text-[13px] text-foreground/75 transition-colors hover:text-foreground active:scale-[0.98] data-active:font-medium data-active:text-foreground"
 												>
-													<span className="absolute inset-y-2 -left-2 w-[3px] rounded-full bg-[linear-gradient(180deg,#6366f1,#a855f7,#ec4899,#f97316)]" />
-												</motion.span>
-											)}
-											<item.icon
-												className="size-4 shrink-0 text-muted-foreground transition-colors group-data-active/nav:text-foreground"
-												strokeWidth={1.75}
-											/>
-											<span className="truncate">{item.title}</span>
-										</Link>
-									</li>
-								);
-							})}
-						</ul>
-					</div>
-				))}
-			</nav>
+													<AnimatePresence>
+														{hovered === item.to && !active && (
+															<motion.span
+																layoutId="sidebar-hover"
+																className="absolute inset-0 -z-10 rounded-lg bg-accent/60"
+																initial={{ opacity: 0 }}
+																animate={{ opacity: 1 }}
+																exit={{ opacity: 0 }}
+																transition={SPRING}
+															/>
+														)}
+													</AnimatePresence>
+													{active && (
+														// The current page sits on a sheet of its own, like the groups on the page.
+														<motion.span
+															layoutId="sidebar-active"
+															className="absolute inset-0 -z-10 rounded-lg bg-[var(--nav-current)] shadow-[var(--nav-current-shadow)]"
+															transition={SPRING}
+														/>
+													)}
+													<item.icon
+														className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/nav:text-foreground group-data-active/nav:text-foreground"
+														strokeWidth={1.75}
+													/>
+													<span className={fade}>{item.title}</span>
+												</Link>
+											</RailTip>
+										</li>
+									);
+								})}
+							</ul>
+						</div>
+					))}
+				</nav>
 
-			<div className="border-border border-t p-2">
-				<AccountMenu />
+				<div className="border-border border-t p-2">
+					<AccountMenu rail={rail} />
+				</div>
 			</div>
-		</div>
+		</TooltipProvider>
 	);
 }
 
@@ -181,7 +263,7 @@ const THEMES: Array<{ value: Theme; label: string; icon: ReactNode }> = [
 	{ value: "dark", label: "Dark", icon: <Moon /> },
 ];
 
-function AccountMenu() {
+function AccountMenu({ rail = false }: { rail?: boolean }) {
 	const user = useSession();
 	const { theme, setTheme } = useTheme();
 	const signOut = useSignOut();
@@ -193,18 +275,28 @@ function AccountMenu() {
 					<button
 						type="button"
 						aria-label="Account menu"
-						className="flex w-full items-center gap-2.5 rounded-md p-1.5 text-left transition-colors hover:bg-accent/60 aria-expanded:bg-accent"
+						className="flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors hover:bg-accent/60 aria-expanded:bg-accent"
 					>
 						<span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#8e8e93,#636366)] font-semibold text-[12px] text-white uppercase">
 							{user.name.slice(0, 1)}
 						</span>
-						<span className="grid min-w-0 flex-1 leading-tight">
+						<span
+							className={cn(
+								"grid min-w-0 flex-1 leading-tight transition-opacity duration-150",
+								rail && "opacity-0",
+							)}
+						>
 							<span className="truncate font-medium text-[13px]">{user.name}</span>
 							<span className="text-[11px] text-muted-foreground">
 								{user.role === "admin" ? "Administrator" : "Read-only"}
 							</span>
 						</span>
-						<ChevronsUpDown className="size-3.5 text-muted-foreground" />
+						<ChevronsUpDown
+							className={cn(
+								"size-3.5 shrink-0 text-muted-foreground transition-opacity",
+								rail && "opacity-0",
+							)}
+						/>
 					</button>
 				}
 			/>
@@ -260,74 +352,119 @@ function ThemeSwitch() {
 	);
 }
 
-/** True once the page has scrolled far enough that its large title is out of view. */
-function useScrolledPast(offset: number): boolean {
-	const [past, setPast] = useState(false);
+/** True once the page has scrolled under the toolbar. */
+function useScrolled(): boolean {
+	const [scrolled, setScrolled] = useState(false);
 	useEffect(() => {
-		const update = () => setPast(window.scrollY > offset);
+		const update = () => setScrolled(window.scrollY > 4);
 		update();
 		window.addEventListener("scroll", update, { passive: true });
 		return () => window.removeEventListener("scroll", update);
-	}, [offset]);
-	return past;
+	}, []);
+	return scrolled;
 }
 
 /**
- * The page's toolbar. On detail pages it leads with a back button to the list; the title appears
- * once the page's own large title scrolls away, as in Apple's apps.
+ * The page's toolbar: where you are (section, page and, on detail pages, the item, with the page
+ * as a link back to its list), then search and the theme. Content scrolls under a solid bar with
+ * a hairline; a blur here would cost a repaint on every scrolled frame.
  */
-function Toolbar({ onShowSidebar, onSearch }: { onShowSidebar: () => void; onSearch: () => void }) {
+function Toolbar({
+	onShowSidebar,
+	onToggleRail,
+	rail,
+	onSearch,
+}: {
+	onShowSidebar: () => void;
+	onToggleRail: () => void;
+	rail: boolean;
+	onSearch: () => void;
+}) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const leaf = useLeaf();
 	const item = itemFor(pathname);
 	const detail = useDetailName();
-	const scrolled = useScrolledPast(56);
+	const scrolled = useScrolled();
 	const fetching = useIsFetching() > 0;
-	const title = detail ?? leaf?.staticData?.title;
+	const title = item?.title ?? leaf?.staticData?.title;
 	return (
 		<header
 			data-toolbar=""
 			className={cn(
-				"sticky top-0 z-30 transition-[background-color,box-shadow] duration-200",
-				scrolled &&
-					"bg-[var(--glass)] shadow-[0_0.5px_0_var(--border)] backdrop-blur-xl backdrop-saturate-[1.8]",
+				"sticky top-0 z-30 bg-background transition-shadow duration-200",
+				scrolled && "shadow-[0_1px_0_var(--border)]",
 			)}
 		>
-			<div className="flex h-13 items-center gap-2 px-4 xl:px-8">
+			<div className="flex h-13 items-center gap-1 px-4 xl:px-8">
 				<Button
 					variant="ghost"
 					size="icon"
 					aria-label="Show sidebar"
-					className="text-muted-foreground lg:hidden"
+					className="-ml-1.5 text-muted-foreground lg:hidden"
 					onClick={onShowSidebar}
 				>
 					<PanelLeft />
 				</Button>
-				{detail && item && (
-					<Link
-						to={item.to as "/"}
-						className="-ml-1 flex h-7 shrink-0 items-center gap-0.5 rounded-md pr-2 pl-1 text-[13px] text-primary hover:bg-accent/60"
-					>
-						<ChevronLeft className="size-4" />
-						{item.title}
-					</Link>
-				)}
-				<motion.p
-					initial={false}
-					animate={{ opacity: scrolled ? 1 : 0, y: scrolled ? 0 : 4 }}
-					transition={{ duration: 0.18 }}
-					aria-hidden={!scrolled}
-					className="min-w-0 truncate font-semibold text-[15px] tracking-[-0.01em]"
-				>
-					{/* Morphs only while shown; hidden, it just takes the new page's name. */}
-					{title ? scrolled ? <TextMorph>{title}</TextMorph> : title : null}
-				</motion.p>
+				<Tooltip>
+					<TooltipTrigger
+						render={
+							<Button
+								variant="ghost"
+								size="icon"
+								aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+								className="-ml-1.5 hidden text-muted-foreground hover:text-foreground lg:inline-flex"
+								onClick={onToggleRail}
+							>
+								<PanelLeft />
+							</Button>
+						}
+					/>
+					<TooltipContent side="bottom">
+						{rail ? "Expand sidebar" : "Collapse sidebar"}
+						<Kbd>⌘B</Kbd>
+					</TooltipContent>
+				</Tooltip>
+				<span aria-hidden="true" className="mx-1.5 h-4 w-px bg-border" />
+				<nav aria-label="Breadcrumb" className="min-w-0 flex-1">
+					<ol className="flex min-w-0 items-center gap-1.5 text-[13px]">
+						{item && item.section !== item.title && (
+							<li className="hidden shrink-0 items-center gap-1.5 text-muted-foreground sm:flex">
+								{item.section}
+								<ChevronRight aria-hidden="true" className="size-3.5 text-tertiary" />
+							</li>
+						)}
+						{detail && item ? (
+							<>
+								<li className="flex shrink-0 items-center gap-1.5">
+									<Link
+										to={item.to as "/"}
+										className="-mx-1 rounded-md px-1 text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
+									>
+										{item.title}
+									</Link>
+									<ChevronRight aria-hidden="true" className="size-3.5 text-tertiary" />
+								</li>
+								<li aria-current="page" className="min-w-0 truncate font-medium">
+									{detail}
+								</li>
+							</>
+						) : (
+							title && (
+								<li aria-current="page" className="min-w-0 truncate font-medium">
+									{title}
+								</li>
+							)
+						)}
+					</ol>
+				</nav>
 				<div className="ml-auto flex shrink-0 items-center gap-1">
 					<button
 						type="button"
 						aria-label="Search"
 						onClick={onSearch}
-						className="flex h-8 items-center gap-2 rounded-md bg-secondary px-2.5 text-[13px] text-muted-foreground transition-colors hover:bg-accent sm:w-56"
+						onPointerEnter={loadCommandMenu}
+						onFocus={loadCommandMenu}
+						className="flex h-8 items-center gap-2 rounded-lg bg-card px-2.5 text-[13px] text-muted-foreground shadow-[var(--sheet-shadow),0_0_0_0.5px_var(--border)] transition-colors hover:text-foreground sm:w-56"
 					>
 						<Search className="size-3.5" />
 						<span className="hidden sm:inline">Search</span>
@@ -369,10 +506,17 @@ export function AppShell() {
 	const command = useCommandMenu();
 	useSpotlight();
 	const [sheetOpen, setSheetOpen] = useState(false);
+	const [rail, toggleRail] = useSidebarCollapsed();
 	return (
-		<div className="min-h-svh">
-			<aside className="glass fixed inset-y-2 left-2 z-40 hidden w-62 rounded-xl lg:block">
-				<SidebarBody />
+		<div data-rail={rail ? "" : undefined} className="group/shell min-h-svh">
+			{/* Docked to the window edge in the canvas tone; folding to the rail only narrows it. */}
+			<aside
+				aria-label="Sidebar"
+				className="fixed inset-y-0 left-0 z-40 hidden w-60 overflow-clip border-border border-r bg-background transition-[width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-rail/shell:w-14 motion-reduce:transition-none lg:block"
+			>
+				<div className="h-full w-full">
+					<SidebarBody rail={rail} />
+				</div>
 			</aside>
 			<Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
 				<SheetContent
@@ -384,27 +528,25 @@ export function AppShell() {
 					<SidebarBody onNavigate={() => setSheetOpen(false)} />
 				</SheetContent>
 			</Sheet>
-			<div className="flex min-h-svh min-w-0 flex-col lg:pl-66">
-				<Toolbar onShowSidebar={() => setSheetOpen(true)} onSearch={() => command.setOpen(true)} />
+			<div className="flex min-h-svh min-w-0 flex-col lg:pl-60 lg:group-data-rail/shell:pl-14">
+				<Toolbar
+					rail={rail}
+					onToggleRail={toggleRail}
+					onShowSidebar={() => setSheetOpen(true)}
+					onSearch={() => command.setOpen(true)}
+				/>
 				<main
 					data-page=""
 					className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8"
 				>
 					<Outlet />
 				</main>
-				{/* Pages sink softly under the bottom edge, and the edge clears at the end of the page. */}
-				<div className="pointer-events-none sticky bottom-0 z-20 h-0" aria-hidden="true">
-					<GradualBlur
-						target="page"
-						position="bottom"
-						height="3.5rem"
-						strength={1.25}
-						autoHide
-						style={{ position: "absolute" }}
-					/>
-				</div>
 			</div>
-			<CommandMenu open={command.open} onOpenChange={command.setOpen} />
+			{command.wanted && (
+				<Suspense fallback={null}>
+					<CommandMenu open={command.open} onOpenChange={command.setOpen} />
+				</Suspense>
+			)}
 		</div>
 	);
 }
