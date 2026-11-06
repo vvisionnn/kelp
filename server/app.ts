@@ -97,19 +97,47 @@ export function createApp({ config, routes }: AppOptions) {
 	api.all("*", (c) => c.json({ error: "Not found" }, 404));
 
 	app.route("/api", api);
-	app.get("*", (c) => serveStatic(config.staticDir, c.req.path));
+	app.get("*", (c) => serveStatic(config.staticDir, c.req.path, c.req.header("accept-encoding") ?? ""));
 	return app;
 }
 
-async function serveStatic(dir: string, path: string): Promise<Response> {
+/** The build's compressed copies, best first: `vite build` writes `.br` and `.gz` beside each text file. */
+const ENCODINGS = [
+	["br", ".br"],
+	["gzip", ".gz"],
+] as const;
+
+/**
+ * A built file, as the compressed copy the browser accepts when the build made one. Bun can't
+ * stream-compress cheaply per request, and brotli at its best setting is too slow to run live.
+ */
+async function sendFile(path: string, accept: string, headers: Record<string, string>): Promise<Response> {
+	const file = Bun.file(path);
+	for (const [encoding, suffix] of ENCODINGS) {
+		if (!accept.includes(encoding)) continue;
+		const copy = Bun.file(path + suffix);
+		if (await copy.exists())
+			return new Response(copy, {
+				headers: {
+					"content-type": file.type,
+					"content-encoding": encoding,
+					vary: "Accept-Encoding",
+					...headers,
+				},
+			});
+	}
+	return new Response(file, { headers: { "content-type": file.type, vary: "Accept-Encoding", ...headers } });
+}
+
+async function serveStatic(dir: string, path: string, accept: string): Promise<Response> {
 	const root = resolve(dir);
 	const target = resolve(join(root, normalize(decodeURIComponent(path))));
 	if (target.startsWith(root + sep)) {
 		const file = Bun.file(target);
 		if (await file.exists()) {
 			const immutable = target.includes(`${sep}assets${sep}`);
-			return new Response(file, {
-				headers: { "cache-control": immutable ? "public, max-age=31536000, immutable" : "no-cache" },
+			return sendFile(target, accept, {
+				"cache-control": immutable ? "public, max-age=31536000, immutable" : "no-cache",
 			});
 		}
 	}
@@ -121,7 +149,8 @@ async function serveStatic(dir: string, path: string): Promise<Response> {
 			headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
 		});
 	}
-	return new Response(Bun.file(join(root, "index.html")), {
-		headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" },
+	return sendFile(join(root, "index.html"), accept, {
+		"content-type": "text/html; charset=utf-8",
+		"cache-control": "no-cache",
 	});
 }

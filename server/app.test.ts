@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { brotliCompressSync, brotliDecompressSync, gunzipSync, gzipSync } from "node:zlib";
 import { Hono } from "hono";
 import { z } from "zod";
 import { testConfig } from "../test/server-helpers.ts";
@@ -13,6 +14,10 @@ beforeAll(async () => {
 	staticDir = await mkdtemp(join(tmpdir(), "kelp-static-"));
 	await writeFile(join(staticDir, "index.html"), "<!doctype html><title>Kelp</title>");
 	await writeFile(join(staticDir, "app.js"), "console.log('kelp')");
+	// The build writes compressed copies beside each text file.
+	await writeFile(join(staticDir, "app.js.br"), brotliCompressSync("console.log('kelp')"));
+	await writeFile(join(staticDir, "app.js.gz"), gzipSync("console.log('kelp')"));
+	await writeFile(join(staticDir, "index.html.br"), brotliCompressSync("<!doctype html><title>Kelp</title>"));
 });
 afterAll(() => rm(staticDir, { recursive: true, force: true }));
 
@@ -188,6 +193,35 @@ describe("static UI", () => {
 		const page = await app.request("/buckets/media");
 		expect(page.headers.get("content-type")).toContain("text/html");
 		expect(await page.text()).toContain("<title>Kelp</title>");
+	});
+
+	test("sends the build's brotli copy to browsers that accept it, with the original type", async () => {
+		const response = await makeApp().request("/app.js", {
+			headers: { "accept-encoding": "gzip, deflate, br, zstd" },
+		});
+		expect(response.headers.get("content-encoding")).toBe("br");
+		expect(response.headers.get("content-type")).toContain("javascript");
+		expect(response.headers.get("vary")).toBe("Accept-Encoding");
+		expect(brotliDecompressSync(Buffer.from(await response.arrayBuffer())).toString()).toBe(
+			"console.log('kelp')",
+		);
+	});
+
+	test("falls back to gzip, then to the plain file", async () => {
+		const app = makeApp();
+		const gzip = await app.request("/app.js", { headers: { "accept-encoding": "gzip" } });
+		expect(gzip.headers.get("content-encoding")).toBe("gzip");
+		expect(gunzipSync(Buffer.from(await gzip.arrayBuffer())).toString()).toBe("console.log('kelp')");
+		const plain = await app.request("/app.js");
+		expect(plain.headers.get("content-encoding")).toBeNull();
+		expect(await plain.text()).toBe("console.log('kelp')");
+	});
+
+	test("the app page for client routes is compressed too", async () => {
+		const page = await makeApp().request("/buckets/media", { headers: { "accept-encoding": "br" } });
+		expect(page.headers.get("content-encoding")).toBe("br");
+		expect(page.headers.get("content-type")).toContain("text/html");
+		expect(page.headers.get("cache-control")).toBe("no-cache");
 	});
 
 	test("a missing build file is a 404, not the app page, so an outdated tab can tell it needs reloading", async () => {
