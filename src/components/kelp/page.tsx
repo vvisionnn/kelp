@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api.ts";
 import { formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, useArriving, usePrefersReducedMotion } from "./motion.ts";
+import { EASE, SPEED, useArriving, useDataDuration, usePrefersReducedMotion } from "./motion.ts";
 import { RollingValue } from "./text-morph.tsx";
 
 export function PageHeader({
@@ -230,6 +230,7 @@ export function AuroraCard({ children, className }: { children: ReactNode; class
 /** Used/total bar. Turns amber past 80% and red past 95%, always with a text value beside it. */
 export function CapacityBar({ used, total, className }: { used: number; total: number; className?: string }) {
 	const arriving = useArriving();
+	const dataDuration = useDataDuration();
 	const fraction = ratio(used, total);
 	const tone = fraction >= 0.95 ? "bg-destructive" : fraction >= 0.8 ? "bg-warning" : "spectrum";
 	return (
@@ -246,7 +247,7 @@ export function CapacityBar({ used, total, className }: { used: number; total: n
 				className={cn("h-full rounded-full", tone)}
 				initial={arriving ? { width: 0 } : false}
 				animate={{ width: `${fraction * 100}%` }}
-				transition={{ duration: SPEED.data, ease: EASE }}
+				transition={{ duration: dataDuration, ease: EASE }}
 			/>
 		</div>
 	);

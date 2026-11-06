@@ -12,7 +12,7 @@ test("overview lists every job type the worker offers", async ({ page }) => {
 		await expect(page.getByRole("link", { name: new RegExp(name) })).toBeVisible(WORKER_READY);
 	}
 	await expect(page.getByText("Detection slots")).toBeVisible();
-	await expect(page.getByText("Activity", { exact: true })).toBeVisible();
+	await expect(page.getByRole("heading", { name: "Activity", exact: true })).toBeVisible();
 });
 
 test("settings validate before they can be saved", async ({ page }) => {

@@ -5,11 +5,20 @@ import { setMedia } from "../../../test/media.ts";
 import { settle } from "../../../test/settle.ts";
 import { Button } from "../ui/button";
 import { TimeChart } from "./charts/index.ts";
-import { resample, useArriving, useTween } from "./motion.ts";
+import { CATCH_UP_MS, resample, useArriving, useDataDuration, useTween } from "./motion.ts";
 import { ChartGhost, KpiGhost, ListGhost, LoadingRegion, RingGhost, StatBandGhost } from "./skeletons.tsx";
 import { useSpotlight } from "./spotlight.ts";
 import { RollingValue, TextMorph } from "./text-morph.tsx";
 import { allOf, Loaded, Swap } from "./transitions.tsx";
+
+/** Moves the clock past the catch-up window, as if someone had been looking at the view a while. */
+function watchAWhile() {
+	const now = performance.now.bind(performance);
+	performance.now = () => now() + CATCH_UP_MS + 1;
+	return () => {
+		performance.now = now;
+	};
+}
 
 /** Runs real animations for one test; the suite otherwise lands every value at once. */
 async function animated(run: () => Promise<void>) {
@@ -139,12 +148,20 @@ describe("tweens", () => {
 			const start = result.current;
 			rerender({ to: [0] });
 			expect(result.current).toBe(start);
-			rerender({ to: [10] });
-			expect(result.current).toEqual([0]);
-			await act(async () => {
-				await new Promise((resolve) => setTimeout(resolve, 120));
-			});
-			expect(result.current[0]).toBeCloseTo(10);
+			// A refresh while the view is still catching up lands as it is.
+			rerender({ to: [5] });
+			expect(result.current).toEqual([5]);
+			const restore = watchAWhile();
+			try {
+				rerender({ to: [10] });
+				expect(result.current).toEqual([5]);
+				await act(async () => {
+					await new Promise((resolve) => setTimeout(resolve, 120));
+				});
+				expect(result.current[0]).toBeCloseTo(10);
+			} finally {
+				restore();
+			}
 		});
 	});
 
@@ -154,12 +171,15 @@ describe("tweens", () => {
 				<TimeChart label="Traffic" times={times} series={[{ label, color: "red", values }]} />
 			);
 			const { container, rerender } = render(chart([0, 1000, 2000], [1, 2, 3]));
+			rerender(chart([0, 1000, 2000], [1, 2, 4]));
+			const restore = watchAWhile();
 			rerender(chart([1000, 2000, 3000], [2, 3, 9]));
 			await act(async () => {
 				await new Promise((resolve) => setTimeout(resolve, 60));
 			});
 			rerender(chart([1000, 2000, 3000], [2, 3, 9], "writes"));
 			await settle();
+			restore();
 			expect(container.querySelector("path")).toBeTruthy();
 		});
 	});
@@ -221,5 +241,21 @@ test("content arrives only when it replaces a skeleton, so revisits and cached v
 		fresh.unmount();
 	} finally {
 		MotionGlobalConfig.skipAnimations = true;
+	}
+});
+
+function DurationProbe() {
+	return <p>{useDataDuration(1)}</p>;
+}
+
+test("data motions run while someone watches and stay still while the view catches up", () => {
+	const { rerender } = render(<DurationProbe />);
+	expect(screen.getByText("0")).toBeTruthy();
+	const restore = watchAWhile();
+	try {
+		rerender(<DurationProbe />);
+		expect(screen.getByText("1")).toBeTruthy();
+	} finally {
+		restore();
 	}
 });

@@ -326,20 +326,55 @@
 	);
 }
 
-/* Moving between pages: only the page's own content fades up. The sidebar and toolbar are never
-   captured or redrawn, so their glass and shadows hold perfectly still. */
+/* Moving between pages: the old page dissolves while the new one rises into its place. Only the
+   page area is captured; the root is not, so the sidebar and toolbar stay live, glass and shadows
+   included, and never redraw from a snapshot. */
+:root {
+	view-transition-name: none;
+}
+[data-page] {
+	view-transition-name: kelp-page;
+}
+/* The page slides under the toolbar during the swap, as it does when scrolling. */
+html:not([data-transition="theme"])::view-transition {
+	clip-path: inset(3.25rem 0 0 0);
+}
+::view-transition-group(kelp-page) {
+	animation: none;
+}
+::view-transition-old(kelp-page) {
+	animation: kelp-page-out 0.12s ease-out both;
+}
+::view-transition-new(kelp-page) {
+	animation: kelp-page-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+}
+@keyframes kelp-page-out {
+	to {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+}
 @keyframes kelp-page-in {
 	from {
 		opacity: 0;
-		transform: translateY(4px);
+		transform: translateY(10px);
 	}
 }
-[data-page] > * {
-	/* `backwards`, so no transform lingers to trap fixed or sticky children afterwards. */
-	animation: kelp-page-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
 }
 
 /* Changing theme: the new one spreads from the click over the whole window. */
+html[data-transition="theme"] {
+	view-transition-name: root;
+}
+html[data-transition="theme"] [data-page] {
+	view-transition-name: none;
+}
 html[data-transition="theme"]::view-transition-old(root) {
 	animation: none;
 }

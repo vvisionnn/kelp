@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 import Counter from "@/components/react-bits/Counter.tsx";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, useArriving, usePrefersReducedMotion } from "./motion.ts";
+import { EASE, SPEED, useArriving, usePrefersReducedMotion, useWatching } from "./motion.ts";
 
 /** Text longer than this stops morphing by letter; it would only read as noise. */
 const LETTER_LIMIT = 32;
@@ -23,6 +23,9 @@ function pieces(text: string, by: "letter" | "word") {
  */
 export function TextMorph({ children, className }: { children: string; className?: string }) {
 	const reduced = usePrefersReducedMotion();
+	// While the view catches up, new text simply replaces the old.
+	const watching = useWatching();
+	const duration = watching() ? SPEED.base : 0;
 	const glyphs = useMemo(
 		() => pieces(children, children.length > LETTER_LIMIT ? "word" : "letter"),
 		[children],
@@ -43,7 +46,7 @@ export function TextMorph({ children, className }: { children: string; className
 							initial={{ opacity: 0, filter: "blur(4px)", y: 3 }}
 							animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
 							exit={{ opacity: 0, filter: "blur(4px)", y: -3 }}
-							transition={{ duration: SPEED.base, ease: EASE }}
+							transition={{ duration, ease: EASE }}
 						/>
 					))}
 				</AnimatePresence>
@@ -60,8 +63,11 @@ const NUMBER = /^([-−]?)([\d,]*\.?\d+)\s*(.*)$/;
  */
 export function RollingValue({ text, className }: { text: string; className?: string }) {
 	const reduced = usePrefersReducedMotion();
-	// Digits spin in only when the number first arrives; on a revisit it is simply there.
+	// Digits spin in only when the number first arrives; on a revisit it is simply there, and a
+	// refresh that lands while the view catches up settles in a blink instead of rolling.
 	const arriving = useArriving();
+	const watching = useWatching();
+	const quiet = !watching();
 	const match = NUMBER.exec(text);
 	if (!match) return <TextMorph className={cn("tabular", className)}>{text}</TextMorph>;
 	const [, sign, number, unit] = match as unknown as [string, string, string, string];
@@ -86,6 +92,8 @@ export function RollingValue({ text, className }: { text: string; className?: st
 					tabular
 					motionBlur={false}
 					intro={arriving}
+					duration={quiet ? 0.05 : 0.7}
+					stagger={quiet ? 0 : 0.04}
 				/>
 			)}
 			{unit && (

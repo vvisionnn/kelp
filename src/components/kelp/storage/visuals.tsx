@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { EASE, SPEED, useArriving } from "@/components/kelp/motion.ts";
+import { EASE, useArriving, useDataDuration } from "@/components/kelp/motion.ts";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { formatBytes, formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { PARITY_TEXTURE } from "./shard-map.tsx";
  */
 export function FillGauge({ size, deleted, limit }: { size: number; deleted: number; limit: number }) {
 	const arriving = useArriving();
+	const dataDuration = useDataDuration();
 	const live = Math.max(0, size - deleted);
 	const capacity = Math.max(limit, size);
 	const segments = [
@@ -35,7 +36,7 @@ export function FillGauge({ size, deleted, limit }: { size: number; deleted: num
 							className={cn("block h-full first:rounded-l-full", segment.fill)}
 							initial={arriving ? { width: 0 } : false}
 							animate={{ width: `${ratio(segment.value, capacity) * 100}%` }}
-							transition={{ duration: SPEED.data, delay: index * 0.1, ease: EASE }}
+							transition={{ duration: dataDuration, delay: index * 0.1, ease: EASE }}
 						/>
 					) : null,
 				)}

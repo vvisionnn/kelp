@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import type { CSSProperties } from "react";
 import { Legend } from "@/components/kelp/charts/index.ts";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, useArriving } from "../motion.ts";
+import { EASE, useArriving, useDataDuration } from "../motion.ts";
 import { Swap } from "../transitions.tsx";
 import {
 	type AccessLevel,
@@ -201,6 +201,7 @@ export function AttentionList({ items, limit = 6 }: { items: Attention[]; limit?
  */
 export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
 	const arriving = useArriving();
+	const dataDuration = useDataDuration();
 	const levels: AccessLevel[] = ["admin", "write", "read", "list"];
 	const rows = matrix.buckets
 		.map((bucket) => {
@@ -226,7 +227,7 @@ export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
 							className="flex h-2 gap-0.5"
 							initial={arriving ? { width: 0 } : false}
 							animate={{ width: `${(row.total / max) * 100}%` }}
-							transition={{ duration: SPEED.data, ease: EASE }}
+							transition={{ duration: dataDuration, ease: EASE }}
 						>
 							{levels.map((level) =>
 								row.counts[level] > 0 ? (

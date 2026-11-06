@@ -29,6 +29,8 @@ export function createAppRouter(queryClient: QueryClient, history?: RouterHistor
 		defaultNotFoundComponent: NotFound,
 		defaultPreloadStaleTime: 0,
 		scrollRestoration: true,
+		// Moving between pages crossfades the page area (see index.css); filters and tabs in the URL stay put.
+		defaultViewTransition: { types: ({ pathChanged }) => (pathChanged ? ["page"] : false) },
 		...(history ? { history } : {}),
 	});
 }

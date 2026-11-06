@@ -12,7 +12,7 @@ import {
 	useState,
 } from "react";
 import { cn } from "@/lib/utils";
-import { EASE, SPEED, useArriving, useInstantMotion } from "../motion.ts";
+import { EASE, SPEED, useArriving, useInstantMotion, useWatching } from "../motion.ts";
 import { clock, clockSeconds, compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
@@ -82,10 +82,17 @@ function useMorph(target: Frame): Frame {
 	const instant = useInstantMotion();
 	const [frame, setFrame] = useState(target);
 	const current = useRef(target);
+	const watching = useWatching();
 	const key = JSON.stringify([target.times.at(0), target.times.at(-1), target.top, target.lines]);
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `key` is the target by value; an identical refetch must not restart the morph.
 	useEffect(() => {
 		if (instant) return;
+		if (!watching()) {
+			// Still catching up after the chart appeared: the fresher numbers simply take over.
+			current.current = target;
+			setFrame(target);
+			return;
+		}
 		const old = current.current;
 		const from = Object.fromEntries(
 			Object.keys(target.lines).map((label) => {

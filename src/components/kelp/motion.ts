@@ -1,5 +1,13 @@
 import { animate, MotionGlobalConfig } from "motion/react";
-import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+	useSyncExternalStore,
+} from "react";
 
 /** Kelp's motion vocabulary. Everything that moves uses these, so the app feels like one thing. */
 export const EASE = [0.22, 1, 0.36, 1] as const;
@@ -51,6 +59,32 @@ export function useArriving(): boolean {
 	return useState(arriving && !instant)[0];
 }
 
+/**
+ * How long after a view appears its data is still catching up. Opening a page from cache usually
+ * brings a refresh a moment later with slightly newer numbers; those land as they are, because
+ * nobody has read the old ones yet. Changes after this move, because someone is watching.
+ */
+export const CATCH_UP_MS = 1500;
+
+/** Whether the person has had the view in front of them long enough to see a change happen. */
+export function useWatching(): () => boolean {
+	const since = useRef(0);
+	useEffect(() => {
+		since.current = performance.now();
+	}, []);
+	return useCallback(() => since.current > 0 && performance.now() - since.current > CATCH_UP_MS, []);
+}
+
+/**
+ * The duration for a data-driven motion this render: the full `duration` when the data arrives or
+ * changes in front of someone, 0 while the view is still catching up.
+ */
+export function useDataDuration(duration: number = SPEED.data): number {
+	const arriving = useArriving();
+	const watching = useWatching();
+	return arriving || watching() ? duration : 0;
+}
+
 /** Reduced motion, or tests, where every value lands at once. */
 export function useInstantMotion(): boolean {
 	return usePrefersReducedMotion() || MotionGlobalConfig.skipAnimations === true;
@@ -71,7 +105,8 @@ export function resample(from: number[], length: number): number[] {
 
 /**
  * Numbers that glide to their new values instead of jumping. `intro` starts them from zero when
- * they arrive (see `ArrivalContext`), for bars and rings that grow in. Identical refreshes do nothing, so a refetch with no news stays still.
+ * they arrive (see `ArrivalContext`), for bars and rings that grow in. Identical refreshes do
+ * nothing, and changes while the view is still catching up land at once (see `CATCH_UP_MS`).
  */
 export function useTween(
 	target: number[],
@@ -83,12 +118,21 @@ export function useTween(
 		intro && arriving ? new Array<number>(target.length).fill(0) : target,
 	);
 	const current = useRef(shown);
+	const growing = useRef(intro && arriving);
+	const watching = useWatching();
 	const key = target.join(",");
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `key` is `target` by value; a new array with the same numbers must not restart the tween.
 	useEffect(() => {
 		if (instant) return;
 		const from = resample(current.current, target.length);
 		if (from.every((value, i) => value === target[i])) return;
+		const grow = growing.current;
+		growing.current = false;
+		if (!grow && !watching()) {
+			current.current = target;
+			setShown(target);
+			return;
+		}
 		const controls = animate(0, 1, {
 			duration,
 			ease: EASE,
