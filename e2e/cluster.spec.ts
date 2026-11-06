@@ -41,3 +41,11 @@ test("signing out returns to the sign-in page and protects the app", async ({ br
 	await expect(page).toHaveURL(/\/login\?redirect=%2Fcluster/);
 	await context.close();
 });
+
+test("a segmented control fits its scroller, rounded corners and all", async ({ page }) => {
+	await page.goto("/");
+	const scroller = page.getByRole("radiogroup").first().locator("xpath=..");
+	await expect(page.getByRole("radio", { name: "1h" })).toBeVisible();
+	const overflow = await scroller.evaluate((element) => element.scrollWidth - element.clientWidth);
+	expect(overflow).toBe(0);
+});

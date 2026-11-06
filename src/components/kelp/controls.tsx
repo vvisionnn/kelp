@@ -25,7 +25,9 @@ export function Segmented<T extends string>({
 }) {
 	return (
 		// Segments size to their labels; on narrow screens the control scrolls instead of squeezing.
-		<div className={cn("-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none]", className)}>
+		<div
+			className={cn("-mx-1 max-w-[calc(100%+0.5rem)] overflow-x-auto px-1 [scrollbar-width:none]", className)}
+		>
 			<RubberSegment
 				items={items}
 				value={value}
