@@ -319,7 +319,8 @@ function Toolbar({ onShowSidebar, onSearch }: { onShowSidebar: () => void; onSea
 					aria-hidden={!scrolled}
 					className="min-w-0 truncate font-semibold text-[15px] tracking-[-0.01em]"
 				>
-					{title ? <TextMorph>{title}</TextMorph> : null}
+					{/* Morphs only while shown; hidden, it just takes the new page's name. */}
+					{title ? scrolled ? <TextMorph>{title}</TextMorph> : title : null}
 				</motion.p>
 				<div className="ml-auto flex shrink-0 items-center gap-1">
 					<button

@@ -64,10 +64,14 @@ export function allOf<T extends Record<string, QueryLike<unknown>>>(
 	};
 }
 
+/** Pages whose content someone has already seen this session. */
+const seen = new Set<string>();
+
 /**
  * The three states of anything that loads, as one crossfade: a layout-matched skeleton, then the
- * content sharpening into place in the same grid cell, so nothing jumps. Content that was already
- * cached appears at once. A failed background refresh keeps the data on screen.
+ * content sharpening into place in the same grid cell, so nothing jumps. The first time a page's
+ * content appears it makes an entrance, even when hovering its link already fetched the data;
+ * after that it is simply there. A failed background refresh keeps the data on screen.
  */
 export function Loaded<T>({
 	query,
@@ -83,15 +87,18 @@ export function Loaded<T>({
 	const reduced = usePrefersReducedMotion();
 	const state = query.data !== undefined ? "data" : query.error ? "error" : "pending";
 	const refetch = query.refetch;
-	// What this rendered last time: content arrives only when it replaces something else.
+	const page = window.location.pathname;
+	// Content arrives when it replaces a skeleton or an error, or shows here for the first time.
+	const [firstSight] = useState(() => state === "data" && !seen.has(page));
 	const last = useRef<string | null>(null);
-	const arriving = state === "data" && last.current !== null && last.current !== "data";
+	const arriving = state === "data" && (last.current === null ? firstSight : last.current !== "data");
 	useEffect(() => {
 		last.current = state;
+		if (state === "data") seen.add(page);
 	});
 	return (
 		<div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] *:col-start-1 *:row-start-1", className)}>
-			<AnimatePresence initial={false}>
+			<AnimatePresence initial={firstSight}>
 				{state === "pending" && (
 					<Layer
 						key="skeleton"
@@ -121,7 +128,7 @@ export function Loaded<T>({
 					<Layer
 						key="data"
 						className="min-w-0"
-						// `initial={false}` above skips this for content that was cached when the page opened.
+						// Skipped (AnimatePresence `initial`) for content already seen on an earlier visit.
 						initial={reduced ? false : SHARPEN.from}
 						animate={SHARPEN.to}
 						exit={{ opacity: 0, transition: { duration: SPEED.fast } }}

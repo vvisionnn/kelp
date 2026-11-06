@@ -146,11 +146,13 @@ export function DataTable<T extends object>({
 	if (error && !data) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
 
 	const showEmpty = !isLoading && data !== undefined && data.length === 0;
-	if (isLoading) sawLoading.current = true;
-	else if (sawLoading.current && landedAt.current === null) landedAt.current = performance.now();
-	const rising = landedAt.current !== null && performance.now() - landedAt.current < ARRIVAL_MS;
 	// The skeleton matches what was here last time, so the page keeps its height when data lands.
 	const rowMemory = `${window.location.pathname}:${columns.length}`;
+	// Rows rise when they replace the skeleton or appear on this page for the first time.
+	if (isLoading) sawLoading.current = true;
+	else if (landedAt.current === null && data && (sawLoading.current || !knownRows.has(rowMemory)))
+		landedAt.current = performance.now();
+	const rising = landedAt.current !== null && performance.now() - landedAt.current < ARRIVAL_MS;
 	if (!isLoading && data) knownRows.set(rowMemory, Math.min(rows.length, pagination.pageSize));
 
 	return (

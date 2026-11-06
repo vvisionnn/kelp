@@ -221,7 +221,7 @@ function ArrivalProbe() {
 	return <p>{useArriving() ? "arriving" : "already here"}</p>;
 }
 
-test("content arrives only when it replaces a skeleton, so revisits and cached views stay still", async () => {
+test("a page's content makes an entrance the first time it shows, and is simply there after that", () => {
 	setMedia("(prefers-reduced-motion: reduce)", false);
 	MotionGlobalConfig.skipAnimations = false;
 	try {
@@ -230,17 +230,24 @@ test("content arrives only when it replaces a skeleton, so revisits and cached v
 				{() => <ArrivalProbe />}
 			</Loaded>
 		);
-		const cached = render(view("ready"));
-		expect(screen.getByText("already here")).toBeTruthy();
-		cached.unmount();
+		window.history.replaceState(null, "", "/first-sight");
+		const first = render(view("ready"));
+		expect(screen.getByText("arriving")).toBeTruthy();
+		first.unmount();
 
-		const fresh = render(view(undefined));
-		fresh.rerender(view("ready"));
+		const revisit = render(view("ready"));
+		expect(screen.getByText("already here")).toBeTruthy();
+		revisit.unmount();
+
+		window.history.replaceState(null, "", "/loading-again");
+		const loading = render(view(undefined));
+		loading.rerender(view("ready"));
 		expect(screen.getByText("arriving")).toBeTruthy();
 		expect(document.querySelector("[data-arrived]")).toBeTruthy();
-		fresh.unmount();
+		loading.unmount();
 	} finally {
 		MotionGlobalConfig.skipAnimations = true;
+		window.history.replaceState(null, "", "/");
 	}
 });
 
