@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.5.1](https://github.com/vvisionnn/kelp/compare/v0.5.0...v0.5.1) - 2026-11-06
+
+### 🐛 Bug Fixes
+
+- **web:** An open tab survives a Kelp upgrade instead of crashing on a page it hasn't opened yet ([`525ab20`](https://github.com/vvisionnn/kelp/commit/525ab20be887f9cb74100daf2596c4937c55be62))
 ## [0.5.0](https://github.com/vvisionnn/kelp/compare/v0.4.0...v0.5.0) - 2026-11-06
 
 ### 🚀 Features
