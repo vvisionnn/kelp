@@ -1,8 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, ScrollText, UsersRound } from "lucide-react";
+import { motion } from "motion/react";
 import type { CSSProperties } from "react";
 import { Legend } from "@/components/kelp/charts/index.ts";
 import { cn } from "@/lib/utils";
+import { EASE, SPEED, usePrefersReducedMotion } from "../motion.ts";
+import { Swap } from "../transitions.tsx";
 import {
 	type AccessLevel,
 	type AccessMatrix,
@@ -197,6 +200,7 @@ export function AttentionList({ items, limit = 6 }: { items: Attention[]; limit?
  * indigo ramp as the matrix, so "more reach" always reads darker.
  */
 export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
+	const reduced = usePrefersReducedMotion();
 	const levels: AccessLevel[] = ["admin", "write", "read", "list"];
 	const rows = matrix.buckets
 		.map((bucket) => {
@@ -218,7 +222,12 @@ export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
 						className="grid grid-cols-[minmax(0,8rem)_1fr_auto] items-center gap-3 text-[13px]"
 					>
 						<span className="truncate font-mono">{row.bucket}</span>
-						<span className="flex h-2 gap-0.5" style={{ width: `${(row.total / max) * 100}%` }}>
+						<motion.span
+							className="flex h-2 gap-0.5"
+							initial={reduced ? false : { width: 0 }}
+							animate={{ width: `${(row.total / max) * 100}%` }}
+							transition={{ duration: SPEED.data, ease: EASE }}
+						>
 							{levels.map((level) =>
 								row.counts[level] > 0 ? (
 									<span
@@ -232,7 +241,7 @@ export function ExposureBars({ matrix }: { matrix: AccessMatrix }) {
 									/>
 								) : null,
 							)}
-						</span>
+						</motion.span>
 						<span className="text-right text-muted-foreground tabular">
 							{row.counts.admin + row.counts.write} can change
 						</span>
@@ -263,8 +272,18 @@ const CAPABILITIES: Array<{ key: Capability; label: string }> = [
  * row's access comes from. All-bucket access sorts first.
  */
 export function ReachGrid({ grants, empty }: { grants: BucketGrant[]; empty: string }) {
-	if (grants.length === 0)
-		return <p className="py-6 text-center text-[13px] text-muted-foreground">{empty}</p>;
+	return (
+		<Swap id={grants.length === 0 ? "empty" : "grid"}>
+			{grants.length === 0 ? (
+				<p className="py-6 text-center text-[13px] text-muted-foreground">{empty}</p>
+			) : (
+				<ReachTable grants={grants} />
+			)}
+		</Swap>
+	);
+}
+
+function ReachTable({ grants }: { grants: BucketGrant[] }) {
 	return (
 		<div className="-mx-1 overflow-x-auto px-1">
 			<table className="w-full min-w-[30rem] text-[13px]">

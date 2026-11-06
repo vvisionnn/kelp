@@ -13,12 +13,24 @@ import { z } from "zod";
 import { expiryTimeline } from "@/components/kelp/access/analysis.ts";
 import { KeyStatusBadge } from "@/components/kelp/access/badges.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
+import {
+	BarsGhost,
+	ColumnsGhost,
+	Expand,
+	SmallRingGhost,
+	TableGhost,
+	TextGhost,
+	TileGhost,
+} from "@/components/kelp/access/loading.tsx";
 import { NewSecretPanel } from "@/components/kelp/access/new-secret.tsx";
 import { BarList, Columns, dataColor, Kpi, Ring } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, InfoList, PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
+import { EmptyState, InfoList, PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -177,9 +189,9 @@ function ExpiryField({
 					))}
 				</SelectContent>
 			</Select>
-			{choice === "custom" && (
+			<Expand open={choice === "custom"}>
 				<Input type="date" aria-label="Expiry date" value={date} onChange={(e) => onDate(e.target.value)} />
-			)}
+			</Expand>
 		</Field>
 	);
 }
@@ -204,8 +216,7 @@ function CreateServiceAccountDialog() {
 		invalidate,
 		onSuccess: (result) => setSecret(result.key),
 	});
-	function close() {
-		setOpen(false);
+	function reset() {
 		setParentUser("");
 		setDescription("");
 		setChoice("never");
@@ -223,9 +234,10 @@ function CreateServiceAccountDialog() {
 			open={open}
 			onOpenChange={(next) => {
 				if (!next && secret) return;
-				if (next) setOpen(true);
-				else close();
+				setOpen(next);
 			}}
+			// Cleared only once closed, so the form never flashes back while the secret fades out.
+			onOpenChangeComplete={(next) => !next && reset()}
 		>
 			<DialogTrigger render={<Button />}>
 				<Plus />
@@ -233,62 +245,75 @@ function CreateServiceAccountDialog() {
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-lg" showCloseButton={!secret}>
 				<DialogHeader>
-					<DialogTitle>{secret ? "Service account created" : "Create service account"}</DialogTitle>
+					<DialogTitle>
+						<TextMorph>{secret ? "Service account created" : "Create service account"}</TextMorph>
+					</DialogTitle>
 					<DialogDescription>
 						{secret
 							? "Give these credentials to the automation that needs them."
 							: "A service account has its own key and acts with its user's permissions. Revoke it without touching the user."}
 					</DialogDescription>
 				</DialogHeader>
-				{secret ? (
-					<NewSecretPanel secret={secret} endpoint={endpoint.data ?? null} onDone={close} />
-				) : (
-					<form onSubmit={submit} className="grid gap-4">
-						<Field>
-							<FieldLabel>Acts as</FieldLabel>
-							<Select
-								value={parentUser || null}
-								onValueChange={(value) => setParentUser((value as string) ?? "")}
-							>
-								<SelectTrigger aria-label="Acts as" className="w-full">
-									<SelectValue placeholder="Choose a user" />
-								</SelectTrigger>
-								<SelectContent>
-									{(users.data ?? []).map((name) => (
-										<SelectItem key={name} value={name}>
-											{name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</Field>
-						<Field>
-							<FieldLabel htmlFor="sa-description">Description</FieldLabel>
-							<Input
-								id="sa-description"
-								value={description}
-								onChange={(e) => setDescription(e.target.value)}
-								placeholder="What uses it, e.g. nightly backups"
-							/>
-						</Field>
-						<ExpiryField choice={choice} onChoice={setChoice} date={date} onDate={setDate} />
-						<DialogFooter>
-							<Button
-								type="submit"
-								disabled={!parentUser || create.isPending || (choice === "custom" && !date)}
-								pending={create.isPending}
-							>
-								Create service account
-							</Button>
-						</DialogFooter>
-					</form>
-				)}
+				<Swap id={secret ? "secret" : "form"}>
+					{secret ? (
+						<NewSecretPanel secret={secret} endpoint={endpoint.data ?? null} onDone={() => setOpen(false)} />
+					) : (
+						<form onSubmit={submit} className="grid gap-4">
+							<Field>
+								<FieldLabel>Acts as</FieldLabel>
+								<Select
+									value={parentUser || null}
+									onValueChange={(value) => setParentUser((value as string) ?? "")}
+								>
+									<SelectTrigger aria-label="Acts as" className="w-full">
+										<SelectValue placeholder="Choose a user" />
+									</SelectTrigger>
+									<SelectContent>
+										{(users.data ?? []).map((name) => (
+											<SelectItem key={name} value={name}>
+												{name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</Field>
+							<Field>
+								<FieldLabel htmlFor="sa-description">Description</FieldLabel>
+								<Input
+									id="sa-description"
+									value={description}
+									onChange={(e) => setDescription(e.target.value)}
+									placeholder="What uses it, e.g. nightly backups"
+								/>
+							</Field>
+							<ExpiryField choice={choice} onChoice={setChoice} date={date} onDate={setDate} />
+							<DialogFooter>
+								<Button
+									type="submit"
+									disabled={!parentUser || create.isPending || (choice === "custom" && !date)}
+									pending={create.isPending}
+								>
+									Create service account
+								</Button>
+							</DialogFooter>
+						</form>
+					)}
+				</Swap>
 			</DialogContent>
 		</Dialog>
 	);
 }
 
 function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: () => void }) {
+	return (
+		<SheetContent className="bg-background sm:max-w-md">
+			<AccountDetails key={account.id} account={account} onClose={onClose} />
+		</SheetContent>
+	);
+}
+
+/** Lives inside the sheet's popup, so an abandoned draft goes when the sheet does. */
+function AccountDetails({ account, onClose }: { account: ServiceAccount; onClose: () => void }) {
 	const canWrite = useCanWrite();
 	const path = `/iam/service-accounts/${encodeURIComponent(account.id)}`;
 	const [description, setDescription] = useState(account.description);
@@ -310,7 +335,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 	const dirty = description.trim() !== account.description || newExpiry !== undefined;
 
 	return (
-		<SheetContent className="bg-background sm:max-w-md">
+		<>
 			<SheetHeader className="flex-row items-center gap-3 px-4 pt-4 pb-0">
 				<span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] bg-[#7d7aff] text-white">
 					<Bot className="size-5" />
@@ -414,14 +439,14 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 										))}
 									</SelectContent>
 								</Select>
-								{choice === "custom" && (
+								<Expand open={choice === "custom"}>
 									<Input
 										type="date"
 										aria-label="Expiry date"
 										value={date}
 										onChange={(e) => setDate(e.target.value)}
 									/>
-								)}
+								</Expand>
 								<FieldDescription>
 									SeaweedFS cannot remove an expiry once set; move it out instead.
 								</FieldDescription>
@@ -432,7 +457,9 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 						</form>
 					</>
 				) : (
-					<p className="text-[13px] text-muted-foreground">Status: {account.status}</p>
+					<p className="text-[13px] text-muted-foreground">
+						<TextMorph>{`Status: ${account.status}`}</TextMorph>
+					</p>
 				)}
 			</div>
 			{canWrite && (
@@ -452,7 +479,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 					/>
 				</SheetFooter>
 			)}
-		</SheetContent>
+		</>
 	);
 }
 
@@ -520,7 +547,9 @@ function AccountsDashboard({ accounts, now = Date.now() }: { accounts: ServiceAc
 							]}
 							center={
 								<>
-									<span className="font-rounded font-semibold text-[22px] leading-7">{accounts.length}</span>
+									<span className="font-rounded font-semibold text-[22px] leading-7">
+										<RollingValue text={String(accounts.length)} />
+									</span>
 									<span className="text-[12px] text-muted-foreground">accounts</span>
 								</>
 							}
@@ -547,13 +576,52 @@ function AccountsDashboard({ accounts, now = Date.now() }: { accounts: ServiceAc
 	);
 }
 
+function AccountsSkeleton() {
+	return (
+		<LoadingRegion label="Loading service accounts">
+			<div className="mb-8">
+				<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+					{[0, 1, 2, 3, 4].map((i) => (
+						<TileGhost key={i} />
+					))}
+				</div>
+				<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+					<Panel
+						title="When they expire"
+						description={<TextGhost className="w-56" />}
+						className="min-w-0 xl:col-span-8"
+					>
+						<ColumnsGhost height={180} />
+					</Panel>
+					<div className="grid min-w-0 gap-3 xl:col-span-4">
+						<Panel title="Status">
+							<SmallRingGhost rows={3} className="size-[124px]" />
+						</Panel>
+						<Panel title="Accounts per user">
+							<BarsGhost rows={2} />
+						</Panel>
+					</div>
+				</div>
+			</div>
+			<TableGhost
+				columns={["Service account", "Acts as", "Access key", "Status", "Expires"]}
+				rows={3}
+				twoLine
+			/>
+		</LoadingRegion>
+	);
+}
+
 function ServiceAccountsPage() {
 	const { account: selectedId } = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(accessQueries.serviceAccounts());
-	const selected = data?.find((a) => a.id === selectedId);
+	const accounts = useQuery(accessQueries.serviceAccounts());
+	const selected = accounts.data?.find((a) => a.id === selectedId);
 	const select = (id: string | undefined) => navigate({ search: id ? { account: id } : {} });
+	// The sheet keeps showing its account while it slides away.
+	const [shown, setShown] = useState(selected);
+	if (selected && selected !== shown) setShown(selected);
 
 	return (
 		<>
@@ -562,34 +630,35 @@ function ServiceAccountsPage() {
 				description="Keys for automation that act on a user's behalf and can be revoked on their own."
 				actions={canWrite && <CreateServiceAccountDialog />}
 			/>
-			{data && data.length > 0 && (
-				<Reveal className="mb-8">
-					<AccountsDashboard accounts={data} />
-				</Reveal>
-			)}
-			<Reveal delay={0.05}>
-				<DataTable
-					data={data}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					getRowId={(a) => a.id}
-					searchText={(a) => `${a.id} ${a.description} ${a.parentUser} ${a.accessKey}`}
-					searchPlaceholder="Search accounts, users or keys"
-					onRowClick={(a) => select(a.id)}
-					empty={
-						<EmptyState
-							icon={<Bot />}
-							title="No service accounts"
-							description="Create one for CI jobs, backups or anything that should not use a person's key."
-							{...(canWrite ? { action: <CreateServiceAccountDialog /> } : {})}
+			<Loaded query={accounts} skeleton={<AccountsSkeleton />}>
+				{(list) => (
+					<Swap id={list.length > 0 ? "accounts" : "empty"}>
+						{list.length > 0 && (
+							<div className="mb-8">
+								<AccountsDashboard accounts={list} />
+							</div>
+						)}
+						<DataTable
+							data={list}
+							getRowId={(a) => a.id}
+							searchText={(a) => `${a.id} ${a.description} ${a.parentUser} ${a.accessKey}`}
+							searchPlaceholder="Search accounts, users or keys"
+							onRowClick={(a) => select(a.id)}
+							empty={
+								<EmptyState
+									icon={<Bot />}
+									title="No service accounts"
+									description="Create one for CI jobs, backups or anything that should not use a person's key."
+									{...(canWrite ? { action: <CreateServiceAccountDialog /> } : {})}
+								/>
+							}
+							columns={columns}
 						/>
-					}
-					columns={columns}
-				/>
-			</Reveal>
+					</Swap>
+				)}
+			</Loaded>
 			<Sheet open={Boolean(selected)} onOpenChange={(open) => !open && select(undefined)}>
-				{selected && <AccountSheet key={selected.id} account={selected} onClose={() => select(undefined)} />}
+				{shown && <AccountSheet account={shown} onClose={() => select(undefined)} />}
 			</Sheet>
 		</>
 	);

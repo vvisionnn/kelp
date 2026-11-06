@@ -9,7 +9,8 @@ test("full access lifecycle: policy, user and key, group, service account", asyn
 	await page.goto("/access/policies/new");
 	await page.getByLabel("Name").fill(policy);
 	await page.getByLabel("Bucket").fill("e2e-bucket");
-	await expect(page.getByText("Policy document is valid")).toBeVisible();
+	// Morphing text is also present as glyphs, so `first()` picks the readable copy.
+	await expect(page.getByText("Policy document is valid").first()).toBeVisible();
 	await page.getByRole("button", { name: "Create policy" }).click();
 	await expect(page).toHaveURL(new RegExp(`/access/policies/${policy}$`));
 	await expect(page.getByText("Not attached to anyone.")).toBeVisible();
@@ -32,7 +33,7 @@ test("full access lifecycle: policy, user and key, group, service account", asyn
 	const toggle = page.getByRole("switch", { name: /^Active: / });
 	await toggle.click();
 	await expect(page.getByText("Access key deactivated")).toBeVisible();
-	await expect(page.getByText("Inactive", { exact: true })).toBeVisible();
+	await expect(page.getByText("Inactive", { exact: true }).first()).toBeVisible();
 	await page.getByRole("button", { name: "Create access key" }).click();
 	await page.getByRole("dialog").getByRole("button", { name: "Create access key" }).click();
 	await expect(page.getByText("Copy the secret now")).toBeVisible();
@@ -54,7 +55,7 @@ test("full access lifecycle: policy, user and key, group, service account", asyn
 
 	// The policy now reports both uses and cannot be deleted.
 	await page.goto(`/access/policies/${policy}`);
-	await expect(page.getByText("Used by: 1 user, 1 group")).toBeVisible();
+	await expect(page.getByText("Used by: 1 user, 1 group").first()).toBeVisible();
 	await expect(page.getByText("Detach it from 2 places before deleting.")).toBeVisible();
 
 	// A service account acting as the user.

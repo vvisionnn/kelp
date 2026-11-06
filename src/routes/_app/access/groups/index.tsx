@@ -6,9 +6,18 @@ import { type FormEvent, useState } from "react";
 import { accessMatrix, groupAsIdentity } from "@/components/kelp/access/analysis.ts";
 import { NameList } from "@/components/kelp/access/badges.tsx";
 import { AccessMatrixView } from "@/components/kelp/access/insights.tsx";
+import {
+	BarsGhost,
+	MatrixGhost,
+	optional,
+	TableGhost,
+	TileGhost,
+} from "@/components/kelp/access/loading.tsx";
 import { BarList, dataColor, Kpi } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, PageHeader, Panel, Reveal, StatusDot } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel, StatusDot } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -210,13 +219,50 @@ function GroupsDashboard({
 	);
 }
 
+function GroupsDashboardGhost() {
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				{[0, 1, 2, 3].map((i) => (
+					<TileGhost key={i} />
+				))}
+			</div>
+			<div className="mt-3 grid items-start gap-3 xl:grid-cols-12">
+				<Panel
+					title="What each group grants"
+					description="The strongest access a group's policies give its members, per bucket"
+					className="min-w-0 xl:col-span-8"
+				>
+					<MatrixGhost rows={3} />
+				</Panel>
+				<Panel title="Members per group" className="xl:col-span-4">
+					<BarsGhost rows={3} />
+				</Panel>
+			</div>
+		</>
+	);
+}
+
+function GroupsSkeleton() {
+	return (
+		<LoadingRegion label="Loading groups">
+			<div className="mb-8">
+				<GroupsDashboardGhost />
+			</div>
+			<TableGhost columns={["Group", "Status", "Members", "Policies"]} rows={3} />
+		</LoadingRegion>
+	);
+}
+
 function GroupsPage() {
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(accessQueries.groups());
-	const users = useQuery(accessQueries.users()).data;
-	const policies = useQuery(accessQueries.policies()).data;
-	const buckets = useQuery(objectQueries.buckets()).data;
+	const groups = useQuery(accessQueries.groups());
+	const insights = allOf({
+		users: useQuery(accessQueries.users()),
+		policies: useQuery(accessQueries.policies()),
+		buckets: optional(useQuery(objectQueries.buckets()), []),
+	});
 	return (
 		<>
 			<PageHeader
@@ -224,37 +270,40 @@ function GroupsPage() {
 				description="Share policies across users. A disabled group grants nothing."
 				actions={canWrite && <CreateGroupDialog />}
 			/>
-			{data && data.length > 0 && users && policies && (
-				<Reveal className="mb-8">
-					<GroupsDashboard
-						groups={data}
-						users={users}
-						policies={policies}
-						buckets={(buckets ?? []).map((b) => b.name)}
-					/>
-				</Reveal>
-			)}
-			<Reveal delay={0.05}>
-				<DataTable
-					data={data}
-					isLoading={isPending}
-					error={error}
-					onRetry={() => refetch()}
-					getRowId={(group) => group.name}
-					searchText={(group) => `${group.name} ${group.members.join(" ")} ${group.policies.join(" ")}`}
-					searchPlaceholder="Search groups, members or policies"
-					onRowClick={(group) => navigate({ to: "/access/groups/$name", params: { name: group.name } })}
-					empty={
-						<EmptyState
-							icon={<UsersRound />}
-							title="No groups yet"
-							description="Groups let many users share the same policies."
-							{...(canWrite ? { action: <CreateGroupDialog /> } : {})}
+			<Loaded query={groups} skeleton={<GroupsSkeleton />}>
+				{(list) => (
+					<Swap id={list.length > 0 ? "groups" : "empty"}>
+						{list.length > 0 && (
+							<Loaded query={insights} skeleton={<GroupsDashboardGhost />} className="mb-8">
+								{({ users, policies, buckets }) => (
+									<GroupsDashboard
+										groups={list}
+										users={users}
+										policies={policies}
+										buckets={buckets.map((b) => b.name)}
+									/>
+								)}
+							</Loaded>
+						)}
+						<DataTable
+							data={list}
+							getRowId={(group) => group.name}
+							searchText={(group) => `${group.name} ${group.members.join(" ")} ${group.policies.join(" ")}`}
+							searchPlaceholder="Search groups, members or policies"
+							onRowClick={(group) => navigate({ to: "/access/groups/$name", params: { name: group.name } })}
+							empty={
+								<EmptyState
+									icon={<UsersRound />}
+									title="No groups yet"
+									description="Groups let many users share the same policies."
+									{...(canWrite ? { action: <CreateGroupDialog /> } : {})}
+								/>
+							}
+							columns={columns}
 						/>
-					}
-					columns={columns}
-				/>
-			</Reveal>
+					</Swap>
+				)}
+			</Loaded>
 		</>
 	);
 }

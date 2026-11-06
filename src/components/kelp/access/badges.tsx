@@ -1,6 +1,7 @@
 import type { KeyStatus } from "@shared/iam.ts";
 import { FileLock2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TextMorph } from "../text-morph.tsx";
 
 /** A key's state as a status pill: a dot and a word, tinted only when it is active. */
 export function KeyStatusBadge({ status }: { status: KeyStatus }) {
@@ -8,12 +9,14 @@ export function KeyStatusBadge({ status }: { status: KeyStatus }) {
 	return (
 		<span
 			className={cn(
-				"inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[12px]",
+				"inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 font-medium text-[12px] transition-colors",
 				active ? "bg-success/12 text-success-foreground" : "bg-secondary text-muted-foreground",
 			)}
 		>
-			<span className={cn("size-1.5 rounded-full", active ? "bg-success" : "bg-tertiary")} />
-			{active ? "Active" : "Inactive"}
+			<span
+				className={cn("size-1.5 rounded-full transition-colors", active ? "bg-success" : "bg-tertiary")}
+			/>
+			<TextMorph>{active ? "Active" : "Inactive"}</TextMorph>
 		</span>
 	);
 }

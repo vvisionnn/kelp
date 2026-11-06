@@ -17,19 +17,24 @@ import { KeyStatusBadge, StaticBadge } from "@/components/kelp/access/badges.tsx
 import { CreateKeyDialog } from "@/components/kelp/access/create-key-dialog.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
 import { ReachGrid } from "@/components/kelp/access/insights.tsx";
+import {
+	Expand,
+	HEADER_ACTION,
+	InfoGhost,
+	ReachGhost,
+	SheetRowsGhost,
+	TileGhost,
+	useLanding,
+} from "@/components/kelp/access/loading.tsx";
 import { TokenField } from "@/components/kelp/access/token-field.tsx";
 import { Kpi } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import {
-	EmptyState,
-	ErrorState,
-	InfoList,
-	PageHeader,
-	Reveal,
-	Section,
-	SkeletonBlock,
-} from "@/components/kelp/page.tsx";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EmptyState, InfoList, PageHeader, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -42,8 +47,13 @@ import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/users/$username")({
 	staticData: { section: "Access", title: "Users" },
-	loader: ({ context, params }) =>
-		void context.queryClient.prefetchQuery(accessQueries.user(params.username)),
+	// The page's secondary queries start here too, so they land with the user and not after it.
+	loader: ({ context: { queryClient }, params }) => {
+		void queryClient.prefetchQuery(accessQueries.user(params.username));
+		void queryClient.prefetchQuery(accessQueries.groups());
+		void queryClient.prefetchQuery(accessQueries.policies());
+		void queryClient.prefetchQuery(accessQueries.serviceAccounts());
+	},
 	component: UserPage,
 });
 
@@ -54,45 +64,80 @@ function UserPage() {
 	const { username } = Route.useParams();
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
-	const { data: user, isPending, error, refetch } = useQuery(accessQueries.user(username));
-	const groups = useQuery(accessQueries.groups()).data;
-	const policies = useQuery(accessQueries.policies()).data;
+	const user = useQuery(accessQueries.user(username));
+	const groups = useQuery(accessQueries.groups());
+	const policies = useQuery(accessQueries.policies());
+	const accounts = useQuery(accessQueries.serviceAccounts());
+	const landed = useLanding(user, groups, policies, accounts);
 	const remove = useAction({
 		run: () => api.delete(userPath(username)),
 		success: `User ${username} deleted`,
 		invalidate,
 		onSuccess: () => navigate({ to: "/access/users" }),
 	});
+	const data = user.data;
+	const editable = canWrite && data !== undefined && !data.isStatic;
 
-	if (isPending) return <UserSkeleton />;
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-
-	const editable = canWrite && !user.isStatic;
-	const active = user.accessKeys.filter((key) => key.status === "Active").length;
 	return (
 		<>
 			<PageHeader
-				title={user.username}
-				description={`${user.email || "No email"}, ${plural(user.accessKeys.length, "access key")}, ${plural(user.groups.length, "group")}`}
+				title={username}
+				description={
+					data ? (
+						<>
+							{data.email || "No email"},{" "}
+							<TextMorph className="align-top">{plural(data.accessKeys.length, "access key")}</TextMorph>,{" "}
+							<TextMorph className="align-top">{plural(data.groups.length, "group")}</TextMorph>
+						</>
+					) : (
+						!user.error && <SkeletonBlock className="my-0.5 h-3.5 w-64" />
+					)
+				}
 				actions={
-					editable && (
-						<ConfirmDialog
-							trigger={
-								<Button variant="destructive">
-									<Trash2 />
-									Delete user
-								</Button>
-							}
-							title={`Delete ${user.username}?`}
-							description="Their access keys stop working immediately. Service accounts they own are not deleted."
-							confirmLabel="Delete user"
-							destructive
-							typeToConfirm={user.username}
-							onConfirm={() => remove.mutateAsync()}
-						/>
+					canWrite && (
+						<Swap id={data ? (editable ? "delete" : "locked") : "pending"} className={HEADER_ACTION}>
+							{data?.isStatic ? (
+								// Holds the slot the delete button was expected in, so the page below stays put.
+								<span className="flex h-8 items-center">
+									<StaticBadge />
+								</span>
+							) : editable ? (
+								<ConfirmDialog
+									trigger={
+										<Button variant="destructive">
+											<Trash2 />
+											Delete user
+										</Button>
+									}
+									title={`Delete ${username}?`}
+									description="Their access keys stop working immediately. Service accounts they own are not deleted."
+									confirmLabel="Delete user"
+									destructive
+									typeToConfirm={username}
+									onConfirm={() => remove.mutateAsync()}
+								/>
+							) : (
+								!data && !user.error && <SkeletonBlock className="h-8 w-28 rounded-md" />
+							)}
+						</Swap>
 					)
 				}
 			/>
+			<Loaded query={landed} skeleton={<UserSkeleton username={username} />}>
+				{(loaded) => <UserDetails user={loaded} editable={editable} canWrite={canWrite} />}
+			</Loaded>
+		</>
+	);
+}
+
+function UserDetails({ user, editable, canWrite }: { user: IamUser; editable: boolean; canWrite: boolean }) {
+	const access = allOf({
+		groups: useQuery(accessQueries.groups()),
+		policies: useQuery(accessQueries.policies()),
+	});
+	const active = user.accessKeys.filter((key) => key.status === "Active").length;
+	return (
+		<>
 			{user.isStatic && (
 				<p className="mb-6 flex items-start gap-2 rounded-lg bg-secondary px-3.5 py-2.5 text-[13px] text-muted-foreground">
 					<FileLock2 className="mt-px size-4 shrink-0" />
@@ -100,29 +145,34 @@ function UserPage() {
 					read-only here.
 				</p>
 			)}
-			{groups && policies && <UserReachStats user={user} grants={userAccess(user, groups, policies)} />}
-			<Reveal className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12 [&>*]:min-w-0">
-				<div className="grid min-w-0 grid-cols-1 gap-8 lg:col-span-8">
-					{groups && policies && (
-						<Section
-							title={`What ${user.username} can reach`}
-							description="Combined from direct actions, attached policies and group policies, after denies."
-							className="mt-0 min-w-0"
-						>
-							<div className="group-sheet p-4">
-								<ReachGrid
-									grants={userAccess(user, groups, policies)}
-									empty="No action, policy or group gives this user access to any bucket."
-								/>
-							</div>
-						</Section>
+			{/* The reach section below says what failed; the tiles would only repeat it. */}
+			{!access.error && (
+				<Loaded query={access} skeleton={<ReachStatsGhost />} className="mb-8">
+					{({ groups, policies }) => (
+						<UserReachStats user={user} grants={userAccess(user, groups, policies)} />
 					)}
+				</Loaded>
+			)}
+			<div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12 [&>*]:min-w-0">
+				<div className="grid min-w-0 grid-cols-1 gap-8 lg:col-span-8">
+					<Section
+						title={`What ${user.username} can reach`}
+						description="Combined from direct actions, attached policies and group policies, after denies."
+						className="mt-0 min-w-0"
+					>
+						<div className="group-sheet p-4">
+							<Loaded query={access} skeleton={<ReachGhost />}>
+								{({ groups, policies }) => (
+									<ReachGrid
+										grants={userAccess(user, groups, policies)}
+										empty="No action, policy or group gives this user access to any bucket."
+									/>
+								)}
+							</Loaded>
+						</div>
+					</Section>
 					<KeysSection user={user} editable={editable} />
-					<PermissionsSection
-						key={JSON.stringify([user.email, user.actions, user.policies])}
-						user={user}
-						editable={editable}
-					/>
+					<PermissionsSection user={user} editable={editable} />
 				</div>
 				<div className="grid min-w-0 gap-8 lg:col-span-4">
 					<Section title="Details" className="mt-0">
@@ -138,8 +188,8 @@ function UserPage() {
 									),
 								},
 								{ label: "Email", value: user.email || <span className="text-tertiary">None</span> },
-								{ label: "Keys that can sign", value: <span className="tabular">{active}</span> },
-								{ label: "Policies", value: <span className="tabular">{user.policies.length}</span> },
+								{ label: "Keys that can sign", value: <RollingValue text={String(active)} /> },
+								{ label: "Policies", value: <RollingValue text={String(user.policies.length)} /> },
 								{ label: "Defined in", value: user.isStatic ? <StaticBadge /> : "Kelp and the admin API" },
 							]}
 						/>
@@ -147,7 +197,7 @@ function UserPage() {
 					<GroupsSection user={user} editable={canWrite} />
 					<ServiceAccountsSection username={user.username} />
 				</div>
-			</Reveal>
+			</div>
 		</>
 	);
 }
@@ -161,7 +211,7 @@ function UserReachStats({ user, grants }: { user: IamUser; grants: BucketGrant[]
 	const ages = active.map((k) => ageInDays(k.createdAt)).filter((a): a is number => a !== null);
 	const oldest = ages.length > 0 ? Math.max(...ages) : null;
 	return (
-		<Reveal className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+		<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 			<Kpi
 				label="Buckets reached"
 				value={all ? "All" : String(named.length)}
@@ -194,7 +244,7 @@ function UserReachStats({ user, grants }: { user: IamUser; grants: BucketGrant[]
 				}
 				{...(oldest !== null && oldest >= ROTATE_AFTER_DAYS ? { tone: "warn" as const } : {})}
 			/>
-		</Reveal>
+		</div>
 	);
 }
 
@@ -202,21 +252,76 @@ function plural(count: number, noun: string): string {
 	return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-function UserSkeleton() {
+function ReachStatsGhost() {
 	return (
-		<div role="status" aria-busy="true" aria-label="Loading user">
-			<div className="flex items-center gap-3 pt-2 pb-6">
-				<SkeletonBlock className="size-9 rounded-[9px]" />
-				<div className="space-y-1.5">
-					<SkeletonBlock className="h-7 w-40" />
-					<SkeletonBlock className="h-4 w-64" />
+		<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+			{[0, 1, 2, 3].map((i) => (
+				<TileGhost key={i} unit />
+			))}
+		</div>
+	);
+}
+
+function UserSkeleton({ username }: { username: string }) {
+	return (
+		<LoadingRegion label="Loading user">
+			<div className="mb-8">
+				<ReachStatsGhost />
+			</div>
+			<div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-12 [&>*]:min-w-0">
+				<div className="grid min-w-0 grid-cols-1 gap-8 lg:col-span-8">
+					<Section
+						title={`What ${username} can reach`}
+						description="Combined from direct actions, attached policies and group policies, after denies."
+						className="mt-0 min-w-0"
+					>
+						<div className="group-sheet p-4">
+							<ReachGhost />
+						</div>
+					</Section>
+					<Section
+						title="Access keys"
+						description="Turn a key off to pause it without losing it."
+						className="mt-0"
+					>
+						<SheetRowsGhost rows={1} />
+					</Section>
+					<Section
+						title="Profile and permissions"
+						description="Actions are SeaweedFS's built-in grants; policies are IAM documents."
+						className="mt-0"
+					>
+						<div className="group-sheet divide-y divide-border">
+							{["Email", "Actions", "Policies"].map((field) => (
+								<div key={field} className="grid gap-2 px-4 py-3.5">
+									<span className="font-medium text-sm">{field}</span>
+									<SkeletonBlock className="h-9 w-full rounded-lg" />
+								</div>
+							))}
+						</div>
+					</Section>
+				</div>
+				<div className="grid min-w-0 gap-8 lg:col-span-4">
+					<Section title="Details" className="mt-0">
+						<InfoGhost rows={5} />
+					</Section>
+					<Section
+						title="Groups"
+						description="Members inherit every policy attached to a group."
+						className="mt-0"
+					>
+						<SheetRowsGhost rows={1} />
+					</Section>
+					<Section
+						title="Service accounts"
+						description="Separate keys that act on this user's behalf."
+						className="mt-0"
+					>
+						<SheetRowsGhost rows={1} />
+					</Section>
 				</div>
 			</div>
-			<div className="grid gap-6 lg:grid-cols-12">
-				<SkeletonBlock className="h-64 rounded-xl lg:col-span-8" />
-				<SkeletonBlock className="h-48 rounded-xl lg:col-span-4" />
-			</div>
-		</div>
+		</LoadingRegion>
 	);
 }
 
@@ -236,12 +341,14 @@ function KeyRow({
 		invalidate,
 	});
 	const remove = useAction({ run: () => api.delete(keyPath), success: "Access key deleted", invalidate });
+	const reduced = usePrefersReducedMotion();
 	return (
 		<motion.li
-			layout
-			initial={{ opacity: 0, y: 4 }}
+			layout={!reduced}
+			initial={reduced ? false : { opacity: 0, y: 4 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, x: -8 }}
+			transition={{ duration: reduced ? 0 : SPEED.fast, ease: EASE }}
 			className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pr-2 pl-4"
 		>
 			<div className="flex min-w-0 flex-1 basis-full items-center gap-2 sm:basis-auto">
@@ -297,21 +404,23 @@ function KeysSection({ user, editable }: { user: IamUser; editable: boolean }) {
 			actions={editable && <CreateKeyDialog username={user.username} />}
 			className="mt-0"
 		>
-			{user.accessKeys.length === 0 ? (
-				<EmptyState
-					icon={<KeyRound />}
-					title="No access keys"
-					description="This user cannot sign S3 requests yet."
-				/>
-			) : (
-				<ul className="group-sheet divide-y divide-border">
-					<AnimatePresence initial={false}>
-						{user.accessKeys.map((key) => (
-							<KeyRow key={key.accessKey} username={user.username} accessKey={key} editable={editable} />
-						))}
-					</AnimatePresence>
-				</ul>
-			)}
+			<Swap id={user.accessKeys.length === 0 ? "empty" : "keys"}>
+				{user.accessKeys.length === 0 ? (
+					<EmptyState
+						icon={<KeyRound />}
+						title="No access keys"
+						description="This user cannot sign S3 requests yet."
+					/>
+				) : (
+					<ul className="group-sheet divide-y divide-border">
+						<AnimatePresence initial={false}>
+							{user.accessKeys.map((key) => (
+								<KeyRow key={key.accessKey} username={user.username} accessKey={key} editable={editable} />
+							))}
+						</AnimatePresence>
+					</ul>
+				)}
+			</Swap>
 		</Section>
 	);
 }
@@ -335,6 +444,13 @@ function PermissionsSection({ user, editable }: { user: IamUser; editable: boole
 		setActions(user.actions);
 		setPolicies(user.policies);
 	};
+	// New values from the server replace the draft in place, so the save bar can slide away.
+	const saved = JSON.stringify([user.email, user.actions, user.policies]);
+	const [seen, setSeen] = useState(saved);
+	if (saved !== seen) {
+		setSeen(saved);
+		reset();
+	}
 
 	return (
 		<Section
@@ -381,23 +497,16 @@ function PermissionsSection({ user, editable }: { user: IamUser; editable: boole
 					disabled={!editable}
 					placeholder="Attach managed policies"
 				/>
-				<AnimatePresence>
-					{editable && dirty && (
-						<motion.div
-							initial={{ opacity: 0, y: 6 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: 6 }}
-							className="flex items-center justify-end gap-2 bg-raised/50"
-						>
-							<Button type="button" variant="ghost" onClick={reset}>
-								Discard
-							</Button>
-							<Button type="submit" disabled={save.isPending} pending={save.isPending}>
-								Save changes
-							</Button>
-						</motion.div>
-					)}
-				</AnimatePresence>
+				<Expand open={editable && dirty} className="!p-0">
+					<div className="flex items-center justify-end gap-2 bg-raised/50 px-4 py-3.5">
+						<Button type="button" variant="ghost" onClick={reset}>
+							Discard
+						</Button>
+						<Button type="submit" disabled={save.isPending} pending={save.isPending}>
+							Save changes
+						</Button>
+					</div>
+				</Expand>
 			</form>
 		</Section>
 	);
@@ -421,58 +530,64 @@ function GroupsSection({ user, editable }: { user: IamUser; editable: boolean })
 	return (
 		<Section title="Groups" description="Members inherit every policy attached to a group." className="mt-0">
 			<div className="grid gap-2">
-				{user.groups.length === 0 ? (
-					<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">Not in any group.</p>
-				) : (
-					<ul className="group-sheet divide-y divide-border">
-						{user.groups.map((group) => (
-							<li key={group} className="flex h-10 items-center gap-2.5 pr-2 pl-4 text-[13px]">
-								<UsersRound className="size-3.5 text-muted-foreground" />
-								<Link
-									to="/access/groups/$name"
-									params={{ name: group }}
-									className="min-w-0 flex-1 truncate hover:underline"
-								>
-									{group}
-								</Link>
-								{editable && (
-									<Button
-										variant="ghost"
-										size="icon-xs"
-										aria-label={`Remove from ${group}`}
-										disabled={leave.isPending}
-										onClick={() => leave.mutate(group)}
+				<Swap id={user.groups.length === 0 ? "none" : "groups"}>
+					{user.groups.length === 0 ? (
+						<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">Not in any group.</p>
+					) : (
+						<ul className="group-sheet divide-y divide-border">
+							{user.groups.map((group) => (
+								<li key={group} className="flex h-10 items-center gap-2.5 pr-2 pl-4 text-[13px]">
+									<UsersRound className="size-3.5 text-muted-foreground" />
+									<Link
+										to="/access/groups/$name"
+										params={{ name: group }}
+										className="min-w-0 flex-1 truncate hover:underline"
 									>
-										<X />
-									</Button>
-								)}
-							</li>
-						))}
-					</ul>
-				)}
-				{editable && available.length > 0 && (
-					<Select value={null} onValueChange={(group) => group && join.mutate(group as string)}>
-						<SelectTrigger aria-label="Add to group" className="w-full">
-							<SelectValue placeholder="Add to group" />
-						</SelectTrigger>
-						<SelectContent>
-							{available.map((name) => (
-								<SelectItem key={name} value={name}>
-									{name}
-								</SelectItem>
+										{group}
+									</Link>
+									{editable && (
+										<Button
+											variant="ghost"
+											size="icon-xs"
+											aria-label={`Remove from ${group}`}
+											disabled={leave.isPending}
+											onClick={() => leave.mutate(group)}
+										>
+											<X />
+										</Button>
+									)}
+								</li>
 							))}
-						</SelectContent>
-					</Select>
-				)}
+						</ul>
+					)}
+				</Swap>
+				<Expand open={editable && (groups.isPending || available.length > 0)}>
+					{groups.isPending ? (
+						<SkeletonBlock className="h-8 w-full rounded-lg" />
+					) : (
+						<Select value={null} onValueChange={(group) => group && join.mutate(group as string)}>
+							<SelectTrigger aria-label="Add to group" className="w-full">
+								<SelectValue placeholder="Add to group" />
+							</SelectTrigger>
+							<SelectContent>
+								{available.map((name) => (
+									<SelectItem key={name} value={name}>
+										{name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					)}
+				</Expand>
 			</div>
 		</Section>
 	);
 }
 
 function ServiceAccountsSection({ username }: { username: string }) {
-	const { data } = useQuery({
+	const accounts = useQuery({
 		...accessQueries.serviceAccounts(),
-		select: (accounts) => accounts.filter((a) => a.parentUser === username),
+		select: (list) => list.filter((a) => a.parentUser === username),
 	});
 	return (
 		<Section
@@ -480,25 +595,31 @@ function ServiceAccountsSection({ username }: { username: string }) {
 			description="Separate keys that act on this user's behalf."
 			className="mt-0"
 		>
-			{!data || data.length === 0 ? (
-				<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">None.</p>
-			) : (
-				<ul className="group-sheet divide-y divide-border">
-					{data.map((account) => (
-						<li key={account.id} className="flex h-10 items-center gap-2.5 px-4 text-[13px]">
-							<Bot className="size-3.5 text-muted-foreground" />
-							<Link
-								to="/access/service-accounts"
-								search={{ account: account.id }}
-								className="min-w-0 flex-1 truncate hover:underline"
-							>
-								{account.description || account.id}
-							</Link>
-							<KeyStatusBadge status={account.status} />
-						</li>
-					))}
-				</ul>
-			)}
+			<Loaded query={accounts} skeleton={<SheetRowsGhost rows={1} />}>
+				{(list) => (
+					<Swap id={list.length === 0 ? "none" : "accounts"}>
+						{list.length === 0 ? (
+							<p className="group-sheet px-4 py-3 text-[13px] text-muted-foreground">None.</p>
+						) : (
+							<ul className="group-sheet divide-y divide-border">
+								{list.map((account) => (
+									<li key={account.id} className="flex h-10 items-center gap-2.5 px-4 text-[13px]">
+										<Bot className="size-3.5 text-muted-foreground" />
+										<Link
+											to="/access/service-accounts"
+											search={{ account: account.id }}
+											className="min-w-0 flex-1 truncate hover:underline"
+										>
+											{account.description || account.id}
+										</Link>
+										<KeyStatusBadge status={account.status} />
+									</li>
+								))}
+							</ul>
+						)}
+					</Swap>
+				)}
+			</Loaded>
 		</Section>
 	);
 }
