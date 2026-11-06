@@ -35,7 +35,7 @@ import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.t
 import { EmptyState, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
-import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
+import { AutoHeight, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
 import {
 	AlertDialog,
@@ -217,18 +217,20 @@ export function FileBrowser({ root, rootLabel, path, onNavigate, ready = true }:
 	return (
 		<LayoutGroup>
 			{/* Until the listing answers there is nothing to summarize; a failed one reports below. */}
-			<Loaded
-				query={{ data: listing.data ? loaded : listing.error ? [] : undefined, error: null }}
-				skeleton={<FolderSummaryGhost foldersOnly={FOLDERS_ONLY.includes(path)} />}
-			>
-				{(summarized) => (
-					<Swap id={summaryShape(summarized)}>
-						<StaleFade active={stale}>
-							<FolderSummary entries={summarized} partial={Boolean(listing.hasNextPage)} onOpen={open} />
-						</StaleFade>
-					</Swap>
-				)}
-			</Loaded>
+			<AutoHeight>
+				<Loaded
+					query={{ data: listing.data ? loaded : listing.error ? [] : undefined, error: null }}
+					skeleton={<FolderSummaryGhost foldersOnly={FOLDERS_ONLY.includes(path)} />}
+				>
+					{(summarized) => (
+						<Swap id={summaryShape(summarized)}>
+							<StaleFade active={stale}>
+								<FolderSummary entries={summarized} partial={Boolean(listing.hasNextPage)} onOpen={open} />
+							</StaleFade>
+						</Swap>
+					)}
+				</Loaded>
+			</AutoHeight>
 			<div className="grid grid-cols-[minmax(0,1fr)] gap-3">
 				<motion.div layout={reduced ? false : "position"} className="flex flex-wrap items-center gap-2">
 					<Breadcrumbs crumbs={crumbsFor(root, path, rootLabel)} onNavigate={onNavigate} />

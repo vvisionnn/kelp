@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
 import { ErrorState } from "./page.tsx";
@@ -121,5 +121,34 @@ export function Swap({ id, children, className }: { id: string; children: ReactN
 				</motion.div>
 			</AnimatePresence>
 		</div>
+	);
+}
+
+/**
+ * For blocks whose final height nobody can know in advance: when the content turns out taller or
+ * shorter, the height glides there and everything below moves with it instead of jumping.
+ */
+export function AutoHeight({ children, className }: { children: ReactNode; className?: string }) {
+	const reduced = usePrefersReducedMotion();
+	const inner = useRef<HTMLDivElement>(null);
+	const [height, setHeight] = useState<number>();
+	useEffect(() => {
+		const element = inner.current as HTMLDivElement;
+		const observer = new ResizeObserver(() => setHeight(element.offsetHeight));
+		observer.observe(element);
+		return () => observer.disconnect();
+	}, []);
+	return (
+		<motion.div
+			// The margin and padding cancel out, so the sheets' shadows and focus rings aren't clipped.
+			className={cn("-m-1 overflow-hidden", className)}
+			initial={false}
+			{...(height === undefined ? {} : { animate: { height } })}
+			transition={{ duration: reduced ? 0 : SPEED.base, ease: EASE }}
+		>
+			<div ref={inner} className="flow-root p-1">
+				{children}
+			</div>
+		</motion.div>
 	);
 }
