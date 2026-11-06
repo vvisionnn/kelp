@@ -49,7 +49,11 @@ import { cores } from "./cluster.tsx";
 
 export const Route = createFileRoute("/_app/")({
 	staticData: { title: "Overview" },
-	loader: ({ context }) => void context.queryClient.prefetchQuery(queries.overview()),
+	// The tiles' trend lines need telemetry too; ask for both at once instead of one after the other.
+	loader: ({ context }) => {
+		void context.queryClient.prefetchQuery(queries.overview());
+		void context.queryClient.prefetchQuery(queries.telemetry("1h"));
+	},
 	component: OverviewPage,
 });
 

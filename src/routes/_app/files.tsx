@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { z } from "zod";
 import { FileBrowser } from "@/components/kelp/objects/file-browser.tsx";
 import { PageHeader } from "@/components/kelp/page.tsx";
 import { objectQueries } from "@/lib/objects-queries.ts";
+import { text } from "@/lib/search.ts";
 
 export const Route = createFileRoute("/_app/files")({
 	staticData: { section: "Object store", title: "Files" },
-	validateSearch: z.object({ path: z.string().optional() }),
+	validateSearch: (raw: Record<string, unknown>): { path?: string } => ({ path: text(raw.path) }),
 	loaderDeps: ({ search }) => ({ path: search.path ?? "/" }),
 	loader: ({ context, deps }) =>
 		void context.queryClient.prefetchInfiniteQuery(objectQueries.folder(deps.path)),

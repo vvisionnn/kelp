@@ -1,6 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
 import { LogOut, Monitor, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import {
 	Command,
 	CommandDialog,
@@ -14,22 +13,6 @@ import {
 import { useSignOut } from "@/lib/session.ts";
 import { useTheme } from "../theme-provider.tsx";
 import { NAV } from "./nav.ts";
-
-/** Open state for the command menu, toggled with ⌘K / Ctrl+K anywhere in the app. */
-export function useCommandMenu() {
-	const [open, setOpen] = useState(false);
-	useEffect(() => {
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-				event.preventDefault();
-				setOpen((value) => !value);
-			}
-		};
-		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
-	}, []);
-	return { open, setOpen };
-}
 
 export function CommandMenu({
 	open,

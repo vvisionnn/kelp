@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { History, ListChecks, Play, RefreshCw, ScanSearch } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
-import { z } from "zod";
 import { clock, Kpi } from "@/components/kelp/charts/index.ts";
 import { StackedColumns } from "@/components/kelp/charts/stacked-columns.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
@@ -38,6 +37,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatDateTime, formatRelative } from "@/lib/format.ts";
 import { maintenanceApi, maintenanceQueries } from "@/lib/maintenance-queries.ts";
 import { useAction } from "@/lib/mutations.ts";
+import { oneOf } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
 const TABS = ["settings", "jobs", "history"] as const;
@@ -49,7 +49,9 @@ export const Route = createFileRoute("/_app/maintenance/$jobType")({
 		crumb: ({ jobType = "" }, queryClient) =>
 			queryClient.getQueryData(maintenanceQueries.jobType(jobType).queryKey)?.displayName ?? jobType,
 	},
-	validateSearch: z.object({ tab: z.enum(TABS).optional() }),
+	validateSearch: (raw: Record<string, unknown>): { tab?: (typeof TABS)[number] } => ({
+		tab: oneOf(raw.tab, TABS),
+	}),
 	loader: ({ context, params }) =>
 		void context.queryClient.prefetchQuery(maintenanceQueries.jobType(params.jobType)),
 	component: JobTypePage,

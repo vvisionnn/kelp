@@ -21,7 +21,10 @@ import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/buckets/")({
 	staticData: { section: "Object store", title: "Buckets" },
-	loader: ({ context }) => void context.queryClient.prefetchQuery(objectQueries.buckets()),
+	loader: ({ context }) => {
+		void context.queryClient.prefetchQuery(objectQueries.buckets());
+		void context.queryClient.prefetchQuery(queries.telemetry("1h"));
+	},
 	component: BucketsPage,
 });
 

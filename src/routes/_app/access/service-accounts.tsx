@@ -9,7 +9,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Bot, Plus, Trash2 } from "lucide-react";
 import { type FormEvent, useState } from "react";
-import { z } from "zod";
 import { expiryTimeline } from "@/components/kelp/access/analysis.ts";
 import { KeyStatusBadge } from "@/components/kelp/access/badges.tsx";
 import { Avatar } from "@/components/kelp/access/identity.tsx";
@@ -57,11 +56,12 @@ import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
 import { formatDateTime, formatRelative } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
+import { text } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/_app/access/service-accounts")({
 	staticData: { section: "Access", title: "Service accounts" },
-	validateSearch: z.object({ account: z.string().optional() }),
+	validateSearch: (raw: Record<string, unknown>): { account?: string } => ({ account: text(raw.account) }),
 	loader: ({ context }) => void context.queryClient.prefetchQuery(accessQueries.serviceAccounts()),
 	component: ServiceAccountsPage,
 });

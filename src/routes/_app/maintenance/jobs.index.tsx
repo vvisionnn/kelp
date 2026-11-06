@@ -2,7 +2,6 @@ import type { JobState, MaintenanceJob } from "@shared/maintenance.ts";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ListChecks } from "lucide-react";
-import { z } from "zod";
 import { Kpi } from "@/components/kelp/charts/index.ts";
 import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
@@ -26,6 +25,7 @@ import { Loaded } from "@/components/kelp/transitions.tsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatRelative } from "@/lib/format.ts";
 import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
+import { oneOf, text } from "@/lib/search.ts";
 
 const STATES = ["pending", "assigned", "running", "succeeded", "failed", "canceled"] as const;
 const FILTERS: Array<{ value: "all" | JobState; label: string }> = [
@@ -39,7 +39,10 @@ const FILTERS: Array<{ value: "all" | JobState; label: string }> = [
 
 export const Route = createFileRoute("/_app/maintenance/jobs/")({
 	staticData: { section: "Operations", title: "Maintenance jobs" },
-	validateSearch: z.object({ jobType: z.string().optional(), state: z.enum(STATES).optional() }),
+	validateSearch: (raw: Record<string, unknown>): { jobType?: string; state?: (typeof STATES)[number] } => ({
+		jobType: text(raw.jobType),
+		state: oneOf(raw.state, STATES),
+	}),
 	loaderDeps: ({ search }) => search,
 	loader: ({ context, deps }) => void context.queryClient.prefetchQuery(maintenanceQueries.jobs(deps)),
 	component: JobsPage,

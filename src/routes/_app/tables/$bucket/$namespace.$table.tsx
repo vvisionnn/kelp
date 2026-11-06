@@ -2,7 +2,6 @@ import type { DataFileInfo, IcebergSnapshot, IcebergTable, TableDetail } from "@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Camera, Database, Rows3, Trash2 } from "lucide-react";
-import { z } from "zod";
 import { BarList, compact, dataColor, Kpi, splitUnit } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
@@ -33,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api.ts";
 import { formatBytes, formatCount, formatDateTime, formatRelative } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
+import { oneOf, text } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { streamsQueries, tablePath } from "@/lib/streams-queries.ts";
 import { cn } from "@/lib/utils";
@@ -46,10 +46,12 @@ export const Route = createFileRoute("/_app/tables/$bucket/$namespace/$table")({
 		title: "Tables",
 		crumb: ({ bucket, namespace, table }) => `${bucket} / ${namespace}.${table}`,
 	},
-	validateSearch: z.object({
-		tab: z.enum(TABS).optional(),
-		snapshot: z.string().optional(),
-		file: z.string().optional(),
+	validateSearch: (
+		raw: Record<string, unknown>,
+	): { tab?: (typeof TABS)[number]; snapshot?: string; file?: string } => ({
+		tab: oneOf(raw.tab, TABS),
+		snapshot: text(raw.snapshot),
+		file: text(raw.file),
 	}),
 	loader: ({ context, params }) => {
 		// Prefetch without blocking: the page renders at once and its skeleton gives way to data.

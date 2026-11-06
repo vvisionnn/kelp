@@ -10,7 +10,6 @@ import type { Telemetry, TelemetryPoint, TrafficSample } from "@shared/telemetry
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Cable, Crown, Network, Server } from "lucide-react";
-import { z } from "zod";
 import {
 	dataColor,
 	latest,
@@ -46,13 +45,16 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes, formatCount, formatRelative, plural } from "@/lib/format.ts";
 import { queries } from "@/lib/queries.ts";
+import { oneOf } from "@/lib/search.ts";
 
 const TABS = ["masters", "volume-servers", "filers", "s3", "brokers", "mounts"] as const;
 type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_app/cluster")({
 	staticData: { section: "Cluster", title: "Nodes" },
-	validateSearch: z.object({ tab: z.enum(TABS).optional() }),
+	validateSearch: (raw: Record<string, unknown>): { tab?: (typeof TABS)[number] } => ({
+		tab: oneOf(raw.tab, TABS),
+	}),
 	loader: ({ context }) => void context.queryClient.prefetchQuery(queries.topology()),
 	component: ClusterPage,
 });

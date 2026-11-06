@@ -22,6 +22,32 @@ afterEach(() => {
 });
 
 describe("api", () => {
+	test("picks up a request the page started before the app loaded, once", async () => {
+		respond({ fresh: true });
+		const early = {
+			at: performance.now(),
+			response: Promise.resolve(Response.json({ user: { name: "early" } })),
+		};
+		Object.assign(window, { __kelpEarly: { "/auth/me": early } });
+		expect(await api.get("/auth/me")).toEqual({ user: { name: "early" } });
+		expect(calls).toHaveLength(0);
+		expect(await api.get("/auth/me")).toEqual({ fresh: true });
+		expect(calls).toHaveLength(1);
+	});
+
+	test("ignores an early answer that has gone stale", async () => {
+		respond({ fresh: true });
+		const early = { at: performance.now() - 60_000, response: Promise.resolve(Response.json({ old: true })) };
+		Object.assign(window, { __kelpEarly: { "/overview": early } });
+		expect(await api.get("/overview")).toEqual({ fresh: true });
+	});
+
+	test("an early request that failed to reach the server reads as unreachable", async () => {
+		const early = { at: performance.now(), response: Promise.reject(new TypeError("offline")) };
+		Object.assign(window, { __kelpEarly: { "/auth/me": early } });
+		await expect(api.get("/auth/me")).rejects.toMatchObject({ status: 0 });
+	});
+
 	test("GETs JSON with query parameters and same-origin credentials", async () => {
 		respond({ ok: true });
 		expect(await api.get("/files", { path: "/buckets", cursor: undefined, limit: 50 })).toEqual({ ok: true });

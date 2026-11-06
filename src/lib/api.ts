@@ -25,6 +25,22 @@ function url(path: string, query?: Query): string {
 	return `/api${path}${search ? `?${search}` : ""}`;
 }
 
+/** How long a request the page started on its own stays fresh enough to stand in for a new one. */
+const EARLY_MS = 10_000;
+
+/**
+ * A GET that `index.html` sent while the app's code was still downloading (who is signed in, the
+ * overview's numbers), taken once. Starting them there saves waiting for the scripts first.
+ */
+function takeEarly(path: string): Promise<Response> | undefined {
+	const early = (window as { __kelpEarly?: Record<string, { at: number; response: Promise<Response> }> })
+		.__kelpEarly;
+	const entry = early?.[path];
+	if (!entry) return undefined;
+	delete early[path];
+	return performance.now() - entry.at < EARLY_MS ? entry.response : undefined;
+}
+
 async function request<T>(
 	method: string,
 	path: string,
@@ -34,12 +50,14 @@ async function request<T>(
 	if (options.body !== undefined) headers["content-type"] = "application/json";
 	let response: Response;
 	try {
-		response = await fetch(url(path, options.query), {
-			method,
-			headers,
-			credentials: "same-origin",
-			...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-		});
+		const early = method === "GET" && !options.query ? takeEarly(path) : undefined;
+		response = await (early ??
+			fetch(url(path, options.query), {
+				method,
+				headers,
+				credentials: "same-origin",
+				...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+			}));
 	} catch {
 		throw new ApiError(0, "Kelp server is unreachable");
 	}

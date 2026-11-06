@@ -2,7 +2,6 @@ import type { StorageInventory } from "@shared/storage.ts";
 import type { Telemetry } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { z } from "zod";
 import {
 	BarList,
 	Columns,
@@ -48,12 +47,17 @@ import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { RollingValue } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { formatBytes, formatCount, formatPercent, plural, ratio } from "@/lib/format.ts";
+import { oneOf } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { storageQueries, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
 
+const FILTERS = ["all", "attention", "read-only", "vacuum"] as const;
+
 export const Route = createFileRoute("/_app/volumes/")({
 	staticData: { section: "Storage", title: "Volumes" },
-	validateSearch: z.object({ filter: z.enum(["all", "attention", "read-only", "vacuum"]).optional() }),
+	validateSearch: (raw: Record<string, unknown>): { filter?: (typeof FILTERS)[number] } => ({
+		filter: oneOf(raw.filter, FILTERS),
+	}),
 	loader: ({ context }) => void context.queryClient.prefetchQuery(storageQueries.inventory()),
 	component: VolumesPage,
 });

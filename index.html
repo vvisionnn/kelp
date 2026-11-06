@@ -15,6 +15,28 @@
 				document.documentElement.style.colorScheme = dark ? "dark" : "light";
 			})();
 		</script>
+		<script>
+			// Ask who is signed in, and on the overview for its numbers, while the app's code downloads.
+			// The app takes these answers instead of asking again (see src/lib/api.ts).
+			(() => {
+				const early = {};
+				window.__kelpEarly = early;
+				const get = (path) => {
+					const response = fetch(`/api${path}`, {
+						headers: { "x-kelp-csrf": "1", accept: "application/json" },
+						credentials: "same-origin",
+					});
+					// An answer nobody takes (signed out, offline) must not surface as an error.
+					response.catch(() => {});
+					early[path] = { at: performance.now(), response };
+				};
+				get("/auth/me");
+				if (location.pathname === "/") {
+					get("/overview");
+					get("/telemetry?range=1h");
+				}
+			})();
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>

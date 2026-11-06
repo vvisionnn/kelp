@@ -1,7 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { type FormEvent, useState } from "react";
-import { z } from "zod";
 import { AmbientRays } from "@/components/kelp/ambient.tsx";
 import { KelpMark } from "@/components/kelp/brand.tsx";
 import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
@@ -9,10 +8,11 @@ import { Reveal } from "@/components/kelp/page.tsx";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { Button } from "@/components/ui/button";
+import { text } from "@/lib/search.ts";
 import { sessionQuery, useSignIn } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/login")({
-	validateSearch: z.object({ redirect: z.string().optional() }),
+	validateSearch: (raw: Record<string, unknown>): { redirect?: string } => ({ redirect: text(raw.redirect) }),
 	beforeLoad: async ({ context }) => {
 		const user = await context.queryClient.fetchQuery(sessionQuery).catch(() => undefined);
 		if (user) throw redirect({ to: "/" });

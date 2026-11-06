@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
-import { z } from "zod";
 import { RANGES, useRange } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { Segmented } from "@/components/kelp/controls.tsx";
@@ -19,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
 import { queries } from "@/lib/queries.ts";
+import { oneOf, text } from "@/lib/search.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
 const TABS = ["objects", "settings", "lifecycle", "policy"] as const;
@@ -26,9 +26,14 @@ type Tab = (typeof TABS)[number];
 
 export const Route = createFileRoute("/_app/buckets/$bucket")({
 	staticData: { section: "Object store", title: "Buckets" },
-	validateSearch: z.object({ tab: z.enum(TABS).optional(), path: z.string().optional() }),
-	loader: ({ context, params }) =>
-		void context.queryClient.prefetchQuery(objectQueries.bucket(params.bucket)),
+	validateSearch: (raw: Record<string, unknown>): { tab?: (typeof TABS)[number]; path?: string } => ({
+		tab: oneOf(raw.tab, TABS),
+		path: text(raw.path),
+	}),
+	loader: ({ context, params }) => {
+		void context.queryClient.prefetchQuery(objectQueries.bucket(params.bucket));
+		void context.queryClient.prefetchQuery(queries.telemetry("1h"));
+	},
 	component: BucketPage,
 });
 
