@@ -34,7 +34,7 @@ export function KpiGhost({ trend = true, className }: { trend?: boolean; classNa
 			<SkeletonBlock className="my-0.5 h-3.5 w-20" />
 			<SkeletonBlock className="mt-1.5 h-7 w-24" />
 			<SkeletonBlock className="mt-1.5 h-3 w-28" />
-			{trend && <SkeletonBlock className="mt-3 h-7 w-full" />}
+			{trend && <SkeletonBlock className="mt-[18px] h-7 w-full" />}
 		</div>
 	);
 }
@@ -54,31 +54,42 @@ export function StatBandGhost({ count = 4, className }: { count?: number; classN
 }
 
 /** Matches a `TimeChart` of the same height, with gridlines so the plot reads as a plot. */
-export function ChartGhost({ height = 200 }: { height?: number }) {
+export function ChartGhost({ height = 200, legend = true }: { height?: number; legend?: boolean }) {
 	return (
-		<div className="relative overflow-hidden" style={{ height }}>
-			<div className="absolute inset-x-0 top-1 bottom-6 flex flex-col justify-between">
-				{repeat(4, (i) => (
-					<div key={i} className="border-border/60 border-t border-dashed" />
-				))}
+		<div>
+			<div className="relative overflow-hidden" style={{ height }}>
+				<div className="absolute inset-x-0 top-2 bottom-7 flex flex-col justify-between">
+					{repeat(5, (i) => (
+						<div key={i} className="border-border/60 border-t" />
+					))}
+				</div>
+				<SkeletonBlock className="absolute inset-x-0 top-1/3 bottom-7 rounded-sm opacity-60" />
+				<div className="absolute inset-x-8 bottom-0 flex justify-between">
+					{repeat(4, (i) => (
+						<SkeletonBlock key={i} className="h-3 w-12" />
+					))}
+				</div>
 			</div>
-			<SkeletonBlock className="absolute inset-x-0 top-1/3 bottom-6 rounded-sm opacity-60" />
-			<div className="absolute inset-x-0 bottom-0 flex justify-between">
-				{repeat(5, (i) => (
-					<SkeletonBlock key={i} className="h-3 w-9" />
-				))}
-			</div>
+			{legend && (
+				<div className="flex h-12 items-start gap-4 pt-3">
+					{repeat(3, (i) => (
+						<SkeletonBlock key={i} className="h-3.5 w-12" />
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
 
-/** Matches a `Ring` with its legend. */
+/** Matches a `Ring` beside or above its legend. */
 export function RingGhost({ rows = 3 }: { rows?: number }) {
 	return (
-		<div className="flex flex-col items-center gap-4">
-			<SkeletonBlock className="size-36 rounded-full" />
-			<div className="w-full">
-				<RowsGhost rows={rows} />
+		<div className="flex flex-wrap items-center gap-6">
+			<SkeletonBlock className="size-[168px] rounded-full" />
+			<div className="w-full space-y-3.5">
+				{repeat(rows, (i) => (
+					<SkeletonBlock key={i} className="h-3.5 w-44" />
+				))}
 			</div>
 		</div>
 	);

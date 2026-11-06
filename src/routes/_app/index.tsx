@@ -541,6 +541,12 @@ function LiveSkeleton() {
 			<Panel title="Capacity" description="What fills the volume servers' disks" className="xl:col-span-4">
 				<RingGhost />
 			</Panel>
+			<Panel title="S3 latency" description="How long requests take, by percentile" className="xl:col-span-6">
+				<ChartGhost height={220} />
+			</Panel>
+			<Panel title="Busiest buckets" description="S3 requests in this range" className="xl:col-span-6">
+				<RowsGhost rows={6} />
+			</Panel>
 		</div>
 	);
 }
