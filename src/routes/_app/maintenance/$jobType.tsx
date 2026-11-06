@@ -2,26 +2,34 @@ import type { DetectionResult, JobRun, MaintenanceJob } from "@shared/maintenanc
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { History, ListChecks, Play, RefreshCw, ScanSearch } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { z } from "zod";
 import { clock, Kpi } from "@/components/kelp/charts/index.ts";
 import { StackedColumns } from "@/components/kelp/charts/stacked-columns.tsx";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { ChecksChart, lastDay } from "@/components/kelp/maintenance/insights.tsx";
+import { ChecksChart, lastDay, StackedGhost } from "@/components/kelp/maintenance/insights.tsx";
 import {
 	ActivityFeed,
 	capitalize,
+	cellGhost,
+	DataHeader,
 	formatDuration,
 	formatInterval,
 	humanize,
 	JobStateBadge,
+	KPI_TILE,
 	OutcomeBadge,
 	Pill,
+	settled,
+	twoLineGhost,
 } from "@/components/kelp/maintenance/parts.tsx";
 import { SettingsForm } from "@/components/kelp/maintenance/settings-form.tsx";
 import { runStats } from "@/components/kelp/maintenance/stats.ts";
-import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { EmptyState, Metric, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { KpiGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
@@ -54,6 +62,15 @@ export function detectionMessage(result: DetectionResult, name: string): string 
 		return `${name} found ${result.totalProposals} ${result.totalProposals === 1 ? "job" : "jobs"} to run`;
 	}
 	return result.skippedReason ? `${name} skipped: ${result.skippedReason}` : `${name} found nothing to do`;
+}
+
+/** A button's icon that crossfades to a spinner in the same spot while its action runs. */
+function BusyIcon({ busy, children }: { busy: boolean; children: ReactNode }) {
+	return (
+		<Swap id={busy ? "busy" : "idle"} className="size-4">
+			{busy ? <Spinner /> : children}
+		</Swap>
+	);
 }
 
 function JobTypePage() {
@@ -92,120 +109,144 @@ function JobTypePage() {
 		invalidate,
 	});
 
-	if (config.isPending) return <JobTypeSkeleton />;
-	if (config.error) {
-		return (
-			<>
-				<PageHeader title={name} />
-				<ErrorState error={config.error} onRetry={() => config.refetch()} />
-			</>
-		);
-	}
-
-	const runtime = config.data.runtime;
+	const ready = Boolean(config.data);
 	return (
 		<>
-			<PageHeader
-				title={name}
-				description={config.data.description}
+			<DataHeader
+				title={<TextMorph className="block overflow-hidden">{name}</TextMorph>}
+				description={
+					(ready || !config.error) && (
+						<Swap id={ready ? "ready" : "loading"}>
+							{config.data?.description ?? <SkeletonBlock className="my-0.5 h-3.5 w-96 max-w-full" />}
+						</Swap>
+					)
+				}
 				actions={
 					canWrite && (
-						<>
-							<Button variant="outline" disabled={detect.isPending} onClick={() => detect.mutate()}>
-								{detect.isPending ? <Spinner /> : <ScanSearch />}
-								Check for work
-							</Button>
-							<ConfirmDialog
-								trigger={
-									<Button disabled={run.isPending}>
-										{run.isPending ? <Spinner /> : <Play />}
-										Run now
+						<Swap id={ready ? "actions" : config.error ? "none" : "loading"}>
+							{ready ? (
+								<div className="flex flex-wrap items-center gap-2">
+									<Button variant="outline" disabled={detect.isPending} onClick={() => detect.mutate()}>
+										<BusyIcon busy={detect.isPending}>
+											<ScanSearch />
+										</BusyIcon>
+										Check for work
 									</Button>
-								}
-								title={`Run ${name} now?`}
-								description="Kelp checks for work right away and starts every job it finds, even outside the schedule. Jobs use cluster resources while they run."
-								confirmLabel="Run now"
-								onConfirm={() => run.mutateAsync()}
-							/>
-						</>
+									<ConfirmDialog
+										trigger={
+											<Button disabled={run.isPending}>
+												<BusyIcon busy={run.isPending}>
+													<Play />
+												</BusyIcon>
+												Run now
+											</Button>
+										}
+										title={`Run ${name} now?`}
+										description="Kelp checks for work right away and starts every job it finds, even outside the schedule. Jobs use cluster resources while they run."
+										confirmLabel="Run now"
+										onConfirm={() => run.mutateAsync()}
+									/>
+								</div>
+							) : (
+								!config.error && (
+									<div className="flex items-center gap-2">
+										<SkeletonBlock className="h-8 w-36" />
+										<SkeletonBlock className="h-8 w-24" />
+									</div>
+								)
+							)}
+						</Swap>
 					)
 				}
 			/>
-			<Reveal>
-				<dl className="group-sheet grid grid-cols-2 divide-border sm:grid-cols-5 sm:divide-x">
-					<div className="col-span-2 px-4 py-3.5 sm:col-span-1">
-						<dt className="text-[12px] text-muted-foreground">
-							{runtime.enabled ? "Runs automatically" : "Runs only when started here"}
-						</dt>
-						<dd className="mt-0.5 font-semibold text-[20px] leading-6 tracking-[-0.015em]">
-							{runtime.enabled
-								? capitalize(formatInterval(runtime.detectionIntervalMinutes) || "on demand")
-								: "Manual only"}
-						</dd>
-					</div>
-					<ScheduleFact label="Jobs per check" value={runtime.maxJobsPerDetection} />
-					<ScheduleFact label="At once in the cluster" value={runtime.globalExecutionConcurrency} />
-					<ScheduleFact label="At once per worker" value={runtime.perWorkerExecutionConcurrency} />
-					<ScheduleFact label="Retries" value={runtime.retryLimit} />
-				</dl>
-				<Performance jobType={jobType} />
-			</Reveal>
-			<Tabs
-				value={tab}
-				onValueChange={(value) => navigate({ search: { tab: value as (typeof TABS)[number] } })}
-			>
-				<div className="mt-8 mb-4 flex items-center justify-between gap-3">
-					<TabsList>
-						<TabsTrigger value="settings">Settings</TabsTrigger>
-						<TabsTrigger value="jobs">Jobs</TabsTrigger>
-						<TabsTrigger value="history">Run history</TabsTrigger>
-					</TabsList>
-					{tab === "settings" && (
-						<div className="flex items-center gap-1">
-							{config.data.updatedAt && (
-								<p className="hidden text-[12px] text-muted-foreground sm:block">
-									Saved {formatRelative(config.data.updatedAt)}
-									{config.data.updatedBy && ` by ${config.data.updatedBy}`}
-								</p>
-							)}
-							{canWrite && (
-								<Tooltip>
-									<TooltipTrigger
-										render={
-											<Button
-												variant="ghost"
-												size="icon-sm"
-												aria-label="Reload settings form from the worker"
-												disabled={refreshForm.isPending}
-												onClick={() => refreshForm.mutate()}
-											>
-												<RefreshCw className={refreshForm.isPending ? "animate-spin" : undefined} />
-											</Button>
-										}
-									/>
-									<TooltipContent>Reload settings form from the worker</TooltipContent>
-								</Tooltip>
-							)}
-						</div>
-					)}
-				</div>
-				<TabsContent value="settings">
-					<Reveal>
-						<SettingsForm
-							key={config.data.updatedAt ?? "new"}
-							config={config.data}
-							canWrite={canWrite}
-							onSave={(update) => save.mutateAsync(update)}
-						/>
-					</Reveal>
-				</TabsContent>
-				<TabsContent value="jobs">
-					<JobsTab jobType={jobType} />
-				</TabsContent>
-				<TabsContent value="history">
-					<HistoryTab jobType={jobType} />
-				</TabsContent>
-			</Tabs>
+			<Loaded query={config} skeleton={<JobTypeSkeleton />}>
+				{(data) => (
+					<>
+						<dl className="group-sheet grid grid-cols-2 divide-border sm:grid-cols-5 sm:divide-x">
+							<div className="col-span-2 px-4 py-3.5 sm:col-span-1">
+								<dt className="text-[12px] text-muted-foreground">
+									<TextMorph>
+										{data.runtime.enabled ? "Runs automatically" : "Runs only when started here"}
+									</TextMorph>
+								</dt>
+								<dd className="mt-0.5 font-semibold text-[20px] leading-6 tracking-[-0.015em]">
+									<TextMorph>
+										{data.runtime.enabled
+											? capitalize(formatInterval(data.runtime.detectionIntervalMinutes) || "on demand")
+											: "Manual only"}
+									</TextMorph>
+								</dd>
+							</div>
+							<ScheduleFact label="Jobs per check" value={data.runtime.maxJobsPerDetection} />
+							<ScheduleFact label="At once in the cluster" value={data.runtime.globalExecutionConcurrency} />
+							<ScheduleFact label="At once per worker" value={data.runtime.perWorkerExecutionConcurrency} />
+							<ScheduleFact label="Retries" value={data.runtime.retryLimit} />
+						</dl>
+						<Performance jobType={jobType} />
+						<Tabs
+							value={tab}
+							onValueChange={(value) => navigate({ search: { tab: value as (typeof TABS)[number] } })}
+						>
+							<div className="mt-8 mb-4 flex items-center justify-between gap-3">
+								<TabsList>
+									<TabsTrigger value="settings">Settings</TabsTrigger>
+									<TabsTrigger value="jobs">Jobs</TabsTrigger>
+									<TabsTrigger value="history">Run history</TabsTrigger>
+								</TabsList>
+								<Swap id={tab === "settings" ? "settings" : "none"}>
+									{tab === "settings" && (
+										<div className="flex items-center justify-end gap-1">
+											{data.updatedAt && (
+												<p className="hidden text-[12px] text-muted-foreground sm:block">
+													<TextMorph>
+														{`Saved ${formatRelative(data.updatedAt)}${data.updatedBy ? ` by ${data.updatedBy}` : ""}`}
+													</TextMorph>
+												</p>
+											)}
+											{canWrite && (
+												<Tooltip>
+													<TooltipTrigger
+														render={
+															<Button
+																variant="ghost"
+																size="icon-sm"
+																aria-label="Reload settings form from the worker"
+																disabled={refreshForm.isPending}
+																onClick={() => refreshForm.mutate()}
+															>
+																<BusyIcon busy={refreshForm.isPending}>
+																	<RefreshCw />
+																</BusyIcon>
+															</Button>
+														}
+													/>
+													<TooltipContent>Reload settings form from the worker</TooltipContent>
+												</Tooltip>
+											)}
+										</div>
+									)}
+								</Swap>
+							</div>
+							<Swap id={tab}>
+								<TabsContent value={tab}>
+									{tab === "settings" ? (
+										<SettingsForm
+											key={data.updatedAt ?? "new"}
+											config={data}
+											canWrite={canWrite}
+											onSave={(update) => save.mutateAsync(update)}
+										/>
+									) : tab === "jobs" ? (
+										<JobsTab jobType={jobType} />
+									) : (
+										<HistoryTab jobType={jobType} />
+									)}
+								</TabsContent>
+							</Swap>
+						</Tabs>
+					</>
+				)}
+			</Loaded>
 			<DetectionSheet
 				result={detection}
 				name={name}
@@ -239,16 +280,19 @@ export const jobColumns: Array<Column<MaintenanceJob>> = [
 			</div>
 		),
 		size: 320,
+		meta: twoLineGhost,
 	},
 	{
 		accessorKey: "state",
 		header: "State",
 		cell: ({ row }) => <JobStateBadge state={row.original.state} progress={row.original.progress} />,
+		meta: cellGhost("w-20"),
 	},
 	{
 		accessorKey: "attempt",
 		header: "Attempt",
 		cell: ({ row }) => <span className="tabular">{row.original.attempt || 1}</span>,
+		meta: cellGhost("w-6"),
 	},
 	{
 		accessorKey: "createdAt",
@@ -256,6 +300,7 @@ export const jobColumns: Array<Column<MaintenanceJob>> = [
 		cell: ({ row }) => (
 			<span className="text-muted-foreground text-xs">{formatRelative(row.original.createdAt)}</span>
 		),
+		meta: cellGhost("w-16"),
 	},
 	{
 		accessorKey: "completedAt",
@@ -263,6 +308,7 @@ export const jobColumns: Array<Column<MaintenanceJob>> = [
 		cell: ({ row }) => (
 			<span className="text-muted-foreground text-xs">{formatRelative(row.original.completedAt)}</span>
 		),
+		meta: cellGhost("w-16"),
 	},
 ];
 
@@ -300,6 +346,7 @@ const runColumns: Array<Column<JobRun>> = [
 		accessorKey: "outcome",
 		header: "Outcome",
 		cell: ({ row }) => <OutcomeBadge outcome={row.original.outcome} />,
+		meta: cellGhost("w-20"),
 	},
 	{
 		accessorKey: "message",
@@ -317,11 +364,13 @@ const runColumns: Array<Column<JobRun>> = [
 				row.original.message
 			),
 		size: 360,
+		meta: cellGhost("w-3/5"),
 	},
 	{
 		accessorKey: "durationMs",
 		header: "Duration",
 		cell: ({ row }) => <span className="tabular">{formatDuration(row.original.durationMs)}</span>,
+		meta: cellGhost("w-12"),
 	},
 	{
 		accessorKey: "completedAt",
@@ -331,6 +380,7 @@ const runColumns: Array<Column<JobRun>> = [
 				{formatRelative(row.original.completedAt)}
 			</span>
 		),
+		meta: cellGhost("w-16"),
 	},
 ];
 
@@ -364,7 +414,7 @@ const PRIORITY_TONE = {
 } as const;
 
 function DetectionSheet({
-	result,
+	result: latest,
 	name,
 	running,
 	onRun,
@@ -376,8 +426,12 @@ function DetectionSheet({
 	onRun: () => Promise<void>;
 	onClose: () => void;
 }) {
+	// The sheet slides out after the result clears; it keeps showing the result until it has gone.
+	const last = useRef(latest);
+	if (latest) last.current = latest;
+	const result = last.current;
 	return (
-		<Sheet open={result !== null} onOpenChange={(open) => !open && onClose()}>
+		<Sheet open={latest !== null} onOpenChange={(open) => !open && onClose()}>
 			<SheetContent className="w-full overflow-y-auto sm:max-w-lg">
 				<SheetHeader>
 					<SheetTitle>{name} check</SheetTitle>
@@ -390,7 +444,9 @@ function DetectionSheet({
 				{result && result.totalProposals > 0 && (
 					<div className="px-4">
 						<Button disabled={running} onClick={() => void onRun().catch(() => {})}>
-							{running ? <Spinner /> : <Play />}
+							<BusyIcon busy={running}>
+								<Play />
+							</BusyIcon>
 							Run these jobs
 						</Button>
 					</div>
@@ -457,69 +513,95 @@ function DetectionSheet({
 
 /** How this job type has been doing: run outcomes and durations, and how often checks find work. */
 function Performance({ jobType }: { jobType: string }) {
-	const runs = useQuery(maintenanceQueries.runs(jobType));
-	const history = useQuery(maintenanceQueries.history(jobType));
-	const list = runs.data ?? [];
-	const stats = runStats(list);
-	const recent = [...list]
-		.filter((r) => r.completedAt)
-		.sort((a, b) => new Date(a.completedAt as string).getTime() - new Date(b.completedAt as string).getTime())
-		.slice(-30);
-	const buckets = lastDay(history.data?.jobs ?? [], history.data?.activities ?? []);
+	const runs = settled(useQuery(maintenanceQueries.runs(jobType)), []);
+	const history = settled(useQuery(maintenanceQueries.history(jobType)), { jobs: [], activities: [] });
 	return (
 		<>
-			<div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<Kpi
-					label="Runs recorded"
-					value={String(stats.runs)}
-					hint={`${stats.succeeded} succeeded, ${stats.failed} failed`}
-				/>
-				<Kpi
-					label="Success rate"
-					{...(stats.successRate === null
-						? { value: "–" }
-						: { value: String(Math.round(stats.successRate * 100)), unit: "%" })}
-					hint={stats.successRate === null ? "No run has finished yet" : "Of runs in the history"}
-					{...(stats.successRate !== null && stats.successRate < 0.9 ? { tone: "warn" as const } : {})}
-				/>
-				<Kpi
-					label="Typical run"
-					value={stats.medianMs === null ? "–" : formatDuration(stats.medianMs)}
-					hint="Median duration"
-				/>
-				<Kpi
-					label="Longest run"
-					value={stats.longestMs === null ? "–" : formatDuration(stats.longestMs)}
-					hint="In the recorded history"
-				/>
-			</div>
+			<Loaded
+				query={runs}
+				className="mt-3"
+				skeleton={
+					<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+						{[0, 1, 2, 3].map((i) => (
+							<KpiGhost key={i} trend={false} className={KPI_TILE} />
+						))}
+					</div>
+				}
+			>
+				{(list) => <RunKpis runs={list} />}
+			</Loaded>
 			<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
 				<Panel
 					title="Recent runs"
 					description="Duration of each run, oldest to newest"
 					className="xl:col-span-7"
 				>
-					<StackedColumns
-						label="Duration of recent runs by outcome"
-						empty="No run has finished yet."
-						height={160}
-						format={(ms) => (ms > 0 ? formatDuration(ms) : "0")}
-						series={[
-							{ key: "success", label: "Succeeded", color: "var(--success)" },
-							{ key: "error", label: "Failed", color: "var(--destructive)" },
-						]}
-						columns={recent.map((run) => ({
-							key: run.runId,
-							label: clock(new Date(run.completedAt as string).getTime()),
-							values: { [run.outcome === "success" ? "success" : "error"]: run.durationMs },
-						}))}
-					/>
+					<Loaded query={runs} skeleton={<StackedGhost height={160} />}>
+						{(list) => <RecentRuns runs={list} />}
+					</Loaded>
 				</Panel>
 				<Panel title="Checks for work" description="Per hour, last 24 hours" className="xl:col-span-5">
-					<ChecksChart buckets={buckets} height={160} />
+					<Loaded query={history} skeleton={<StackedGhost height={160} />}>
+						{(past) => <ChecksChart buckets={lastDay(past.jobs, past.activities)} height={160} />}
+					</Loaded>
 				</Panel>
 			</div>
 		</>
+	);
+}
+
+function RunKpis({ runs }: { runs: JobRun[] }) {
+	const stats = runStats(runs);
+	return (
+		<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+			<Kpi
+				label="Runs recorded"
+				value={String(stats.runs)}
+				hint={`${stats.succeeded} succeeded, ${stats.failed} failed`}
+			/>
+			<Kpi
+				label="Success rate"
+				{...(stats.successRate === null
+					? { value: "–" }
+					: { value: String(Math.round(stats.successRate * 100)), unit: "%" })}
+				hint={stats.successRate === null ? "No run has finished yet" : "Of runs in the history"}
+				{...(stats.successRate !== null && stats.successRate < 0.9 ? { tone: "warn" as const } : {})}
+			/>
+			<Kpi
+				label="Typical run"
+				value={stats.medianMs === null ? "–" : formatDuration(stats.medianMs)}
+				hint="Median duration"
+			/>
+			<Kpi
+				label="Longest run"
+				value={stats.longestMs === null ? "–" : formatDuration(stats.longestMs)}
+				hint="In the recorded history"
+			/>
+		</div>
+	);
+}
+
+function RecentRuns({ runs }: { runs: JobRun[] }) {
+	const recent = [...runs]
+		.filter((r) => r.completedAt)
+		.sort((a, b) => new Date(a.completedAt as string).getTime() - new Date(b.completedAt as string).getTime())
+		.slice(-30);
+	return (
+		<StackedColumns
+			label="Duration of recent runs by outcome"
+			empty="No run has finished yet."
+			height={160}
+			format={(ms) => (ms > 0 ? formatDuration(ms) : "0")}
+			series={[
+				{ key: "success", label: "Succeeded", color: "var(--success)" },
+				{ key: "error", label: "Failed", color: "var(--destructive)" },
+			]}
+			columns={recent.map((run) => ({
+				key: run.runId,
+				label: clock(new Date(run.completedAt as string).getTime()),
+				values: { [run.outcome === "success" ? "success" : "error"]: run.durationMs },
+			}))}
+		/>
 	);
 }
 
@@ -527,26 +609,43 @@ function ScheduleFact({ label, value }: { label: string; value: number }) {
 	return (
 		<div className="px-4 py-3.5">
 			<dt className="truncate text-[12px] text-muted-foreground">{label}</dt>
-			<dd className="metric mt-0.5 font-semibold text-[20px] leading-6">{value}</dd>
+			<dd className="metric mt-0.5 font-semibold text-[20px] leading-6">
+				<Metric value={value} />
+			</dd>
 		</div>
 	);
 }
 
 function JobTypeSkeleton() {
 	return (
-		<div role="status" aria-busy="true" aria-label="Loading job type">
-			<div className="flex items-center gap-3 pt-2 pb-6">
-				<SkeletonBlock className="size-9 rounded-[9px]" />
-				<div className="space-y-1.5">
-					<SkeletonBlock className="h-7 w-48" />
-					<SkeletonBlock className="h-4 w-96 max-w-full" />
-				</div>
+		<LoadingRegion label="Loading job type">
+			<div className="group-sheet grid min-h-[75px] grid-cols-2 divide-border sm:grid-cols-5 sm:divide-x">
+				{[0, 1, 2, 3, 4].map((i) => (
+					<div key={i} className="px-4 py-3.5 first:col-span-2 sm:first:col-span-1">
+						<SkeletonBlock className="my-0.5 h-3.5 w-24" />
+						<SkeletonBlock className="mt-1 h-5 w-16" />
+					</div>
+				))}
 			</div>
-			<SkeletonBlock className="h-[74px] rounded-xl" />
-			<SkeletonBlock className="mt-8 mb-4 h-8 w-64" />
-			{[0, 1].map((i) => (
-				<SkeletonBlock key={i} className="mb-4 h-56 rounded-xl" />
-			))}
-		</div>
+			<div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+				{[0, 1, 2, 3].map((i) => (
+					<KpiGhost key={i} trend={false} className={KPI_TILE} />
+				))}
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+				<Panel
+					title="Recent runs"
+					description="Duration of each run, oldest to newest"
+					className="xl:col-span-7"
+				>
+					<StackedGhost height={160} />
+				</Panel>
+				<Panel title="Checks for work" description="Per hour, last 24 hours" className="xl:col-span-5">
+					<StackedGhost height={160} />
+				</Panel>
+			</div>
+			<SkeletonBlock className="mt-8 mb-6 h-8 w-64" />
+			<SkeletonBlock className="h-96 rounded-xl" />
+		</LoadingRegion>
 	);
 }

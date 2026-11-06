@@ -1,5 +1,6 @@
 import type { TopicRetention } from "@shared/messaging.ts";
 import { useId } from "react";
+import { Collapse } from "@/components/kelp/maintenance/parts.tsx";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -84,7 +85,7 @@ export function RetentionFields({
 					onCheckedChange={(enabled) => onChange({ ...draft, enabled })}
 				/>
 			</div>
-			{draft.enabled && (
+			<Collapse open={draft.enabled}>
 				<div className="flex flex-wrap items-center gap-2">
 					<Input
 						type="number"
@@ -120,7 +121,7 @@ export function RetentionFields({
 						))}
 					</ToggleGroup>
 				</div>
-			)}
+			</Collapse>
 		</div>
 	);
 }

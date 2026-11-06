@@ -1,6 +1,7 @@
 import type { IcebergSnapshot, TableDetail, TableSummary } from "@shared/tables.ts";
 import { useQueries } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useRef } from "react";
 import {
 	BarList,
 	Columns,
@@ -10,7 +11,10 @@ import {
 	splitUnit,
 	TimeChart,
 } from "@/components/kelp/charts/index.ts";
+import { BarsGhost, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
 import { Panel } from "@/components/kelp/page.tsx";
+import { ChartGhost, KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
+import { Loaded } from "@/components/kelp/transitions.tsx";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { streamsQueries } from "@/lib/streams-queries.ts";
 import { cn } from "@/lib/utils";
@@ -91,11 +95,56 @@ export interface TableRef {
 
 /** Reads every table's metadata (tables are few) and totals what the warehouses hold. */
 export function useTableDetails(tables: TableRef[]) {
-	return useQueries({
+	const queries = useQueries({
 		queries: tables.map(({ bucket, table }) => streamsQueries.table(bucket, table.namespace, table.name)),
-	})
-		.map((query, i) => ({ ref: tables[i] as TableRef, detail: query.data }))
-		.filter((entry): entry is { ref: TableRef; detail: TableDetail } => Boolean(entry.detail));
+	});
+	return {
+		pending: queries.some((query) => query.isPending),
+		details: queries
+			.map((query, i) => ({ ref: tables[i] as TableRef, detail: query.data }))
+			.filter((entry): entry is { ref: TableRef; detail: TableDetail } => Boolean(entry.detail)),
+	};
+}
+
+/** Matches `WarehouseDashboard`, tiles and panels both. */
+export function DashboardGhost({ wide = false }: { wide?: boolean }) {
+	return (
+		<div className="mb-6 space-y-3">
+			<div
+				className={cn("grid grid-cols-2 gap-3 md:grid-cols-3", wide ? "xl:grid-cols-6" : "xl:grid-cols-5")}
+			>
+				{(wide ? [0, 1, 2, 3, 4, 5] : [0, 1, 2, 3, 4]).map((i) => (
+					<KpiGhost key={i} trend={false} className={KPI_TILE} />
+				))}
+			</div>
+			<div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+				<Panel title="Largest tables" description="By records" className="xl:col-span-7">
+					<BarsGhost rows={3} />
+				</Panel>
+				<Panel title="Latest commits" description="Across every table" className="xl:col-span-5">
+					<RowsGhost rows={4} className="space-y-[23px] py-3" />
+				</Panel>
+			</div>
+		</div>
+	);
+}
+
+/** Matches `TableGrowth`. */
+export function GrowthGhost() {
+	return (
+		<div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+			<Panel
+				title="Records over time"
+				description="Total records after each commit"
+				className="xl:col-span-8"
+			>
+				<ChartGhost height={200} legend={false} />
+			</Panel>
+			<Panel title="Recent commits" description="Records each commit added" className="xl:col-span-4">
+				<ChartGhost height={200} legend={false} />
+			</Panel>
+		</div>
+	);
 }
 
 /** Totals, the largest tables and the latest commits across every warehouse. */
@@ -103,13 +152,51 @@ export function WarehouseDashboard({
 	warehouses,
 	namespaces,
 	tables,
+	pending = false,
 }: {
 	/** Shown when the dashboard spans several warehouses. */
 	warehouses?: number;
 	namespaces: number;
 	tables: TableRef[];
+	/** The caller is still reading what `tables` should be. */
+	pending?: boolean;
 }) {
-	const details = useTableDetails(tables);
+	const { details, pending: reading } = useTableDetails(tables);
+	// Only the first read shows ghosts; a table added later must not blank the dashboard.
+	const answered = useRef(false);
+	if (!pending && !reading) answered.current = true;
+	return (
+		<Loaded
+			query={{ data: answered.current ? details : undefined, error: null }}
+			skeleton={
+				<LoadingRegion label="Loading warehouse totals">
+					<DashboardGhost wide={warehouses !== undefined} />
+				</LoadingRegion>
+			}
+		>
+			{(ready) => (
+				<WarehouseTotals
+					{...(warehouses === undefined ? {} : { warehouses })}
+					namespaces={namespaces}
+					tables={tables}
+					details={ready}
+				/>
+			)}
+		</Loaded>
+	);
+}
+
+function WarehouseTotals({
+	warehouses,
+	namespaces,
+	tables,
+	details,
+}: {
+	warehouses?: number;
+	namespaces: number;
+	tables: TableRef[];
+	details: Array<{ ref: TableRef; detail: TableDetail }>;
+}) {
 	const records = details.reduce((sum, d) => sum + (d.detail.iceberg?.metrics.records ?? 0), 0);
 	const bytes = details.reduce((sum, d) => sum + (d.detail.iceberg?.metrics.totalSize ?? 0), 0);
 	const snapshots = details.flatMap((d) =>

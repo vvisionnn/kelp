@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { FolderPlus, Plus, TablePropertiesIcon, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useState } from "react";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -252,6 +254,7 @@ export function CreateTableDialog({ bucket, namespaces }: { bucket: string; name
 		},
 	});
 	const problem = columnsProblem(columns);
+	const reduced = usePrefersReducedMotion();
 	const validName = IDENTIFIER.test(name.trim());
 	const update = (id: number, patch: Partial<ColumnDraft>) =>
 		setColumns((all) => all.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -314,10 +317,11 @@ export function CreateTableDialog({ bucket, namespaces }: { bucket: string; name
 					{columns.map((column, index) => (
 						<motion.div
 							key={column.id}
-							layout
-							initial={{ opacity: 0, height: 0 }}
+							layout={!reduced}
+							initial={reduced ? false : { opacity: 0, height: 0 }}
 							animate={{ opacity: 1, height: "auto" }}
 							exit={{ opacity: 0, height: 0 }}
+							transition={{ duration: reduced ? 0 : SPEED.base, ease: EASE }}
 							className="grid grid-cols-[minmax(0,1fr)_9rem_auto_auto] items-center gap-2"
 						>
 							<Input
@@ -373,7 +377,9 @@ export function CreateTableDialog({ bucket, namespaces }: { bucket: string; name
 						<Plus />
 						Add column
 					</Button>
-					{problem && <span className="text-destructive text-xs">{problem}</span>}
+					<Swap id={problem ?? "fine"} className="min-w-0 flex-1 justify-items-end">
+						{problem && <span className="text-destructive text-xs">{problem}</span>}
+					</Swap>
 				</div>
 			</fieldset>
 		</FormDialog>

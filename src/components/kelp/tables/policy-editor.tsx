@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 /** Starting points for the most common resource policies. */
 export function policyTemplates(resource: string) {
@@ -147,7 +148,7 @@ export function PolicyEditor({
 				onChange={(event) => setText(event.target.value)}
 				aria-invalid={Boolean(problem)}
 			/>
-			<p className={problem ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
+			<p className={cn("text-xs transition-colors", problem ? "text-destructive" : "text-muted-foreground")}>
 				{problem ??
 					(text.trim() ? "Valid JSON policy." : "No policy. Access follows each identity's own permissions.")}
 			</p>

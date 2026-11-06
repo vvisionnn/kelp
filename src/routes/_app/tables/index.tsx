@@ -2,12 +2,12 @@ import type { TableBucket } from "@shared/tables.ts";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Database, ScrollText, Table2 } from "lucide-react";
-import { motion } from "motion/react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
-import { EmptyState, ErrorState, PageHeader, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { ListGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { CreateBucketDialog } from "@/components/kelp/tables/create-dialogs.tsx";
-import { WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
+import { DashboardGhost, WarehouseDashboard } from "@/components/kelp/tables/table-insights.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -43,7 +43,7 @@ export function catalogUri(
 }
 
 function TablesPage() {
-	const { data, isPending, error, refetch } = useQuery(streamsQueries.tableBuckets());
+	const query = useQuery(streamsQueries.tableBuckets());
 	const canWrite = useCanWrite();
 	return (
 		<>
@@ -52,36 +52,31 @@ function TablesPage() {
 				description="Iceberg tables in SeaweedFS table buckets, and how query engines connect to them."
 				actions={canWrite ? <CreateBucketDialog /> : null}
 			/>
-			{isPending ? (
-				<div
-					className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]"
-					role="status"
-					aria-label="Loading table buckets"
-				>
-					<SkeletonBlock className="h-48 rounded-xl" />
-					<SkeletonBlock className="h-80 rounded-xl" />
-				</div>
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : data.buckets.length === 0 ? (
-				<EmptyState
-					icon={<Database />}
-					title="No table buckets yet"
-					description="Create a table bucket to give engines like Spark, Trino or DuckDB an Iceberg warehouse on SeaweedFS."
-				/>
-			) : (
-				<Reveal>
-					<TablesOverview buckets={data.buckets} />
-					<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
-						<section aria-label="Table buckets" className="group-sheet h-fit divide-y divide-border">
-							{data.buckets.map((bucket, index) => (
-								<BucketRow key={bucket.arn} bucket={bucket} index={index} />
-							))}
-						</section>
-						<ConnectCard port={data.icebergPort} example={data.buckets[0]?.name ?? "analytics"} />
-					</div>
-				</Reveal>
-			)}
+			<Loaded query={query} skeleton={<TablesSkeleton />}>
+				{(data) => (
+					<Swap id={data.buckets.length === 0 ? "empty" : "list"}>
+						{data.buckets.length === 0 ? (
+							<EmptyState
+								icon={<Database />}
+								title="No table buckets yet"
+								description="Create a table bucket to give engines like Spark, Trino or DuckDB an Iceberg warehouse on SeaweedFS."
+							/>
+						) : (
+							<>
+								<TablesOverview buckets={data.buckets} />
+								<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+									<section aria-label="Table buckets" className="group-sheet h-fit divide-y divide-border">
+										{data.buckets.map((bucket) => (
+											<BucketRow key={bucket.arn} bucket={bucket} />
+										))}
+									</section>
+									<ConnectCard port={data.icebergPort} example={data.buckets[0]?.name ?? "analytics"} />
+								</div>
+							</>
+						)}
+					</Swap>
+				)}
+			</Loaded>
 		</>
 	);
 }
@@ -96,42 +91,36 @@ function TablesOverview({ buckets }: { buckets: TableBucket[] }) {
 			warehouses={buckets.length}
 			namespaces={loaded.reduce((sum, d) => sum + d.namespaces.length, 0)}
 			tables={tables}
+			pending={details.some((q) => q.isPending)}
 		/>
 	);
 }
 
-function BucketRow({ bucket, index }: { bucket: TableBucket; index: number }) {
-	const reduced = usePrefersReducedMotion();
+function BucketRow({ bucket }: { bucket: TableBucket }) {
 	return (
-		<motion.div
-			initial={reduced ? false : { opacity: 0 }}
-			animate={{ opacity: 1 }}
-			transition={{ duration: 0.2, delay: reduced ? 0 : index * 0.03 }}
+		<Link
+			to="/tables/$bucket"
+			params={{ bucket: bucket.name }}
+			className="group flex items-center gap-3 px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-raised/70"
 		>
-			<Link
-				to="/tables/$bucket"
-				params={{ bucket: bucket.name }}
-				className="group flex items-center gap-3 px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-raised/70"
-			>
-				<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-raised text-muted-foreground">
-					<Table2 className="size-4" />
+			<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-raised text-muted-foreground">
+				<Table2 className="size-4" />
+			</span>
+			<span className="min-w-0 flex-1">
+				<span className="block truncate font-medium font-mono text-[13px]">{bucket.name}</span>
+				<span className="block text-[12px] text-muted-foreground">
+					{bucket.format.toLowerCase()} warehouse, owned by {bucket.owner || "admin"}, created{" "}
+					{formatDateTime(bucket.createdAt)}
 				</span>
-				<span className="min-w-0 flex-1">
-					<span className="block truncate font-medium font-mono text-[13px]">{bucket.name}</span>
-					<span className="block text-[12px] text-muted-foreground">
-						{bucket.format.toLowerCase()} warehouse, owned by {bucket.owner || "admin"}, created{" "}
-						{formatDateTime(bucket.createdAt)}
-					</span>
-				</span>
-				{bucket.policyStatements > 0 && (
-					<Badge variant="secondary">
-						<ScrollText />
-						{bucket.policyStatements} policy {bucket.policyStatements === 1 ? "rule" : "rules"}
-					</Badge>
-				)}
-				<ChevronRight className="size-4 text-tertiary transition-transform group-hover:translate-x-0.5" />
-			</Link>
-		</motion.div>
+			</span>
+			{bucket.policyStatements > 0 && (
+				<Badge variant="secondary">
+					<ScrollText />
+					{bucket.policyStatements} policy {bucket.policyStatements === 1 ? "rule" : "rules"}
+				</Badge>
+			)}
+			<ChevronRight className="size-4 text-tertiary transition-transform group-hover:translate-x-0.5" />
+		</Link>
 	);
 }
 
@@ -176,5 +165,24 @@ function ConnectCard({ port, example }: { port: number | null; example: string }
 				</span>
 			</div>
 		</section>
+	);
+}
+
+function TablesSkeleton() {
+	return (
+		<LoadingRegion label="Loading table buckets">
+			<DashboardGhost wide />
+			<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+				<ListGhost rows={2} className="h-fit" />
+				<section className="group-sheet h-fit p-4">
+					<h2 className="font-semibold text-[13px]">Connect a query engine</h2>
+					<p className="mt-0.5 text-[12px] text-muted-foreground">
+						Any Iceberg REST client works. Sign in with an S3 access key as OAuth client credentials.
+					</p>
+					<SkeletonBlock className="mt-8 h-[92px]" />
+					<SkeletonBlock className="mt-4 h-48 rounded-lg" />
+				</section>
+			</div>
+		</LoadingRegion>
 	);
 }

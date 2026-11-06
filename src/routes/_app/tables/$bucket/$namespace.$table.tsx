@@ -1,16 +1,20 @@
 import type { DataFileInfo, IcebergSnapshot, IcebergTable, TableDetail } from "@shared/tables.ts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Camera, Database, Rows3, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { BarList, compact, dataColor, Kpi, splitUnit } from "@/components/kelp/charts/index.ts";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { EmptyState, ErrorState, PageHeader, Panel, Reveal, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { Collapse, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
+import { EmptyState, PageHeader, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
 import { PolicyEditor } from "@/components/kelp/tables/policy-editor.tsx";
 import { SchemaTree } from "@/components/kelp/tables/schema-tree.tsx";
-import { snapshotHistory, TableGrowth } from "@/components/kelp/tables/table-insights.tsx";
+import { GrowthGhost, snapshotHistory, TableGrowth } from "@/components/kelp/tables/table-insights.tsx";
 import { TagsEditor } from "@/components/kelp/tables/tags-editor.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Alert, AlertDescription } from "@/components/reui/alert";
 import {
 	Timeline,
@@ -56,46 +60,57 @@ export const Route = createFileRoute("/_app/tables/$bucket/$namespace/$table")({
 	component: TablePage,
 });
 
+/** Whether the bucket page, if it was the way here, already said this table has no commits. */
+function useKnownEmpty() {
+	const { bucket, namespace, table } = Route.useParams();
+	const cached = useQueryClient().getQueryData(streamsQueries.tableBucket(bucket).queryKey);
+	const summary = cached?.tables.find((t) => t.namespace === namespace && t.name === table);
+	return summary !== undefined && !summary.metadataLocation;
+}
+
 function TablePage() {
 	const { bucket, namespace, table } = Route.useParams();
-	const { data, isPending, error, refetch } = useQuery(streamsQueries.table(bucket, namespace, table));
+	const query = useQuery(streamsQueries.table(bucket, namespace, table));
+	const { data, isPending } = query;
 	const canWrite = useCanWrite();
+	const partition = data?.iceberg?.partition ?? [];
+	const knownEmpty = useKnownEmpty();
 	return (
 		<>
 			<PageHeader
 				title={`${namespace}.${table}`}
 				description={
-					<>
+					// A phone wraps the partition phrase onto a second line; hold room for it either way.
+					<span className="block max-sm:min-h-9">
 						An Iceberg table in <span className="font-mono">{bucket}</span>, namespace{" "}
 						<span className="font-mono">{namespace}</span>
-						{data?.iceberg?.partition.length ? (
+						{partition.length > 0 && (
 							<>
 								, partitioned by{" "}
-								<span className="font-mono">
-									{data.iceberg.partition.map((p) => p.sourceName).join(", ")}
-								</span>
+								<TextMorph className="font-mono">{partition.map((p) => p.sourceName).join(", ")}</TextMorph>
 							</>
-						) : null}
+						)}
+						{isPending && !knownEmpty && (
+							<SkeletonBlock className="ml-1 inline-block h-3 w-40 align-middle" />
+						)}
 						.
-					</>
+					</span>
 				}
 				actions={
-					canWrite && data ? <DeleteTable bucket={bucket} namespace={namespace} table={table} /> : null
+					canWrite && (
+						<Swap id={data ? "delete" : isPending ? "loading" : "none"}>
+							{data ? (
+								<DeleteTable bucket={bucket} namespace={namespace} table={table} />
+							) : (
+								isPending && <SkeletonBlock className="h-8 w-28" />
+							)}
+						</Swap>
+					)
 				}
 			/>
-			{isPending ? (
-				<div className="space-y-6" role="status" aria-label="Loading table">
-					<div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-						<SkeletonBlock className="h-36 rounded-xl lg:col-span-5" />
-						<SkeletonBlock className="h-36 rounded-xl lg:col-span-7" />
-					</div>
-					<SkeletonBlock className="h-80 rounded-xl" />
-				</div>
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : (
-				<TableBody detail={data} />
-			)}
+			<Loaded query={query} skeleton={<TableSkeleton />}>
+				{(detail) => <TableBody detail={detail} />}
+			</Loaded>
 		</>
 	);
 }
@@ -105,7 +120,7 @@ function TableBody({ detail }: { detail: TableDetail }) {
 	const navigate = useNavigate({ from: Route.fullPath });
 	const iceberg = detail.iceberg;
 	return (
-		<Reveal className="space-y-6">
+		<div className="space-y-6">
 			{detail.metadataError && (
 				<Alert variant="warning">
 					<AlertDescription>{detail.metadataError}</AlertDescription>
@@ -124,23 +139,23 @@ function TableBody({ detail }: { detail: TableDetail }) {
 					<TabsTrigger value="details">Details</TabsTrigger>
 					<TabsTrigger value="access">Access</TabsTrigger>
 				</TabsList>
-				<TabsContent value="schema">
-					<SchemaTab iceberg={iceberg} />
-				</TabsContent>
-				<TabsContent value="data">
-					<DataTab detail={detail} />
-				</TabsContent>
-				<TabsContent value="snapshots">
-					<SnapshotsTab iceberg={iceberg} />
-				</TabsContent>
-				<TabsContent value="details">
-					<DetailsTab detail={detail} />
-				</TabsContent>
-				<TabsContent value="access">
-					<AccessTab detail={detail} />
-				</TabsContent>
+				<Swap id={tab}>
+					<TabsContent value={tab}>
+						{tab === "schema" ? (
+							<SchemaTab iceberg={iceberg} />
+						) : tab === "data" ? (
+							<DataTab detail={detail} />
+						) : tab === "snapshots" ? (
+							<SnapshotsTab iceberg={iceberg} />
+						) : tab === "details" ? (
+							<DetailsTab detail={detail} />
+						) : (
+							<AccessTab detail={detail} />
+						)}
+					</TabsContent>
+				</Swap>
 			</Tabs>
-		</Reveal>
+		</div>
 	);
 }
 
@@ -289,7 +304,7 @@ function DataTab({ detail }: { detail: TableDetail }) {
 	const partitions = preview.data ? recordsByPartition(preview.data.files) : [];
 	return (
 		<div className="space-y-4">
-			{partitions.length > 1 && (
+			<Collapse open={partitions.length > 1}>
 				<Panel title="Records by partition" description="In the chosen snapshot's data files">
 					<BarList
 						label="Records by partition"
@@ -307,7 +322,7 @@ function DataTab({ detail }: { detail: TableDetail }) {
 						}))}
 					/>
 				</Panel>
-			)}
+			</Collapse>
 			<div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[20rem_1fr]">
 				<Panel title="Files" description="Live data files in the chosen snapshot.">
 					<div className="mb-3 grid gap-1 text-xs">
@@ -330,15 +345,21 @@ function DataTab({ detail }: { detail: TableDetail }) {
 							</SelectContent>
 						</Select>
 					</div>
-					{preview.isPending ? (
-						<SkeletonBlock className="h-40" />
-					) : preview.data ? (
-						<FileList
-							files={preview.data.files}
-							selected={preview.data.file}
-							onSelect={(path) => select({ file: path })}
-						/>
-					) : null}
+					{/* The Rows panel reports a failed preview; this one just stays empty. */}
+					<Loaded
+						query={{ data: preview.data ?? (preview.error ? null : undefined), error: null }}
+						skeleton={<SkeletonBlock className="h-40" />}
+					>
+						{(ready) =>
+							ready && (
+								<FileList
+									files={ready.files}
+									selected={ready.file}
+									onSelect={(path) => select({ file: path })}
+								/>
+							)
+						}
+					</Loaded>
 				</Panel>
 				<Panel
 					title="Rows"
@@ -350,27 +371,26 @@ function DataTab({ detail }: { detail: TableDetail }) {
 						)
 					}
 					actions={
-						preview.isFetching && !preview.isPending ? (
-							<span className="tide h-1 w-16 rounded-full bg-accent" />
-						) : null
+						<span
+							className={cn(
+								"tide h-1 w-16 rounded-full bg-accent transition-opacity",
+								!preview.isPlaceholderData && "opacity-0",
+							)}
+						/>
 					}
 				>
-					{preview.error ? (
-						<ErrorState error={preview.error} onRetry={() => preview.refetch()} />
-					) : preview.isPending ? (
-						<SkeletonBlock className="h-64" />
-					) : (
-						<>
-							{preview.data.notes.map((note) => (
-								<p key={note} className="mb-2 text-muted-foreground text-sm">
-									{note}
-								</p>
-							))}
-							{preview.data.rows.length > 0 && (
-								<RowsGrid columns={preview.data.columns} rows={preview.data.rows} />
-							)}
-						</>
-					)}
+					<Loaded query={preview} skeleton={<RowsGhost rows={8} />}>
+						{(ready) => (
+							<Swap id={ready.file ?? "none"}>
+								{ready.notes.map((note) => (
+									<p key={note} className="mb-2 text-muted-foreground text-sm">
+										{note}
+									</p>
+								))}
+								{ready.rows.length > 0 && <RowsGrid columns={ready.columns} rows={ready.rows} />}
+							</Swap>
+						)}
+					</Loaded>
 				</Panel>
 			</div>
 		</div>
@@ -691,5 +711,42 @@ function DeleteTable({ bucket, namespace, table }: { bucket: string; namespace: 
 			typeToConfirm={table}
 			onConfirm={() => remove.mutateAsync()}
 		/>
+	);
+}
+
+function TableSkeleton() {
+	const { tab = "schema" } = Route.useSearch();
+	const knownEmpty = useKnownEmpty();
+	return (
+		<LoadingRegion label="Loading table" className="space-y-6">
+			<div className="space-y-3">
+				<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+					{[0, 1, 2, 3, 4, 5].map((i) => (
+						<KpiGhost key={i} trend={i < 2 && !knownEmpty} className={KPI_TILE} />
+					))}
+				</div>
+				{!knownEmpty && <GrowthGhost />}
+			</div>
+			<div className="flex flex-col gap-2 pt-2">
+				<SkeletonBlock className="mb-4 h-8 w-80 max-w-full" />
+				{tab === "schema" ? (
+					<div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,8fr)_minmax(0,4fr)]">
+						<Panel title="Columns">
+							<RowsGhost rows={6} />
+						</Panel>
+						<div className="space-y-3">
+							<Panel title="Partitioning" description="How rows are split into files.">
+								<RowsGhost rows={1} />
+							</Panel>
+							<Panel title="Sort order">
+								<RowsGhost rows={1} />
+							</Panel>
+						</div>
+					</div>
+				) : (
+					<SkeletonBlock className="h-80 rounded-xl" />
+				)}
+			</div>
+		</LoadingRegion>
 	);
 }

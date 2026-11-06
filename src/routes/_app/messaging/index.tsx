@@ -7,6 +7,7 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { BarsGhost, Collapse, cellGhost, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
 import { MessagingInsights } from "@/components/kelp/messaging/insights.tsx";
 import {
 	draftFrom,
@@ -14,14 +15,9 @@ import {
 	RetentionFields,
 	retentionFrom,
 } from "@/components/kelp/messaging/retention.tsx";
-import {
-	EmptyState,
-	ErrorState,
-	PageHeader,
-	Reveal,
-	Section,
-	SkeletonBlock,
-} from "@/components/kelp/page.tsx";
+import { EmptyState, PageHeader, Panel, Section, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { KpiGhost, LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,7 +50,8 @@ export const Route = createFileRoute("/_app/messaging/")({
 const BROKER_COMMAND = "weed mq.broker -master=<master-host>:9333";
 
 function MessagingPage() {
-	const { data, isPending, error, refetch } = useQuery(streamsQueries.messaging());
+	const query = useQuery(streamsQueries.messaging());
+	const { data, isPending } = query;
 	const canWrite = useCanWrite();
 	const hasBroker = Boolean(data?.brokers.length);
 
@@ -64,31 +61,42 @@ function MessagingPage() {
 				title="Messaging"
 				description="Topics on SeaweedFS's message queue, the brokers that serve them, and how long they keep data."
 				actions={
-					canWrite && hasBroker ? (
-						<>
-							<PurgeButton />
-							<CreateTopicDialog />
-						</>
-					) : null
+					canWrite && (
+						<Swap id={hasBroker ? "actions" : isPending ? "loading" : "none"}>
+							{hasBroker ? (
+								<div className="flex flex-wrap items-center gap-2">
+									<PurgeButton />
+									<CreateTopicDialog />
+								</div>
+							) : (
+								isPending && (
+									<div className="flex items-center gap-2">
+										<SkeletonBlock className="h-8 w-40" />
+										<SkeletonBlock className="h-8 w-32" />
+									</div>
+								)
+							)}
+						</Swap>
+					)
 				}
 			/>
-			{isPending ? (
-				<MessagingSkeleton />
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : !hasBroker ? (
-				<NoBroker />
-			) : (
-				<>
-					<Reveal>
-						<MessagingInsights data={data} />
-					</Reveal>
-					<Section title="Topics">
-						<TopicsTable topics={data.topics} />
-					</Section>
-					<Brokers brokers={data.brokers} leader={data.leader} />
-				</>
-			)}
+			<Loaded query={query} skeleton={<MessagingSkeleton />}>
+				{(overview) => (
+					<Swap id={overview.brokers.length ? "brokers" : "none"}>
+						{overview.brokers.length ? (
+							<>
+								<MessagingInsights data={overview} />
+								<Section title="Topics">
+									<TopicsTable topics={overview.topics} />
+								</Section>
+								<Brokers brokers={overview.brokers} leader={overview.leader} />
+							</>
+						) : (
+							<NoBroker />
+						)}
+					</Swap>
+				)}
+			</Loaded>
 		</>
 	);
 }
@@ -181,21 +189,25 @@ export const topicColumns: Array<Column<TopicSummary>> = [
 			</div>
 		),
 		size: 260,
+		meta: cellGhost("w-40"),
 	},
 	{
 		accessorKey: "partitionCount",
 		header: "Partitions",
 		cell: ({ row }) => <PartitionTicks count={row.original.partitionCount} />,
+		meta: cellGhost("w-16"),
 	},
 	{
 		accessorKey: "messageCount",
 		header: "Messages",
 		cell: ({ row }) => <span className="tabular">{formatCount(row.original.messageCount)}</span>,
+		meta: cellGhost("w-12"),
 	},
 	{
 		accessorKey: "totalSize",
 		header: "Size",
 		cell: ({ row }) => <span className="tabular">{formatBytes(row.original.totalSize)}</span>,
+		meta: cellGhost("w-14"),
 	},
 	{
 		id: "retention",
@@ -206,6 +218,7 @@ export const topicColumns: Array<Column<TopicSummary>> = [
 			) : (
 				<Badge variant="secondary">Keep forever</Badge>
 			),
+		meta: cellGhost("w-16"),
 	},
 	{
 		accessorKey: "lastUpdated",
@@ -213,14 +226,16 @@ export const topicColumns: Array<Column<TopicSummary>> = [
 		cell: ({ row }) => (
 			<span className="text-muted-foreground">{formatRelative(row.original.lastUpdated)}</span>
 		),
+		meta: cellGhost("w-16"),
 	},
 ];
 
-function TopicsTable({ topics }: { topics: TopicSummary[] }) {
+function TopicsTable({ topics }: { topics: TopicSummary[] | undefined }) {
 	const navigate = useNavigate();
 	return (
 		<DataTable
 			data={topics}
+			isLoading={!topics}
 			columns={topicColumns}
 			getRowId={(t) => `${t.namespace}.${t.name}`}
 			searchText={(t) => `${t.namespace} ${t.name}`}
@@ -344,7 +359,9 @@ export function CreateTopicDialog() {
 							/>
 						</div>
 					</div>
-					{invalid && <p className="-mt-3 text-[12px] text-destructive">{invalid}</p>}
+					<Collapse open={Boolean(invalid)} className="-mt-3">
+						<p className="text-[12px] text-destructive">{invalid}</p>
+					</Collapse>
 					<div className="grid gap-1.5">
 						<Label htmlFor="topic-partitions">Partitions</Label>
 						<Input
@@ -374,13 +391,40 @@ export function CreateTopicDialog() {
 
 function MessagingSkeleton() {
 	return (
-		<div role="status" aria-label="Loading messaging">
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				{[0, 1, 2, 3].map((i) => (
-					<SkeletonBlock key={i} className="h-[74px] rounded-xl" />
+		<LoadingRegion label="Loading messaging">
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<KpiGhost key={i} trend={false} className={KPI_TILE} />
 				))}
 			</div>
-			<SkeletonBlock className="mt-8 h-64 rounded-xl" />
-		</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+				<Panel
+					title="Partitions by topic"
+					description="How each topic is spread over brokers"
+					className="xl:col-span-4"
+				>
+					<BarsGhost rows={4} />
+				</Panel>
+				<Panel title="Busiest topics" description="Messages stored per topic" className="xl:col-span-4">
+					<BarsGhost rows={4} />
+				</Panel>
+				<Panel title="Retention" description="How long each topic keeps messages" className="xl:col-span-4">
+					<BarsGhost rows={4} />
+				</Panel>
+			</div>
+			<Section title="Topics">
+				<TopicsTable topics={undefined} />
+			</Section>
+			<Section
+				title="Brokers"
+				description="The leader assigns partitions to brokers and moves them when a broker joins or leaves."
+				className="max-w-2xl"
+			>
+				<div className="group-sheet flex h-11 items-center justify-between px-4">
+					<SkeletonBlock className="h-3.5 w-40" />
+					<SkeletonBlock className="h-3 w-12" />
+				</div>
+			</Section>
+		</LoadingRegion>
 	);
 }

@@ -1,6 +1,8 @@
 import type { MaintenanceActivity, MaintenanceJob } from "@shared/maintenance.ts";
 import { BarList, clock } from "@/components/kelp/charts/index.ts";
 import { StackedColumns, type StackSeries } from "../charts/stacked-columns.tsx";
+import { SkeletonBlock } from "../page.tsx";
+import { ChartGhost } from "../skeletons.tsx";
 import { formatDuration, humanize } from "./parts.tsx";
 import { type HourBucket, hourly, timeByType } from "./stats.ts";
 
@@ -17,6 +19,19 @@ const CHECK_SERIES: StackSeries[] = [
 
 function columns(buckets: HourBucket[], pick: (b: HourBucket) => Record<string, number>) {
 	return buckets.map((b) => ({ label: clock(b.t), values: pick(b) }));
+}
+
+/** Matches `StackedColumns` of the same height, with its legend below the plot. */
+export function StackedGhost({ height = 180 }: { height?: number }) {
+	return (
+		<div>
+			<ChartGhost height={height} legend={false} />
+			<div className="mt-2 flex h-[18px] items-center gap-4 pl-9">
+				<SkeletonBlock className="h-3 w-20" />
+				<SkeletonBlock className="h-3 w-16" />
+			</div>
+		</div>
+	);
 }
 
 /** Finished jobs per hour, split by outcome. */
@@ -60,7 +75,8 @@ export function WorkerTime({ jobs, names }: { jobs: MaintenanceJob[]; names: Rec
 					value: t.totalMs,
 					display: formatDuration(t.totalMs),
 					extra: (
-						<span className="hidden w-28 text-right text-[12px] text-muted-foreground sm:inline">
+						// Beside the bar in the narrow panel at `xl`, this would squeeze the bar away.
+						<span className="hidden w-28 text-right text-[12px] text-muted-foreground sm:inline xl:hidden 2xl:inline">
 							{t.jobs} {t.jobs === 1 ? "job" : "jobs"}, {formatDuration(t.medianMs)} each
 						</span>
 					),

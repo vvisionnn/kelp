@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { BarsGhost, cellGhost, InfoGhost, KPI_TILE } from "@/components/kelp/maintenance/parts.tsx";
 import { TopicInsights } from "@/components/kelp/messaging/insights.tsx";
 import { PartitionRing } from "@/components/kelp/messaging/partition-ring.tsx";
 import {
@@ -22,14 +23,16 @@ import {
 } from "@/components/kelp/messaging/retention.tsx";
 import {
 	EmptyState,
-	ErrorState,
 	InfoList,
 	PageHeader,
-	Reveal,
+	Panel,
 	Section,
 	SkeletonBlock,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
+import { ChartGhost, KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,24 +57,27 @@ export const Route = createFileRoute("/_app/messaging/$namespace/$topic")({
 
 function TopicPage() {
 	const { namespace, topic } = Route.useParams();
-	const { data, isPending, error, refetch } = useQuery(streamsQueries.topic(namespace, topic));
+	const query = useQuery(streamsQueries.topic(namespace, topic));
+	const { data, error } = query;
 	return (
 		<>
 			<PageHeader
 				title={`${namespace}.${topic}`}
 				description={
-					data
-						? `${data.partitions.length} ${data.partitions.length === 1 ? "partition" : "partitions"}, ${data.retention.enabled && data.retention.seconds > 0 ? `keeps messages for ${formatRetention(data.retention)}` : "keeps messages forever"}`
-						: "A topic on SeaweedFS's message queue"
+					data ? (
+						<TextMorph className="block overflow-hidden">
+							{`${data.partitions.length} ${data.partitions.length === 1 ? "partition" : "partitions"}, ${data.retention.enabled && data.retention.seconds > 0 ? `keeps messages for ${formatRetention(data.retention)}` : "keeps messages forever"}`}
+						</TextMorph>
+					) : error ? (
+						"A topic on SeaweedFS's message queue"
+					) : (
+						<SkeletonBlock className="my-0.5 h-3.5 w-64 max-w-full" />
+					)
 				}
 			/>
-			{isPending ? (
-				<TopicSkeleton />
-			) : error ? (
-				<ErrorState error={error} onRetry={() => refetch()} />
-			) : (
-				<TopicBody topic={data} />
-			)}
+			<Loaded query={query} skeleton={<TopicSkeleton />}>
+				{(detail) => <TopicBody topic={detail} />}
+			</Loaded>
 		</>
 	);
 }
@@ -80,7 +86,7 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 	const leaders = new Set(topic.partitions.map((p) => p.leader).filter(Boolean)).size;
 	const groups = new Set(topic.consumerGroupOffsets.map((o) => o.consumerGroup)).size;
 	return (
-		<Reveal>
+		<>
 			<TopicInsights topic={topic} />
 			<div className="mt-3 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<section aria-label="Key ring" className="group-sheet p-4 lg:col-span-7">
@@ -92,15 +98,25 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 				<InfoList
 					className="lg:col-span-5"
 					items={[
-						{ label: "Leading brokers", value: <span className="tabular">{leaders}</span> },
-						{ label: "Keeps messages", value: formatRetention(topic.retention) },
+						{ label: "Leading brokers", value: <TextMorph className="tabular">{String(leaders)}</TextMorph> },
+						{ label: "Keeps messages", value: <TextMorph>{formatRetention(topic.retention)}</TextMorph> },
 						{
 							label: "Schema fields",
-							value: <span className="tabular">{topic.keySchema.length + topic.valueSchema.length}</span>,
+							value: (
+								<TextMorph className="tabular">
+									{String(topic.keySchema.length + topic.valueSchema.length)}
+								</TextMorph>
+							),
 						},
-						{ label: "Consumer groups", value: <span className="tabular">{groups}</span> },
-						{ label: "Created", value: topic.createdAt ? formatRelative(topic.createdAt) : "Unknown" },
-						{ label: "Last updated", value: topic.lastUpdated ? formatRelative(topic.lastUpdated) : "Never" },
+						{ label: "Consumer groups", value: <TextMorph className="tabular">{String(groups)}</TextMorph> },
+						{
+							label: "Created",
+							value: <TextMorph>{topic.createdAt ? formatRelative(topic.createdAt) : "Unknown"}</TextMorph>,
+						},
+						{
+							label: "Last updated",
+							value: <TextMorph>{topic.lastUpdated ? formatRelative(topic.lastUpdated) : "Never"}</TextMorph>,
+						},
 					]}
 				/>
 			</div>
@@ -123,7 +139,7 @@ function TopicBody({ topic }: { topic: TopicDetail }) {
 				<SchemaPanel keys={topic.keySchema} values={topic.valueSchema} />
 			</div>
 			<ClientsPanel topic={topic} />
-		</Reveal>
+		</>
 	);
 }
 
@@ -150,7 +166,7 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 	return (
 		<Section
 			title="Retention"
-			description={`Currently: ${formatRetention(topic.retention)}.`}
+			description={<TextMorph>{`Currently: ${formatRetention(topic.retention)}.`}</TextMorph>}
 			className="mt-0"
 		>
 			{canWrite ? (
@@ -163,11 +179,13 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 				>
 					<RetentionFields draft={draft} onChange={setDraft} disabled={save.isPending} />
 					<div className="flex justify-end gap-2">
-						{dirty && (
-							<Button type="button" variant="secondary" onClick={() => setDraft(saved)}>
-								Discard
-							</Button>
-						)}
+						<Swap id={dirty ? "dirty" : "clean"}>
+							{dirty && (
+								<Button type="button" variant="secondary" onClick={() => setDraft(saved)}>
+									Discard
+								</Button>
+							)}
+						</Swap>
 						<Button type="submit" disabled={!dirty || save.isPending} pending={save.isPending}>
 							Save retention
 						</Button>
@@ -236,41 +254,50 @@ const quiet = (text: string) => (
 );
 
 function ClientsPanel({ topic }: { topic: TopicDetail }) {
+	const [tab, setTab] = useState("publishers");
 	return (
 		<Section
 			title="Clients"
 			description="Who is reading and writing right now, and where consumer groups will resume."
 		>
-			<Tabs defaultValue="publishers">
+			<Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
 				<TabsList className="mb-3">
-					<TabsTrigger value="publishers">Publishers {topic.publishers.length}</TabsTrigger>
-					<TabsTrigger value="subscribers">Subscribers {topic.subscribers.length}</TabsTrigger>
-					<TabsTrigger value="offsets">Offsets {topic.consumerGroupOffsets.length}</TabsTrigger>
+					<TabsTrigger value="publishers">
+						Publishers <TextMorph>{String(topic.publishers.length)}</TextMorph>
+					</TabsTrigger>
+					<TabsTrigger value="subscribers">
+						Subscribers <TextMorph>{String(topic.subscribers.length)}</TextMorph>
+					</TabsTrigger>
+					<TabsTrigger value="offsets">
+						Offsets <TextMorph>{String(topic.consumerGroupOffsets.length)}</TextMorph>
+					</TabsTrigger>
 				</TabsList>
-				<TabsContent value="publishers">
-					<DataTable
-						data={topic.publishers}
-						columns={publisherColumns}
-						getRowId={(p) => `${p.clientId}-${p.partition}`}
-						empty={quiet("Nobody is publishing. Publishers appear while they are connected.")}
-					/>
-				</TabsContent>
-				<TabsContent value="subscribers">
-					<DataTable
-						data={topic.subscribers}
-						columns={subscriberColumns}
-						getRowId={(s) => `${s.consumerGroup}-${s.consumerId}-${s.partition}`}
-						empty={quiet("Nobody is subscribed. Subscribers appear while they are connected.")}
-					/>
-				</TabsContent>
-				<TabsContent value="offsets">
-					<DataTable
-						data={topic.consumerGroupOffsets}
-						columns={offsetColumns}
-						getRowId={(o) => `${o.consumerGroup}-${o.partition}`}
-						empty={quiet("No committed offsets. Consumer groups commit offsets as they read.")}
-					/>
-				</TabsContent>
+				<Swap id={tab}>
+					<TabsContent value={tab}>
+						{tab === "publishers" ? (
+							<DataTable
+								data={topic.publishers}
+								columns={publisherColumns}
+								getRowId={(p) => `${p.clientId}-${p.partition}`}
+								empty={quiet("Nobody is publishing. Publishers appear while they are connected.")}
+							/>
+						) : tab === "subscribers" ? (
+							<DataTable
+								data={topic.subscribers}
+								columns={subscriberColumns}
+								getRowId={(s) => `${s.consumerGroup}-${s.consumerId}-${s.partition}`}
+								empty={quiet("Nobody is subscribed. Subscribers appear while they are connected.")}
+							/>
+						) : (
+							<DataTable
+								data={topic.consumerGroupOffsets}
+								columns={offsetColumns}
+								getRowId={(o) => `${o.consumerGroup}-${o.partition}`}
+								empty={quiet("No committed offsets. Consumer groups commit offsets as they read.")}
+							/>
+						)}
+					</TabsContent>
+				</Swap>
 			</Tabs>
 		</Section>
 	);
@@ -280,6 +307,7 @@ const partitionColumns: Array<Column<TopicPartition>> = [
 	{
 		accessorKey: "rangeStart",
 		header: "Slots",
+		meta: cellGhost("w-20"),
 		cell: ({ row }) => (
 			<span className="font-mono text-[12px]">
 				{row.original.rangeStart}–{row.original.rangeStop - 1}
@@ -289,26 +317,31 @@ const partitionColumns: Array<Column<TopicPartition>> = [
 	{
 		accessorKey: "leader",
 		header: "Leader",
+		meta: cellGhost("w-28"),
 		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.leader || "—"}</span>,
 	},
 	{
 		accessorKey: "follower",
 		header: "Follower",
+		meta: cellGhost("w-16"),
 		cell: ({ row }) => <span className="font-mono text-[12px]">{row.original.follower || "—"}</span>,
 	},
 	{
 		accessorKey: "messageCount",
 		header: "Messages",
+		meta: cellGhost("w-12"),
 		cell: ({ row }) => <span className="tabular">{formatCount(row.original.messageCount)}</span>,
 	},
 	{
 		accessorKey: "totalSize",
 		header: "Size",
+		meta: cellGhost("w-14"),
 		cell: ({ row }) => <span className="tabular">{formatBytes(row.original.totalSize)}</span>,
 	},
 	{
 		accessorKey: "lastDataAt",
 		header: "Last write",
+		meta: cellGhost("w-16"),
 		cell: ({ row }) =>
 			row.original.lastDataAt ? (
 				<span className="text-muted-foreground">{formatRelative(row.original.lastDataAt)}</span>
@@ -423,12 +456,49 @@ const offsetColumns: Array<Column<ConsumerGroupOffset>> = [
 
 function TopicSkeleton() {
 	return (
-		<div role="status" aria-label="Loading topic">
-			<div className="grid gap-6 lg:grid-cols-12">
-				<SkeletonBlock className="h-60 rounded-xl lg:col-span-7" />
-				<SkeletonBlock className="h-60 rounded-xl lg:col-span-5" />
+		<LoadingRegion label="Loading topic">
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<KpiGhost key={i} trend={false} className={KPI_TILE} />
+				))}
 			</div>
-			<SkeletonBlock className="mt-8 h-48 rounded-xl" />
-		</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12 [&>*]:min-w-0">
+				<Panel
+					title="Messages per partition"
+					description="An even spread means keys hash well"
+					className="xl:col-span-7"
+				>
+					<ChartGhost height={160} legend={false} />
+				</Panel>
+				<Panel
+					title="Consumer groups"
+					description="Messages each group has yet to read"
+					className="xl:col-span-5"
+				>
+					<BarsGhost rows={3} />
+				</Panel>
+			</div>
+			<div className="mt-3 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<section className="group-sheet p-4 lg:col-span-7">
+					<p className="mb-3 text-[12px] text-muted-foreground">
+						Each partition owns a slice of the 2,520-slot key ring.
+					</p>
+					<div className="flex flex-wrap items-center gap-6">
+						<SkeletonBlock className="size-[184px] rounded-full" />
+						<RowsGhost rows={2} className="w-44" />
+					</div>
+				</section>
+				<InfoGhost rows={6} className="lg:col-span-5" />
+			</div>
+			<Section title="Partition details">
+				<DataTable
+					data={undefined}
+					isLoading
+					columns={partitionColumns}
+					getRowId={(p) => String(p.rangeStart)}
+					empty={null}
+				/>
+			</Section>
+		</LoadingRegion>
 	);
 }
