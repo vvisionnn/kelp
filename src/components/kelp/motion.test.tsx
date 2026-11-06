@@ -210,13 +210,17 @@ function Sheets() {
 	);
 }
 
-test("the spotlight follows the pointer across sheets and leaves with it", () => {
+test("the spotlight follows the pointer across sheets, once a frame, and leaves with it", async () => {
 	setMedia("(hover: hover)", true);
 	const { unmount } = render(<Sheets />);
 	const [a, b] = [screen.getByTestId("a"), screen.getByTestId("b")];
+	const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 	fireEvent.pointerMove(a, { clientX: 4, clientY: 8 });
+	expect(a.style.getPropertyValue("--spot")).toBe("");
+	await frame();
 	expect(a.style.getPropertyValue("--spot")).toBe("1");
 	fireEvent.pointerMove(b, { clientX: 4, clientY: 8 });
+	await frame();
 	expect(a.style.getPropertyValue("--spot")).toBe("");
 	expect(b.style.getPropertyValue("--spot")).toBe("1");
 	unmount();

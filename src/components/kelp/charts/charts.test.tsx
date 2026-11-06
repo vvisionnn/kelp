@@ -189,6 +189,27 @@ describe("other charts", () => {
 		expect(screen.queryByText("4")).toBeNull();
 	});
 
+	test("long column labels thin out instead of running into each other", () => {
+		const labels = [
+			"< 1 week",
+			"1–4 weeks",
+			"1–3 months",
+			"3–6 months",
+			"6–12 months",
+			"> 1 year",
+			"> 2 years",
+			"> 3 years",
+			"> 4 years",
+			"> 5 years",
+		];
+		const { container } = render(
+			<Columns label="Key age" columns={labels.map((label, i) => ({ label, value: i }))} />,
+		);
+		// 600px wide (the test fallback) fits seven 11-character labels, so every other one shows.
+		const shown = [...container.querySelectorAll("text")].map((t) => t.textContent);
+		expect(shown).toEqual(["< 1 week", "1–3 months", "6–12 months", "> 2 years", "> 4 years"]);
+	});
+
 	test("sparklines draw a trend and stay empty with too few points; stat tiles show tone", () => {
 		const { container, rerender } = render(<Sparkline label="trend" values={[1, null, 3]} />);
 		expect(container.querySelectorAll("path")).toHaveLength(2);

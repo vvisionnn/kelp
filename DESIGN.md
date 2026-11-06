@@ -9,12 +9,12 @@ Kelp is the console an operator keeps open next to a SeaweedFS cluster. This fil
 Two influences, used as concepts and never copied:
 
 - **x.ai's color thinking**: the chrome is black, white and greys, actions are monochrome (ink on light, white on dark), and color comes from one place: the spectrum family (indigo, violet, pink, orange, amber). Kelp uses it for data and for the few brand moments, never for decoration.
-- **Desktop craft**: navigation floats on a glass layer above the content, dense controls are compact rounded rectangles, hierarchy comes from type and spacing rather than boxes, and motion answers what the person did.
+- **Desktop craft**: navigation is docked and quiet, dense controls are compact rounded rectangles, hierarchy comes from type and spacing rather than boxes, and motion answers what the person did.
 
 ### Key Characteristics
 
-- A floating glass sidebar with quiet monochrome line icons. The current page gets a soft fill and a thin spectrum bar on its leading edge, the one touch of brand color in the chrome.
-- A sticky glass toolbar per page: title on the left, search and page actions on the right. Content scrolls beneath both glass layers.
+- A sidebar docked to the window edge in the canvas tone, separated by a hairline, with quiet monochrome line icons. The current page rests on a small sheet of its own, the same white (raised grey in dark) as the groups on the page, so the chrome and the content speak one language. It folds to an icon rail.
+- A toolbar per page in the canvas tone: where you are (section, page, item) on the left, search and theme on the right. Content scrolls under it; a hairline appears once it does.
 - Inset grouped sections (white sheets on a soft grey canvas in light, raised greys on near-black in dark), with hairline separators between rows.
 - Dense, legible tables: 40px rows, 13px text, tabular numerals, units in secondary ink.
 - Charts everywhere data has a shape: live traffic, latency, growth, shares and distributions, drawn in the data palette with a crosshair and a data table behind every chart.
@@ -45,11 +45,11 @@ Colors are named by role. Light and dark are designed separately, not inverted.
 
 ### The spectrum
 
-`--spectrum` is x.ai's gradient: indigo #6366F1, violet #A855F7, pink #EC4899, orange #F97316, amber #EAB308. It appears in exactly three places: the current page's bar in the sidebar, capacity meters below the warning threshold, and the sign-in screen. Nowhere else, so it keeps meaning "Kelp".
+`--spectrum` is x.ai's gradient: indigo #6366F1, violet #A855F7, pink #EC4899, orange #F97316, amber #EAB308. It appears in exactly two places: capacity meters below the warning threshold, and the sign-in screen. Nowhere else, so it keeps meaning "Kelp". The chrome carries no color at all apart from the cluster's status dot, so any color in the sidebar means something.
 
 ### Icons
 
-Navigation icons are 16px line icons at 1.75 stroke in secondary ink; the current page's icon turns to label ink. No colored icon tiles: they read as a phone home screen, not a desktop console.
+Navigation icons are 16px lucide line icons at 1.75 stroke in secondary ink; hovered and current pages turn to label ink. Icons sit on one vertical line with the brand tile and the avatar, so folding to the rail only hides the words. No colored icon tiles: they read as a phone home screen, not a desktop console.
 
 ### Status (reserved)
 
@@ -85,7 +85,7 @@ Series take colors in this order and keep them when filters change; a sixth seri
 
 ### Surface & Overlay
 
-- Glass (sidebar, toolbar, floating bars): canvas color at 72% (light) / 64% (dark) with `backdrop-filter: blur(24px) saturate(180%)`, a 0.5px edge and a 1px inner top highlight.
+- Glass (floating save bars only): canvas color at 72% (light) / 64% (dark) with `backdrop-filter: blur(24px) saturate(180%)`, a 0.5px edge and a 1px inner top highlight. The sidebar and toolbar are solid: a blur under a sticky bar repaints on every scrolled frame.
 - Overlay behind dialogs and sheets: black at 24% (light) / 48% (dark) with 2px blur.
 
 ### Shadows & Depth
@@ -161,8 +161,9 @@ Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, s
 
 ### Navigation
 
-- **Sidebar**: floats 8px from the window edges, 248px wide, 16px radius, glass. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 16px line icon in secondary ink, 13px label, 32px row, 8px radius. The current row gets the Fill background, label-ink icon and text, and a 3px spectrum bar on its leading edge that springs between rows. Bottom: the account button.
-- **Toolbar**: 52px, sticky, glass. Leading: sidebar button (compact widths), back button on detail pages ("‹ Volumes"), and the page title once the page header scrolls away. Trailing: search field.
+- **Sidebar**: docked, full height, 240px wide, canvas tone, 1px hairline on its trailing edge, no radius or shadow. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 16px line icon in secondary ink, 13px label, 32px row, 8px radius. The current row rests on a sheet (`--nav-current`, white with a hairline and faint shadow in light, #222225 with a light edge in dark) that springs between rows; hover shows a Fill pill that glides the same way. Bottom: the account button.
+- **Rail**: ⌘B (or the toolbar's sidebar button) folds the sidebar to 56px; the choice is remembered. Words fade out before the rail narrows and back in after it widens; section labels become hairlines; every item names itself in a tooltip; the cluster status becomes a dot on the brand tile. Below 1024px the sidebar is a sheet from the toolbar instead.
+- **Toolbar**: 52px, sticky, canvas tone, a hairline once content scrolls under it. Leading: the sidebar button and a breadcrumb: section, page and, on detail pages, the page as a link back to its list followed by the item ("Operations › Maintenance › Volume vacuum"). Trailing: search field and theme switch.
 - **Page header**: 26px semibold title, a one-line description in secondary ink, and page actions (including the time range when the page has charts) at the trailing edge.
 
 ### Tables
@@ -184,7 +185,7 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 
 ### Distinctive Components
 
-- **Spectrum bar** marking the current page in the sidebar.
+- **Current-page sheet** gliding between sidebar rows.
 - **Rolling metrics**: values change with React Bits Counter digit rolls when data refreshes.
 - **Capacity meter**: 6px track in Fill, value in spectrum/Warning/Critical with the percent beside it.
 - **Hold to delete**: destructive actions on populated resources fill as you hold, so nothing important is lost to a misclick.
@@ -197,7 +198,7 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 
 ### Grid & Container
 
-- Window: sidebar (248px plus 8px insets) and a content column.
+- Window: sidebar (240px, or the 56px rail) and a content column.
 - Content column: 24px side padding (32px from 1280px), max width 1400px, left-aligned.
 - Overview and list pages use a 12-column grid with 16px gutters; widgets span 3, 4, 6 or 12 columns.
 
@@ -207,17 +208,17 @@ Density with calm: tight inside a group, generous between groups. A page shows t
 
 ### Border Radius Scale
 
-Concentric with the window: sidebar 16, groups and widgets 12, controls and sidebar rows 8, menu items and tags 6, checkboxes 4, pills 9999.
+Groups and widgets 12, controls and sidebar rows 8, menu items and tags 6, checkboxes 4, pills 9999. The docked sidebar and toolbar have no radius.
 
 ## 6. Depth & Elevation
 
-| Level | Surface                  | Treatment                       |
-| ----- | ------------------------ | ------------------------------- |
-| 0     | Canvas                   | flat                            |
-| 1     | Sheet (groups, widgets)  | separator outline, faint shadow |
-| 2     | Glass (sidebar, toolbar) | blur, saturate, edge, shadow    |
-| 3     | Popover, menu, tooltip   | popover surface, popover shadow |
-| 4     | Dialog, sheet panel      | overlay plus popover shadow     |
+| Level | Surface                 | Treatment                       |
+| ----- | ----------------------- | ------------------------------- |
+| 0     | Canvas                  | flat                            |
+| 1     | Sheet (groups, widgets) | separator outline, faint shadow |
+| 2     | Sidebar, toolbar        | canvas tone, hairline edge      |
+| 3     | Popover, menu, tooltip  | popover surface, popover shadow |
+| 4     | Dialog, sheet panel     | overlay plus popover shadow     |
 
 ### Depth Principles
 
@@ -238,7 +239,7 @@ Concentric with the window: sidebar 16, groups and widgets 12, controls and side
 
 - No landing-page patterns: hero headlines, marketing copy, giant stat bands, bento grids of links, decorative gradients.
 - No glass on content, no nested cards, no borders and shadows stacked on the same element.
-- No color for decoration; the spectrum is only for the sidebar marker, meters and sign-in; status colors only for state.
+- No color for decoration; the spectrum is only for meters and sign-in; status colors only for state.
 - No ambient or looping animation inside the app. A skeleton's tide runs only while something loads, and the sheet spotlight only answers the pointer.
 - No all-caps labels or letter-spaced eyebrows.
 
@@ -249,7 +250,7 @@ Concentric with the window: sidebar 16, groups and widgets 12, controls and side
 | Name    | Width     | Behavior                                                  |
 | ------- | --------- | --------------------------------------------------------- |
 | Compact | < 1024    | Sidebar becomes a sheet from the toolbar's sidebar button |
-| Regular | 1024–1279 | Floating sidebar, widgets reflow to 6 columns             |
+| Regular | 1024–1279 | Docked sidebar (or rail), widgets reflow to 6 columns     |
 | Wide    | ≥ 1280    | Full grid, 32px content padding                           |
 
 ### Touch Targets
@@ -266,12 +267,13 @@ Tables keep identity and status columns and drop secondary columns first; side c
 
 - Canvas #F5F5F7 / #0E0E10, Sheet #FFFFFF / #1C1C1E, Raised #F2F2F5 / #2C2C2E
 - Label #1D1D1F / #F5F5F7, Secondary #6E6E73 / #98989F
-- Ink #1D1D1F / #F5F5F7, spectrum #6366F1 → #A855F7 → #EC4899 → #F97316 → #EAB308
+- Ink #1D1D1F / #F5F5F7, spectrum #6366F1 → #A855F7 → #EC4899 → #F97316 → #EAB308 (meters and sign-in only)
+- Current page in the sidebar: `--nav-current` #FFFFFF / #222225
 - Good #248A3D / #30D158, Warning #C93400 / #FF9F0A, Critical #D70015 / #FF453A
 
 ### Quick Summary
 
-Big-screen operations dashboard: floating glass sidebar with quiet line icons and a spectrum marker, sticky glass toolbar, stat tiles with sparklines, live charts in the data palette, inset grouped sheets on a soft canvas, dense 40px tables, monochrome ink actions, status colors only for state.
+Big-screen operations dashboard: docked sidebar in the canvas tone with quiet line icons and the current page on a sheet, folding to an icon rail; a breadcrumb toolbar; stat tiles with sparklines, live charts in the data palette, inset grouped sheets on a soft canvas, dense 40px tables, monochrome ink actions, status colors only for state.
 
 ### Example Component Prompts
 
@@ -307,7 +309,9 @@ Big-screen operations dashboard: floating glass sidebar with quiet line icons an
 ## Optional Appendix: Evidence Notes
 
 - From x.ai: the restraint of a monochrome chrome with color reserved for meaning, and quiet, confident numbers. Its marketing patterns (hero headlines, mesh-gradient cards, bento links) were deliberately left behind; they belong on a landing page, not in a console.
-- From Apple's Human Interface Guidelines (Materials, Sidebars) and WWDC25 "Get to know the new design system": navigation on a floating glass layer above content; capsules for standout actions while dense desktop controls stay rounded rectangles; concentric radii; rounded numerals for metrics. Colored icon tiles were tried and dropped: they read as mobile, not desktop.
+- From Apple's Human Interface Guidelines (Sidebars) and WWDC25 "Get to know the new design system": capsules for standout actions while dense desktop controls stay rounded rectangles; rounded numerals for metrics. Colored icon tiles were tried and dropped: they read as mobile, not desktop.
+- From ReUI's app shells (reui.io): the docked sidebar in the canvas tone with a hairline, the neutral current-page fill, folding to an icon rail. React Bits supplied the gliding highlight and the rail's tooltips.
+- Tried and dropped (v0.6): the floating glass sidebar inset 8px from the window with a spectrum bar on the current row. It read as a separate floating panel competing with the content, and its blur cost frames while scrolling.
 
 ## Loading and change
 
@@ -322,3 +326,25 @@ Nothing on screen jumps. Data arrives, it doesn't appear.
 - **Pages**: a view transition captures only the page area: the old page dissolves in 120 ms while the new one rises 10 px into place over 360 ms, sliding under the toolbar. The root is never captured, so the sidebar and toolbar stay live and their glass and shadows never redraw. Filters in the URL don't animate the page. The theme spreads from the pointer in a circle.
 - **Measure**: `scripts/motion-qa.ts` screenshots each route loading and loaded, and `e2e/motion.spec.ts` fails a route whose layout shift reaches 0.03.
 - **Tokens**: `EASE`, `SPEED` and `SPRING` in `motion.ts`. Never hard-code a curve or duration in a component.
+
+## Performance
+
+Motion is only worth having if it runs at the display's rate. These rules come from profiling Kelp, not from taste:
+
+- **Page-sized motion animates opacity and transform only.** A blur or filter on a page, a table or a chart repaints all of it on every frame. Small text may still morph.
+- **No backdrop blur on sticky chrome.** The sidebar and toolbar are solid; glass is for small floating bars.
+- **No layout reads while a page mounts.** `getBoundingClientRect`, `offsetWidth` and `document.fonts.ready` in a layout effect force the browser to lay out the whole new page early, inside the page transition. Measure from a `ResizeObserver` (its first callback arrives after layout, before paint).
+- **Unchanged text renders nothing.** `TextMorph` and `RollingValue` are memoized; every glyph tracks its layout, so a re-render with the same text must not reach them. Don't morph text that changes on every navigation (titles, breadcrumbs): the page crossfade already covers it.
+- **Formatters are built once** (`Intl.DateTimeFormat`, `Intl.NumberFormat`), never per call.
+- **The first download stays small.** Route files export only `Route`; helpers live in `src/components/kelp/<area>`. Libraries sit in their own cached chunks. Things used on demand (the command menu) load on demand.
+- **Data starts early.** `index.html` asks for the session (and the overview's numbers) while scripts download; route loaders prefetch every query their page needs, telemetry included.
+
+Budgets, measured with `bun scripts/perf-profile.ts` against a production build (`--cpu 4 --network 4g` for a slow laptop or phone on mobile data):
+
+| Measure                                             | Budget   | v0.5.1   | v0.6   |
+| --------------------------------------------------- | -------- | -------- | ------ |
+| Overview data on screen, cold, 4× CPU + 4G          | ≤ 2 s    | 3.2 s    | 1.6 s  |
+| Overview data on screen, cold, unthrottled          | ≤ 300 ms | 537 ms   | 116 ms |
+| Bytes on a first visit (compressed)                 | ≤ 450 KB | 1,466 KB | 437 KB |
+| Frames over 20 ms during a page change, unthrottled | ≤ 5%     | ~25%     | ~2%    |
+| Frames over 20 ms while scrolling, 4× CPU           | ≤ 5%     | 15%      | ≤ 4%   |

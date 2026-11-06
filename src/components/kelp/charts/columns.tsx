@@ -5,6 +5,15 @@ import { useTween } from "../motion.ts";
 import { compact } from "./format.ts";
 import { useWidth } from "./use-width.ts";
 
+/**
+ * Show every nth axis label so the longest one still has room: 11px labels run about 6.2px a
+ * character, plus a gap between neighbours.
+ */
+export function labelStep(labels: string[], width: number): number {
+	const widest = Math.max(0, ...labels.map((l) => l.length)) * 6.2 + 12;
+	return Math.max(1, Math.ceil(labels.length / Math.max(1, Math.floor(width / widest))));
+}
+
 export interface Column {
 	label: string;
 	value: number;
@@ -46,7 +55,10 @@ export function Columns({
 		.domain([0, Math.max(1, ...columns.map((c) => c.value))])
 		.range([innerHeight, 0]);
 	const barWidth = Math.min(24, x.bandwidth());
-	const every = Math.max(1, Math.ceil(columns.length / Math.max(1, Math.floor(width / 56))));
+	const every = labelStep(
+		columns.map((c) => c.label),
+		width,
+	);
 	return (
 		<div ref={ref} className={cn("relative", className)}>
 			<svg role="img" aria-label={label} width={width} height={height} className="block overflow-visible">

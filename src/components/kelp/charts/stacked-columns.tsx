@@ -2,6 +2,7 @@ import { scaleBand, scaleLinear } from "d3-scale";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useTween } from "../motion.ts";
+import { labelStep } from "./columns.tsx";
 import { compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
@@ -61,7 +62,10 @@ export function StackedColumns({
 		.nice(3)
 		.range([innerHeight, 0]);
 	const barWidth = Math.min(24, x.bandwidth());
-	const every = Math.max(1, Math.ceil(columns.length / Math.max(1, Math.floor(innerWidth / 52))));
+	const every = labelStep(
+		columns.map((c) => c.label),
+		innerWidth,
+	);
 	const hovered = active === null ? null : columns[active];
 	const glided = useTween(
 		columns.flatMap((c) => series.map((s) => c.values[s.key] ?? 0)),
