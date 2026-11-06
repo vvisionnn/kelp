@@ -13,8 +13,9 @@ Two influences, used as concepts and never copied:
 
 ### Key Characteristics
 
-- A sidebar docked to the window edge in the canvas tone, separated by a hairline, with quiet monochrome line icons. The current page rests on a small sheet of its own, the same white (raised grey in dark) as the groups on the page, so the chrome and the content speak one language. It folds to an icon rail.
-- A toolbar per page in the canvas tone: where you are (section, page, item) on the left, search and theme on the right. Content scrolls under it; a hairline appears once it does.
+- Flat, edge to edge. The sidebar is docked full height on a surface of its own (white beside the grey page in light, a lifted grey beside near-black in dark), set apart by a hairline and a soft edge shadow; the page fills the rest of the window and scrolls with it. No floating panels.
+- The sidebar has quiet monochrome line icons. The current page rests on a flat tint of the brand indigo with an indigo icon, the one color in its rows. Its foot shows how full the disks are, with the spectrum meter. It folds to an icon rail.
+- A toolbar at the top of the page: where you are (section, page, item) on the left, search and theme on the right. Content scrolls under it; a hairline appears once it does.
 - Inset grouped sections (white sheets on a soft grey canvas in light, raised greys on near-black in dark), with hairline separators between rows.
 - Dense, legible tables: 40px rows, 13px text, tabular numerals, units in secondary ink.
 - Charts everywhere data has a shape: live traffic, latency, growth, shares and distributions, drawn in the data palette with a crosshair and a data table behind every chart.
@@ -27,7 +28,9 @@ Colors are named by role. Light and dark are designed separately, not inverted.
 
 | Role            | Token                | Light                  | Dark                   | Usage                                            |
 | --------------- | -------------------- | ---------------------- | ---------------------- | ------------------------------------------------ |
-| Canvas          | `--background`       | #F5F5F7                | #0E0E10                | Window background behind sidebar and groups      |
+| Sidebar         | `--sidebar`          | #FFFFFF                | #161618                | The docked sidebar's own surface                 |
+| Current page    | `--nav-current`      | indigo #5552E0 at 9%   | #8F8CFF at 13%         | The current row in the sidebar                   |
+| Canvas          | `--background`       | #F5F5F7                | #0E0E10                | The page behind the groups                       |
 | Sheet           | `--card`             | #FFFFFF                | #1C1C1E                | Grouped sections, tables, widgets                |
 | Raised          | `--raised`           | #F2F2F5                | #2C2C2E                | Inputs on sheets, hovered rows, segmented tracks |
 | Popover         | `--popover`          | #FFFFFF                | #2C2C2E                | Menus, popovers, dialogs                         |
@@ -45,11 +48,11 @@ Colors are named by role. Light and dark are designed separately, not inverted.
 
 ### The spectrum
 
-`--spectrum` is x.ai's gradient: indigo #6366F1, violet #A855F7, pink #EC4899, orange #F97316, amber #EAB308. It appears in exactly two places: capacity meters below the warning threshold, and the sign-in screen. Nowhere else, so it keeps meaning "Kelp". The chrome carries no color at all apart from the cluster's status dot, so any color in the sidebar means something.
+`--spectrum` is x.ai's gradient: indigo #6366F1, violet #A855F7, pink #EC4899, orange #F97316, amber #EAB308. It appears in exactly two places: capacity meters below the warning threshold (including the disk meter at the foot of the sidebar), and the sign-in screen. Nowhere else, so it keeps meaning "Kelp". The chrome carries no color at all apart from the cluster's status dot, so any color in the sidebar means something.
 
 ### Icons
 
-Navigation icons are 16px lucide line icons at 1.75 stroke in secondary ink; hovered and current pages turn to label ink. Icons sit on one vertical line with the brand tile and the avatar, so folding to the rail only hides the words. No colored icon tiles: they read as a phone home screen, not a desktop console.
+Navigation icons are 16px lucide line icons at 1.75 stroke in secondary ink; hovered pages turn to label ink, and the current page's icon takes the brand indigo (`--nav-current-icon`), the one color a row carries, because it marks state. Icons sit on one vertical line with the brand tile and the avatar, so folding to the rail only hides the words. No colored icon tiles: they read as a phone home screen, not a desktop console.
 
 ### Status (reserved)
 
@@ -161,9 +164,9 @@ Near-black canvas (#0E0E10), sheets at #1C1C1E and raised controls at #2C2C2E, s
 
 ### Navigation
 
-- **Sidebar**: docked, full height, 240px wide, canvas tone, 1px hairline on its trailing edge, no radius or shadow. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 16px line icon in secondary ink, 13px label, 32px row, 8px radius. The current row rests on a sheet (`--nav-current`, white with a hairline and faint shadow in light, #222225 with a light edge in dark) that springs between rows; hover shows a Fill pill that glides the same way. Bottom: the account button.
+- **Sidebar**: docked, full height, 240px wide, on `--sidebar`, with `--sidebar-edge` (a hairline and a soft shadow that fades within 12px) on its trailing edge. No radius, no inset. Top: Kelp app icon, name, and a one-line cluster status. Then sections (Cluster, Storage, Object store, Access, Operations) with caption-style labels, then items: 16px line icon in secondary ink, 13px label, 32px row, 8px radius. The current row rests on a flat indigo tint (`--nav-current`) with its icon in indigo (`--nav-current-icon`) and its label in label ink, springing between rows; hover shows a Fill pill that glides the same way. Bottom: the disk meter ("Disk 77% of 228 GiB", linking to Nodes), then the account button.
 - **Rail**: ⌘B (or the toolbar's sidebar button) folds the sidebar to 56px; the choice is remembered. Words fade out before the rail narrows and back in after it widens; section labels become hairlines; every item names itself in a tooltip; the cluster status becomes a dot on the brand tile. Below 1024px the sidebar is a sheet from the toolbar instead.
-- **Toolbar**: 52px, sticky, canvas tone, a hairline once content scrolls under it. Leading: the sidebar button and a breadcrumb: section, page and, on detail pages, the page as a link back to its list followed by the item ("Operations › Maintenance › Volume vacuum"). Trailing: search field and theme switch.
+- **Toolbar**: 52px, sticky, canvas tone (solid, no blur), a hairline once content scrolls under it. Leading: the sidebar button and a breadcrumb: section, page and, on detail pages, the page as a link back to its list followed by the item ("Operations › Maintenance › Volume vacuum"). Trailing: search field and theme switch.
 - **Page header**: 26px semibold title, a one-line description in secondary ink, and page actions (including the time range when the page has charts) at the trailing edge.
 
 ### Tables
@@ -185,7 +188,7 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 
 ### Distinctive Components
 
-- **Current-page sheet** gliding between sidebar rows.
+- **Current-page tint** gliding between sidebar rows.
 - **Rolling metrics**: values change with React Bits Counter digit rolls when data refreshes.
 - **Capacity meter**: 6px track in Fill, value in spectrum/Warning/Critical with the percent beside it.
 - **Hold to delete**: destructive actions on populated resources fill as you hold, so nothing important is lost to a misclick.
@@ -198,7 +201,7 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 
 ### Grid & Container
 
-- Window: sidebar (240px, or the 56px rail) and a content column.
+- Window: the sidebar (240px, or the 56px rail) and the page, edge to edge.
 - Content column: 24px side padding (32px from 1280px), max width 1400px, left-aligned.
 - Overview and list pages use a 12-column grid with 16px gutters; widgets span 3, 4, 6 or 12 columns.
 
@@ -208,17 +211,17 @@ Density with calm: tight inside a group, generous between groups. A page shows t
 
 ### Border Radius Scale
 
-Groups and widgets 12, controls and sidebar rows 8, menu items and tags 6, checkboxes 4, pills 9999. The docked sidebar and toolbar have no radius.
+Groups and widgets 12, controls and sidebar rows 8, menu items and tags 6, checkboxes 4, pills 9999. The docked sidebar has no radius.
 
 ## 6. Depth & Elevation
 
-| Level | Surface                 | Treatment                       |
-| ----- | ----------------------- | ------------------------------- |
-| 0     | Canvas                  | flat                            |
-| 1     | Sheet (groups, widgets) | separator outline, faint shadow |
-| 2     | Sidebar, toolbar        | canvas tone, hairline edge      |
-| 3     | Popover, menu, tooltip  | popover surface, popover shadow |
-| 4     | Dialog, sheet panel     | overlay plus popover shadow     |
+| Level | Surface                 | Treatment                          |
+| ----- | ----------------------- | ---------------------------------- |
+| 0     | Canvas                  | flat                               |
+| 1     | Sheet (groups, widgets) | separator outline, faint shadow    |
+| 2     | Sidebar                 | own surface, hairline, edge shadow |
+| 3     | Popover, menu, tooltip  | popover surface, popover shadow    |
+| 4     | Dialog, sheet panel     | overlay plus popover shadow        |
 
 ### Depth Principles
 
@@ -273,7 +276,7 @@ Tables keep identity and status columns and drop secondary columns first; side c
 
 ### Quick Summary
 
-Big-screen operations dashboard: docked sidebar in the canvas tone with quiet line icons and the current page on a sheet, folding to an icon rail; a breadcrumb toolbar; stat tiles with sparklines, live charts in the data palette, inset grouped sheets on a soft canvas, dense 40px tables, monochrome ink actions, status colors only for state.
+Big-screen operations dashboard: a flat docked sidebar on its own surface with quiet line icons, the current page on an indigo tint and a disk meter, folding to an icon rail; the page edge to edge with a breadcrumb toolbar; stat tiles with sparklines, live charts in the data palette, inset grouped sheets on a soft canvas, dense 40px tables, monochrome ink actions, status colors only for state.
 
 ### Example Component Prompts
 
@@ -310,7 +313,8 @@ Big-screen operations dashboard: docked sidebar in the canvas tone with quiet li
 
 - From x.ai: the restraint of a monochrome chrome with color reserved for meaning, and quiet, confident numbers. Its marketing patterns (hero headlines, mesh-gradient cards, bento links) were deliberately left behind; they belong on a landing page, not in a console.
 - From Apple's Human Interface Guidelines (Sidebars) and WWDC25 "Get to know the new design system": capsules for standout actions while dense desktop controls stay rounded rectangles; rounded numerals for metrics. Colored icon tiles were tried and dropped: they read as mobile, not desktop.
-- From ReUI's app shells (reui.io): the docked sidebar in the canvas tone with a hairline, the neutral current-page fill, folding to an icon rail. React Bits supplied the gliding highlight and the rail's tooltips.
+- From ReUI's app shells (reui.io): the docked, flat sidebar with a hairline, the tinted current-page fill, folding to an icon rail. React Bits supplied the gliding highlight and the rail's tooltips.
+- Tried and dropped (v0.6, same night): (1) sidebar and page on one canvas split by a hairline: everything read as one background. (2) The page as a floating rounded panel inset in a glowing frame: the content shouldn't float. The answer is a flat sidebar on a surface of its own.
 - Tried and dropped (v0.6): the floating glass sidebar inset 8px from the window with a spectrum bar on the current row. It read as a separate floating panel competing with the content, and its blur cost frames while scrolling.
 
 ## Loading and change

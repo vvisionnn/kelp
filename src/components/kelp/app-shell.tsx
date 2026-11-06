@@ -19,6 +19,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
+import { formatBytes, formatPercent, ratio } from "@/lib/format.ts";
 import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
 import { sessionQuery, useSession, useSignOut } from "@/lib/session.ts";
@@ -27,6 +28,7 @@ import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
 import { SPRING } from "./motion.ts";
 import { itemFor, NAV } from "./nav.ts";
+import { CapacityBar } from "./page.tsx";
 import { useSpotlight } from "./spotlight.ts";
 import { TextMorph } from "./text-morph.tsx";
 
@@ -135,6 +137,38 @@ function RailTip({ rail, label, children }: { rail: boolean; label: ReactNode; c
 }
 
 /**
+ * How full the volume servers' disks are, at the foot of the sidebar: the one number an operator
+ * wants from every page. The meter is the spectrum until it nears full, then turns to a warning.
+ */
+function SidebarCapacity({ rail, onNavigate }: { rail: boolean; onNavigate?: (() => void) | undefined }) {
+	const { data } = useQuery(queries.overview());
+	if (!data) return null;
+	const used = data.volumeServers.reduce((sum, s) => sum + s.diskUsage, 0);
+	const total = data.volumeServers.reduce((sum, s) => sum + s.diskCapacity, 0);
+	if (total <= 0) return null;
+	return (
+		<Link
+			to="/cluster"
+			onClick={onNavigate}
+			aria-hidden={rail || undefined}
+			tabIndex={rail ? -1 : undefined}
+			className={cn(
+				"mx-2 mb-2 block rounded-lg p-2.5 transition-[opacity,background-color] hover:bg-accent/60",
+				rail ? "pointer-events-none opacity-0 duration-100" : "delay-100 duration-200",
+			)}
+		>
+			<span className="flex items-baseline justify-between gap-2 whitespace-nowrap text-[12px]">
+				<span className="font-medium">Disk</span>
+				<span className="text-muted-foreground tabular">
+					<TextMorph>{`${formatPercent(ratio(used, total))} of ${formatBytes(total)}`}</TextMorph>
+				</span>
+			</span>
+			<CapacityBar used={used} total={total} className="mt-2" />
+		</Link>
+	);
+}
+
+/**
  * Sidebar contents, shared by the docked sidebar and the compact-width sheet. Every icon, the
  * brand tile and the avatar sit on one vertical line, so folding to the rail only hides the words.
  */
@@ -161,7 +195,7 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 							<KelpMark className="size-5" />
 							<span
 								className={cn(
-									"absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-background transition-[opacity,background-color] duration-300",
+									"absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-[var(--sidebar)] transition-[opacity,background-color] duration-300",
 									status.dot,
 									!rail && "opacity-0",
 								)}
@@ -227,7 +261,7 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 														)}
 													</AnimatePresence>
 													{active && (
-														// The current page sits on a sheet of its own, like the groups on the page.
+														// The current page rests on a flat tint of the brand indigo.
 														<motion.span
 															layoutId="sidebar-active"
 															className="absolute inset-0 -z-10 rounded-lg bg-[var(--nav-current)] shadow-[var(--nav-current-shadow)]"
@@ -235,7 +269,7 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 														/>
 													)}
 													<item.icon
-														className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/nav:text-foreground group-data-active/nav:text-foreground"
+														className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/nav:text-foreground group-data-active/nav:text-[var(--nav-current-icon)]"
 														strokeWidth={1.75}
 													/>
 													<span className={fade}>{item.title}</span>
@@ -249,6 +283,7 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 					))}
 				</nav>
 
+				<SidebarCapacity rail={rail} onNavigate={onNavigate} />
 				<div className="border-border border-t p-2">
 					<AccountMenu rail={rail} />
 				</div>
@@ -509,10 +544,11 @@ export function AppShell() {
 	const [rail, toggleRail] = useSidebarCollapsed();
 	return (
 		<div data-rail={rail ? "" : undefined} className="group/shell min-h-svh">
-			{/* Docked to the window edge in the canvas tone; folding to the rail only narrows it. */}
+			{/* Docked full height on a flat surface of its own, set apart from the page by a hairline and
+			    a soft edge shadow. Folding to the rail only narrows it. */}
 			<aside
 				aria-label="Sidebar"
-				className="fixed inset-y-0 left-0 z-40 hidden w-60 overflow-clip border-border border-r bg-background transition-[width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-rail/shell:w-14 motion-reduce:transition-none lg:block"
+				className="fixed inset-y-0 left-0 z-40 hidden w-60 overflow-clip bg-[var(--sidebar)] shadow-[var(--sidebar-edge)] transition-[width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-rail/shell:w-14 motion-reduce:transition-none lg:block"
 			>
 				<div className="h-full w-full">
 					<SidebarBody rail={rail} />
@@ -522,7 +558,7 @@ export function AppShell() {
 				<SheetContent
 					side="left"
 					showCloseButton={false}
-					className="w-72 gap-0 bg-background p-0 sm:max-w-72"
+					className="w-72 gap-0 bg-[var(--sidebar)] p-0 sm:max-w-72"
 				>
 					<SheetTitle className="sr-only">Pages</SheetTitle>
 					<SidebarBody onNavigate={() => setSheetOpen(false)} />

@@ -1,5 +1,5 @@
 import { describe, expect, spyOn, test } from "bun:test";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { cores } from "@/components/kelp/cluster/insights.ts";
 import { clusterApi } from "../../../test/client-fixtures.ts";
 import { renderApp } from "../../../test/render-app.tsx";
@@ -148,7 +148,9 @@ describe("nodes page", () => {
 		fireEvent.change(await screen.findByLabelText("Search volume servers"), { target: { value: "nowhere" } });
 		expect(screen.getByText('Nothing matches "nowhere".')).toBeTruthy();
 		fireEvent.change(screen.getByLabelText("Search volume servers"), { target: { value: "18080" } });
-		fireEvent.click(screen.getByText("Disk"));
+		fireEvent.click(
+			within(screen.getAllByRole("columnheader", { name: /^Disk/ })[0] as HTMLElement).getByText("Disk"),
+		);
 		expect(screen.getAllByText("127.0.0.1:18080").length).toBeGreaterThan(0);
 	});
 

@@ -11,14 +11,16 @@ const THEMES: Array<{ value: Theme; label: string }> = [
 const PREVIEW = {
 	light: {
 		canvas: "#f5f5f7",
-		current: "#ffffff",
+		sidebar: "#ffffff",
+		current: "rgb(85 82 224 / 0.16)",
 		sheet: "#ffffff",
 		line: "rgb(0 0 0 / 0.1)",
 		edge: "rgb(0 0 0 / 0.08)",
 	},
 	dark: {
 		canvas: "#0e0e10",
-		current: "#2c2c2e",
+		sidebar: "#161618",
+		current: "rgb(143 140 255 / 0.2)",
 		sheet: "#1c1c1e",
 		line: "rgb(255 255 255 / 0.14)",
 		edge: "rgb(255 255 255 / 0.08)",
@@ -27,18 +29,21 @@ const PREVIEW = {
 
 const ROWS = [0, 1, 2, 3];
 
-/** A tiny drawing of Kelp in a palette: the docked sidebar with the current page on a sheet, and sheets. */
+/** A tiny drawing of Kelp in a palette: the docked sidebar on its own surface with the current page tinted, and sheets. */
 function ThemePreview({ mode }: { mode: "light" | "dark" }) {
 	const c = PREVIEW[mode];
 	const edge = { boxShadow: `0 0 0 0.5px ${c.edge}` };
 	return (
 		<div className="flex h-full w-full" style={{ background: c.canvas }}>
-			<div className="flex w-[30%] flex-col gap-1 p-1.5 pt-2" style={{ boxShadow: `0.5px 0 0 ${c.edge}` }}>
+			<div
+				className="flex w-[30%] flex-col gap-1 p-1.5 pt-2"
+				style={{ background: c.sidebar, boxShadow: `0.5px 0 0 ${c.edge}` }}
+			>
 				{ROWS.map((row) => (
 					<span
 						key={row}
 						className="flex items-center gap-1 rounded-[3px] px-0.5 py-[1px]"
-						style={row === 1 ? { background: c.current, ...edge } : undefined}
+						style={row === 1 ? { background: c.current } : undefined}
 					>
 						<span className="size-1.5 rounded-[2px]" style={{ background: c.line }} />
 						<span className="h-1 flex-1 rounded-full" style={{ background: c.line }} />

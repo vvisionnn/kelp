@@ -121,8 +121,13 @@
 	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.14), 0 0 0 0.5px rgb(0 0 0 / 0.08);
 	--thumb: #ffffff;
 	/* The current page in the sidebar rests on a sheet, like the groups on the page. */
-	--nav-current: #ffffff;
-	--nav-current-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+	/* The sidebar's own flat surface: white beside the grey page in light, a lifted grey in dark. */
+	--sidebar: #ffffff;
+	--sidebar-edge: 0.5px 0 0 rgb(0 0 0 / 0.1), 6px 0 24px -12px rgb(0 0 0 / 0.08);
+	--nav-current-icon: #5552e0;
+	/* The current page: a flat tint of the brand indigo, the one color in the sidebar's rows. */
+	--nav-current: rgb(85 82 224 / 0.09);
+	--nav-current-shadow: none;
 	/* The x.ai spectrum: the one gradient, for meters and the brand moments. */
 	--spectrum: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316, #eab308);
 	--radius: 0.75rem;
@@ -172,8 +177,11 @@
 	--sheet-shadow: none;
 	--float-shadow: 0 12px 40px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(255 255 255 / 0.1);
 	--thumb: #636366;
-	--nav-current: #222225;
-	--nav-current-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+	--sidebar: #161618;
+	--sidebar-edge: 0.5px 0 0 rgb(255 255 255 / 0.08), 6px 0 24px -12px rgb(0 0 0 / 0.6);
+	--nav-current-icon: #8f8cff;
+	--nav-current: rgb(143 140 255 / 0.13);
+	--nav-current-shadow: none;
 }
 
 @layer base {
