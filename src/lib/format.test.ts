@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { formatBytes, formatCount, formatDateTime, formatPercent, formatRelative, ratio } from "./format.ts";
+import {
+	formatBytes,
+	formatCount,
+	formatDateTime,
+	formatPercent,
+	formatRelative,
+	plural,
+	ratio,
+} from "./format.ts";
 
 describe("formatBytes", () => {
 	test.each([
@@ -65,4 +73,10 @@ describe("formatDateTime", () => {
 		expect(formatDateTime("2026-11-04T12:00:00Z")).toMatch(/Nov 4, 2026/);
 		expect(formatDateTime(null)).toBe("—");
 	});
+});
+
+test("plural names one thing in the singular and counts with grouping", () => {
+	expect(plural(1, "volume")).toBe("1 volume");
+	expect(plural(1204, "volume")).toBe("1,204 volumes");
+	expect(plural(0, "policy", "policies")).toBe("0 policies");
 });

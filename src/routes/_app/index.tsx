@@ -42,7 +42,7 @@ import {
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
-import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatPercent, formatRelative, plural, ratio } from "@/lib/format.ts";
 import { healthSummary } from "@/lib/health.ts";
 import { queries } from "@/lib/queries.ts";
 import { cores } from "./cluster.tsx";
@@ -140,7 +140,7 @@ function Headline({ data, telemetry }: { data: Overview; telemetry: Telemetry | 
 			<Kpi
 				label="Object data"
 				{...stored}
-				hint={`${formatCount(data.totalVolumes)} volumes`}
+				hint={plural(data.totalVolumes, "volume")}
 				trend={inventory.map((p) => p.storedBytes)}
 				color={dataColor(0)}
 			/>

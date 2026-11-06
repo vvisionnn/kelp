@@ -19,7 +19,7 @@ import {
 import { CapacityBar, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { ChartGhost, KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
-import { formatBytes, formatCount, formatDateTime, formatPercent } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatDateTime, formatPercent, plural } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { errorShare, nearQuota, quotaUsage, sizeColumns, sizeShares } from "./insights.ts";
 
@@ -148,7 +148,7 @@ export function BucketsDashboard({ buckets, telemetry }: { buckets: Bucket[]; te
 										<RollingValue text={formatBytes(total)} />
 									</span>
 									<span className="text-[12px] text-muted-foreground">
-										<TextMorph>{`in ${buckets.length} buckets`}</TextMorph>
+										<TextMorph>{`in ${plural(buckets.length, "bucket")}`}</TextMorph>
 									</span>
 								</>
 							}
@@ -348,7 +348,7 @@ export function BucketDashboard({ bucket, telemetry }: { bucket: Bucket; telemet
 					<Detail label="Lifecycle">
 						<TextMorph>
 							{bucket.lifecycle.rules
-								? `${bucket.lifecycle.enabled} of ${bucket.lifecycle.rules} rules active`
+								? `${bucket.lifecycle.enabled} of ${plural(bucket.lifecycle.rules, "rule")} active`
 								: "No rules"}
 						</TextMorph>
 					</Detail>

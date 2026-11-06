@@ -45,7 +45,7 @@ import { KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
-import { formatRelative } from "@/lib/format.ts";
+import { formatRelative, plural } from "@/lib/format.ts";
 import { maintenanceQueries } from "@/lib/maintenance-queries.ts";
 import { cn } from "@/lib/utils";
 
@@ -262,7 +262,7 @@ function Insights({
 				<Kpi
 					label="Workers"
 					value={String(data.workerCount)}
-					hint={`${slots.used} of ${slots.total} slots busy`}
+					hint={`${slots.used} of ${plural(slots.total, "slot")} busy`}
 				/>
 				<Kpi label="Running now" value={String(active)} hint={`${queued} queued on workers`} />
 				<Kpi

@@ -26,7 +26,7 @@ import { ServerLegend, ShardMap, serverFill, shardRanges } from "@/components/ke
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
 import { Button } from "@/components/ui/button";
-import { formatBytes, formatCount, formatDateTime } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatDateTime, plural } from "@/lib/format.ts";
 import { collectionLabel, collectionParam, serverPalette, storageQueries } from "@/lib/storage-queries.ts";
 import { cn } from "@/lib/utils";
 
@@ -188,7 +188,7 @@ function EcDetail({ ec }: { ec: EcVolume }) {
 				description={
 					ec.dataShards > 0
 						? `${ec.dataShards} data shards and ${ec.parityShards} parity shards. Hover a shard to see where it lives.`
-						: `${ec.totalShards} shards. Hover a shard to see where it lives.`
+						: `${plural(ec.totalShards, "shard")}. Hover a shard to see where it lives.`
 				}
 			>
 				<AuroraCard className="space-y-4 overflow-x-auto p-4">

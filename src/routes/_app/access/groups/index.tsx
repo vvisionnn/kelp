@@ -32,6 +32,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
+import { plural } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
@@ -179,7 +180,7 @@ function GroupsDashboard({
 				<Kpi
 					label="Memberships"
 					value={String(stats.memberships)}
-					hint={`${stats.attached} policies attached`}
+					hint={`${plural(stats.attached, "policy", "policies")} attached`}
 				/>
 				<Kpi
 					label="Users in no group"

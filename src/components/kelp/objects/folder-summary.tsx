@@ -4,7 +4,7 @@ import { BarList, dataColor } from "@/components/kelp/charts/index.ts";
 import { SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
-import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatRelative, plural } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { folderStats } from "./insights.ts";
 
@@ -53,7 +53,7 @@ export function FolderSummary({
 				<p className="mt-3 text-[12px] text-muted-foreground lg:mt-auto">
 					<TextMorph>
 						{partial
-							? `Counts the first ${formatCount(entries.length)} items; scroll the list to load more.`
+							? `Counts the first ${plural(entries.length, "item")}; scroll the list to load more.`
 							: "Counts every item in this folder."}
 					</TextMorph>
 				</p>

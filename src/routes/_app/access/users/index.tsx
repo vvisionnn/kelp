@@ -33,6 +33,7 @@ import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { allOf, Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { accessQueries, describeActions } from "@/lib/access-queries.ts";
+import { plural } from "@/lib/format.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
 
@@ -260,7 +261,7 @@ function UsersDashboard({
 				<Kpi
 					label="Users"
 					value={String(stats.users)}
-					hint={`${groups.length} groups, ${policies.length} policies`}
+					hint={`${plural(groups.length, "group")}, ${plural(policies.length, "policy", "policies")}`}
 				/>
 				<Kpi
 					label="Keys that can sign"

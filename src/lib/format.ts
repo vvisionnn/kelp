@@ -17,6 +17,11 @@ export function formatCount(n: number): string {
 	return Math.abs(n) >= 1_000_000 ? compact.format(n) : grouped.format(n);
 }
 
+/** A count with its noun: "1 volume", "12 volumes", "1,204 policies". */
+export function plural(n: number, one: string, many = `${one}s`): string {
+	return `${formatCount(n)} ${n === 1 ? one : many}`;
+}
+
 /** `part / whole` clamped to 0..1, and 0 when the whole is empty. */
 export function ratio(part: number, whole: number): number {
 	if (!whole || !Number.isFinite(part / whole)) return 0;

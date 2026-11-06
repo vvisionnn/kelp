@@ -47,7 +47,7 @@ import {
 import { VolumeTable } from "@/components/kelp/storage/volume-table.tsx";
 import { RollingValue } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
-import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatPercent, plural, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { storageQueries, VACUUM_THRESHOLD, volumeHealth } from "@/lib/storage-queries.ts";
 
@@ -144,7 +144,7 @@ function VolumeNumbers({
 			<Kpi
 				label="Stored"
 				{...splitUnit(formatBytes(stored))}
-				hint={`${formatCount(inventory.totals.files)} files`}
+				hint={plural(inventory.totals.files, "file")}
 				trend={growth.map((p) => p.storedBytes)}
 				color={dataColor(2)}
 			/>
@@ -175,7 +175,7 @@ function VolumeNumbers({
 				label="Writes"
 				value={compact(latest(writeRates) ?? 0)}
 				unit="/s"
-				hint={`${hotVolumes(volumes)} volumes written today`}
+				hint={`${plural(hotVolumes(volumes), "volume")} written today`}
 				trend={writeRates}
 				color={dataColor(1)}
 			/>

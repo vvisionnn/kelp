@@ -29,7 +29,7 @@ import { RangeControl, useTelemetry, withTelemetry } from "@/components/kelp/sto
 import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
-import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatPercent, plural, ratio } from "@/lib/format.ts";
 import { useCanWrite } from "@/lib/session.ts";
 import { collectionLabel, collectionParam, storageQueries } from "@/lib/storage-queries.ts";
 
@@ -198,7 +198,7 @@ function CollectionNumbers({
 			<Kpi
 				label="Collections"
 				value={formatCount(collections.length)}
-				hint={`${inventory.volumes.length} volumes in all`}
+				hint={`${plural(inventory.volumes.length, "volume")} in all`}
 			/>
 			<Kpi
 				label="Stored"

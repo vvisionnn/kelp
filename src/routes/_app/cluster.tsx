@@ -44,7 +44,7 @@ import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
+import { formatBytes, formatCount, formatRelative, plural } from "@/lib/format.ts";
 import { queries } from "@/lib/queries.ts";
 
 const TABS = ["masters", "volume-servers", "filers", "s3", "brokers", "mounts"] as const;
@@ -328,7 +328,7 @@ function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
 														<span className="truncate font-mono">{node.address}</span>
 													</span>
 													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
-														<TextMorph>{`${formatCount(node.volumes)} volumes`}</TextMorph>
+														<TextMorph>{plural(node.volumes, "volume")}</TextMorph>
 													</span>
 												</div>
 												<div className="mt-2 flex items-center gap-3">
