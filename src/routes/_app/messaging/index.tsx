@@ -62,19 +62,28 @@ function MessagingPage() {
 				description="Topics on SeaweedFS's message queue, the brokers that serve them, and how long they keep data."
 				actions={
 					canWrite && (
-						<Swap id={hasBroker ? "actions" : isPending ? "loading" : "none"}>
+						<Swap id={hasBroker ? "actions" : isPending ? "loading" : "no-broker"}>
 							{hasBroker ? (
 								<div className="flex flex-wrap items-center gap-2">
 									<PurgeButton />
 									<CreateTopicDialog />
 								</div>
+							) : isPending ? (
+								<div className="flex items-center gap-2">
+									<SkeletonBlock className="h-8 w-40" />
+									<SkeletonBlock className="h-8 w-32" />
+								</div>
 							) : (
-								isPending && (
-									<div className="flex items-center gap-2">
-										<SkeletonBlock className="h-8 w-40" />
-										<SkeletonBlock className="h-8 w-32" />
-									</div>
-								)
+								// Kept in place, so the header holds its shape and says what is missing.
+								<Tooltip>
+									<TooltipTrigger render={<span className="inline-flex" />}>
+										<Button disabled>
+											<Plus />
+											Create topic
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>Topics need a running message broker</TooltipContent>
+								</Tooltip>
 							)}
 						</Swap>
 					)

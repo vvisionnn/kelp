@@ -8,6 +8,7 @@ import {
 	clockSeconds,
 	compact,
 	dataColor,
+	distinctTicks,
 	hasSeries,
 	Kpi,
 	latencySeries,
@@ -200,4 +201,10 @@ describe("other charts", () => {
 		rerender(<Kpi label="Disk" value="85" unit="%" tone="warn" />);
 		expect(screen.getByText("85").closest(".text-warning")).toBeTruthy();
 	});
+});
+
+test("axis ticks never repeat a label", () => {
+	expect(distinctTicks(0.15, perSecond).map(perSecond)).toEqual(["0/s", "0.1/s"]);
+	expect(distinctTicks(40, perSecond)).toEqual([0, 10, 20, 30, 40]);
+	expect(distinctTicks(0.0001, () => "same")).toEqual([0]);
 });

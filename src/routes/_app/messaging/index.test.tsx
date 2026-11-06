@@ -29,7 +29,8 @@ describe("messaging page", () => {
 		renderApp("/messaging", { "GET /messaging": { brokers: [], leader: null, topics: [] } });
 		expect(await screen.findByText("No message broker is running")).toBeTruthy();
 		expect(screen.getByText("weed mq.broker -master=<master-host>:9333")).toBeTruthy();
-		expect(screen.queryByRole("button", { name: "Create topic" })).toBeNull();
+		// The action stays where it would be, unavailable until a broker runs.
+		expect(screen.getByRole("button", { name: "Create topic" }).hasAttribute("disabled")).toBe(true);
 	});
 
 	test("shows an empty topic list, an electing leader, and topics without details", async () => {

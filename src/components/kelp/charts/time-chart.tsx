@@ -127,6 +127,16 @@ function useMorph(target: Frame): Frame {
 
 type Lines = Frame["lines"];
 
+/** Up to four axis ticks whose labels all differ; tiny ranges would otherwise read "0.1/s" three times. */
+export function distinctTicks(top: number, format: (value: number) => string): number[] {
+	const scale = scaleLinear().domain([0, top]);
+	for (const count of [4, 3, 2]) {
+		const ticks = scale.ticks(count);
+		if (new Set(ticks.map(format)).size === ticks.length) return ticks;
+	}
+	return [0];
+}
+
 /** Each series' band over the ones below it, or null when the chart isn't stacked. */
 function stackBands(mode: string, series: TimeSeries[], lines: Lines, length: number) {
 	if (mode !== "stacked") return null;
@@ -250,7 +260,7 @@ export function TimeChart({
 
 	const x = scaleTime().domain([frame.start, frame.end]).range([0, innerWidth]);
 	const y = scaleLinear().domain([0, frame.top]).range([innerHeight, 0]).clamp(true);
-	const yTicks = scaleLinear().domain([0, target.top]).ticks(4);
+	const yTicks = distinctTicks(target.top, format);
 	const xTicks = x.ticks(Math.max(2, Math.min(6, Math.floor(innerWidth / 110))));
 	// Ticks closer than a minute apart need seconds, or the labels repeat.
 	const withSeconds =

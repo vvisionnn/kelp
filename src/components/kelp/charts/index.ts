@@ -7,5 +7,5 @@ export { Ring, type RingSlice } from "./ring.tsx";
 export { Sparkline } from "./sparkline.tsx";
 export { type StackColumn, StackedColumns, type StackSeries } from "./stacked-columns.tsx";
 export { dataColor, hasSeries, latencySeries, latest, RANGES, trafficByType, useRange } from "./telemetry.ts";
-export { robustTop, TimeChart, type TimeSeries } from "./time-chart.tsx";
+export { distinctTicks, robustTop, TimeChart, type TimeSeries } from "./time-chart.tsx";
 export { useWidth } from "./use-width.ts";
