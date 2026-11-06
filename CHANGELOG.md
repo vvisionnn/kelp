@@ -2,6 +2,55 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.5.0](https://github.com/vvisionnn/kelp/compare/v0.4.0...v0.5.0) - 2026-11-06
+
+### 🚀 Features
+
+- **seaweedfs:** Validate new SeaweedFS releases daily and track the last-known-good version ([`6842b33`](https://github.com/vvisionnn/kelp/commit/6842b33b4c79276c30178d7e39e1c067564e8ac3))
+- **web:** Add a shared motion foundation for loading, morphing text and charts ([`0a3f462`](https://github.com/vvisionnn/kelp/commit/0a3f4623f3b19c56f08c34c8101a7086bc3e29e1))
+- **web:** Carry the motion language into sign-in, tables, overlays and the page edge ([`57ba432`](https://github.com/vvisionnn/kelp/commit/57ba432de0f4548cc7a75e6da4609128bde66565))
+- **web:** Bring buckets, files and the bucket editors onto the motion foundation ([`83d8c99`](https://github.com/vvisionnn/kelp/commit/83d8c991d6d55b33177526e92d464e80803d8dbc))
+- **web:** Bring the access pages onto the motion foundation ([`1c0fb2d`](https://github.com/vvisionnn/kelp/commit/1c0fb2d2fde6c012a73bcfa3f909eb86e9869474))
+- **web:** Give operations pages layout-matched loading and morphing status ([`3841fca`](https://github.com/vvisionnn/kelp/commit/3841fca878124b6eaf2a826341666178d5586afd))
+- **web:** Bring nodes, volumes, collections and erasure coding onto the motion foundation ([`976e623`](https://github.com/vvisionnn/kelp/commit/976e6230418b201e0e85bc1909c368a3d43ef7be))
+- **web:** Crossfade only the page area between pages, and let changes land quietly while a view catches up ([`ad67bd7`](https://github.com/vvisionnn/kelp/commit/ad67bd7f79ae50229ee4d8fe89e81be0c37c3be8))
+
+### 🐛 Bug Fixes
+
+- **seaweedfs:** Run SeaweedFS 4.52 by default ([`a4ad4a5`](https://github.com/vvisionnn/kelp/commit/a4ad4a5aaa7799645caa9f729d99af7737fd840f))
+- **seaweedfs:** Format the LKG file like CI's lint and check lint before committing a promotion ([`1f818dd`](https://github.com/vvisionnn/kelp/commit/1f818dd327d576f5a5d8a72397d56fc6ac36edb4))
+- **seaweedfs:** Close compatibility issues only when their version passes or the LKG reaches it ([`ca89241`](https://github.com/vvisionnn/kelp/commit/ca89241f678d2d1a83476e1600475cddd97647fd))
+- **web:** Give every folder one summary shape, and stop morphing text from doubling for search and tests ([`41809ac`](https://github.com/vvisionnn/kelp/commit/41809ac890e570e26c934e8ae19424e04b2edd6f))
+- **web:** Segmented controls keep their natural width on phones, and stat hints truncate cleanly ([`165bd5a`](https://github.com/vvisionnn/kelp/commit/165bd5a0d14f94e1d6137bc371d7821092c6193c))
+- **web:** Overview lands with its trend lines and keeps a slot for the range control ([`1eb4c41`](https://github.com/vvisionnn/kelp/commit/1eb4c41bc338bb7b57d1daecc36a9885ee03b081))
+- **web:** A view fading out is hidden from assistive tech, and shift failures name what moved ([`8971b5b`](https://github.com/vvisionnn/kelp/commit/8971b5bfd38f1986b34e3a2b40559fcfbf814893))
+- **web:** Play entrances once, when data first arrives, and keep the sidebar still between pages ([`3fa73fc`](https://github.com/vvisionnn/kelp/commit/3fa73fcf1431538516ac02bd3434f74a43d120d7))
+- **web:** The theme icon turns only on a theme change, and table rows rise only as they first arrive ([`e5c09af`](https://github.com/vvisionnn/kelp/commit/e5c09af882e956e99d0d6e45c1c7b06764b1f452))
+- **web:** Countdown meters, chart clips and volume fill bars stay still while a view catches up ([`1fcacd1`](https://github.com/vvisionnn/kelp/commit/1fcacd194e0d37f7718a68251bd9a0c0491fc1ec))
+- **web:** The sidebar says when the cluster can't be reached instead of connecting forever ([`4de56a8`](https://github.com/vvisionnn/kelp/commit/4de56a8e964bdf1c614cf2472b1dd13582231030))
+- **web:** Messaging keeps a disabled create action without a broker, and chart axes never repeat a label ([`76071a6`](https://github.com/vvisionnn/kelp/commit/76071a6aee25335441f5b70ca87db816f9b6bea2))
+- **web:** Counts name one thing in the singular ([`c0a40cc`](https://github.com/vvisionnn/kelp/commit/c0a40cc671ced38ba4f6abb67eae882495f3fa2a))
+- **web:** Every page makes its entrance the first time it shows, and revisits display at once ([`f0ef455`](https://github.com/vvisionnn/kelp/commit/f0ef4557a6584420a9377f65989e8b46a49d0de0))
+
+### 📚 Documentation
+
+- Refresh README screenshots ([`15245da`](https://github.com/vvisionnn/kelp/commit/15245dac5df73eeb12d40e1a58608cbb1a4d4870))
+
+### 🧪 Tests
+
+- **web:** Add a loading-state QA script and match Overview's ghosts to its panels ([`a6350ce`](https://github.com/vvisionnn/kelp/commit/a6350ce241f45dd49b90c0e8dd40ae19d0dd3427))
+- **e2e:** Hold every route to a still layout while data lands ([`e931d24`](https://github.com/vvisionnn/kelp/commit/e931d245effe7f3445a70be1e60d83d4ed3b807a))
+- **web:** Check crossfades without waiting on animation timing ([`27df357`](https://github.com/vvisionnn/kelp/commit/27df357a9fa45ed9b00af5b7db133bcf7b90580a))
+- **e2e:** Give the access lifecycle journey a slow-test budget ([`ac56849`](https://github.com/vvisionnn/kelp/commit/ac568493d482d28bbc18d5fecddfbe7e5d815b6f))
+
+### 🧹 Chores
+
+- **seaweedfs:** Start the LKG at 4.51 so the first compatibility run proves promotion ([`35dfb01`](https://github.com/vvisionnn/kelp/commit/35dfb0137855465a1429a814ab4f4d19873dce1b))
+- Format scripts/seaweedfs.ts ([`ba8ff1e`](https://github.com/vvisionnn/kelp/commit/ba8ff1e217ca84913016cb3d3dea6f4666424d76))
+
+### Wip
+
+- Glide unknown heights ([`9c66115`](https://github.com/vvisionnn/kelp/commit/9c66115117e2757f4b1f0936abd4e31d1a675e35))
 ## [0.4.0](https://github.com/vvisionnn/kelp/compare/v0.3.0...v0.4.0) - 2026-11-05
 
 ### 🚀 Features
