@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.6.1](https://github.com/vvisionnn/kelp/compare/v0.6.0...v0.6.1) - 2026-11-06
+
+### 🐛 Bug Fixes
+
+- **web:** Segmented controls keep their right corner: the scroller's bleed was capped at full width ([`e35aa87`](https://github.com/vvisionnn/kelp/commit/e35aa87c59070342d8981e99d04390740a2177f5))
 ## [0.6.0](https://github.com/vvisionnn/kelp/compare/v0.5.1...v0.6.0) - 2026-11-06
 
 ### 🚀 Features
