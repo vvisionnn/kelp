@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, type HTMLMotionProps, motion, useIsPresent } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
@@ -9,6 +9,15 @@ const SHARPEN = {
 	// `filter: none` afterwards, because a lasting filter would trap fixed and sticky children.
 	to: { opacity: 1, filter: "blur(0px)", y: 0, transitionEnd: { filter: "none" } },
 };
+
+/**
+ * One view in a crossfade. A view on its way out is hidden from assistive tech and can't be
+ * focused or clicked, so during the fade only the arriving view exists for screen readers and tests.
+ */
+function Layer(props: HTMLMotionProps<"div">) {
+	const leaving = !useIsPresent();
+	return <motion.div {...props} {...(leaving ? { "aria-hidden": true, inert: true } : {})} />;
+}
 
 interface QueryLike<T> {
 	data: T | undefined;
@@ -58,7 +67,7 @@ export function Loaded<T>({
 		<div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] *:col-start-1 *:row-start-1", className)}>
 			<AnimatePresence initial={false}>
 				{state === "pending" && (
-					<motion.div
+					<Layer
 						key="skeleton"
 						aria-busy="true"
 						// The CSS delay spares a fast answer from flashing a skeleton at all.
@@ -68,10 +77,10 @@ export function Loaded<T>({
 						exit={{ opacity: 0, transition: { duration: reduced ? 0 : SPEED.base, ease: "easeOut" } }}
 					>
 						{skeleton}
-					</motion.div>
+					</Layer>
 				)}
 				{state === "error" && (
-					<motion.div
+					<Layer
 						key="error"
 						className="min-w-0"
 						initial={reduced ? false : { opacity: 0, y: 6 }}
@@ -80,10 +89,10 @@ export function Loaded<T>({
 						transition={{ duration: SPEED.base, ease: EASE }}
 					>
 						<ErrorState error={query.error} {...(refetch ? { onRetry: () => refetch() } : {})} />
-					</motion.div>
+					</Layer>
 				)}
 				{state === "data" && (
-					<motion.div
+					<Layer
 						key="data"
 						className="min-w-0"
 						// `initial={false}` above skips this for content that was cached when the page opened.
@@ -93,7 +102,7 @@ export function Loaded<T>({
 						transition={{ duration: SPEED.slow, ease: EASE }}
 					>
 						{children(query.data as T)}
-					</motion.div>
+					</Layer>
 				)}
 			</AnimatePresence>
 		</div>
@@ -109,7 +118,7 @@ export function Swap({ id, children, className }: { id: string; children: ReactN
 	return (
 		<div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] *:col-start-1 *:row-start-1", className)}>
 			<AnimatePresence initial={false}>
-				<motion.div
+				<Layer
 					key={id}
 					className="min-w-0"
 					initial={reduced ? false : SHARPEN.from}
@@ -118,7 +127,7 @@ export function Swap({ id, children, className }: { id: string; children: ReactN
 					transition={{ duration: SPEED.base, ease: EASE }}
 				>
 					{children}
-				</motion.div>
+				</Layer>
 			</AnimatePresence>
 		</div>
 	);

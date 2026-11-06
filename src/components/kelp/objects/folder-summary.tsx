@@ -32,7 +32,7 @@ export function FolderSummary({
 	onOpen: (entry: FileEntry) => void;
 }) {
 	const stats = folderStats(entries);
-	const none = entries.length === 0 ? "This folder is empty." : "Only folders here.";
+	const none = entries.length === 0 ? "No files yet." : "Only folders here.";
 	return (
 		<section aria-label="Folder summary" className={ROW}>
 			<div className={cn(SHEET, "flex flex-col")}>

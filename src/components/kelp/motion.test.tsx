@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { MotionGlobalConfig } from "motion/react";
 import { setMedia } from "../../../test/media.ts";
 import { settle } from "../../../test/settle.ts";
@@ -62,13 +62,17 @@ describe("Loaded", () => {
 	});
 });
 
-test("Swap crossfades to the view its id names", async () => {
+test("Swap crossfades to the view its id names, hiding the leaving one from assistive tech", async () => {
 	setMedia("(prefers-reduced-motion: reduce)", false);
+	MotionGlobalConfig.skipAnimations = false;
 	const { rerender } = render(<Swap id="a">first</Swap>);
 	rerender(<Swap id="b">second</Swap>);
-	await settle();
+	const leaving = screen.getByText("first");
+	expect(leaving.getAttribute("aria-hidden")).toBe("true");
+	expect(leaving.hasAttribute("inert")).toBe(true);
+	MotionGlobalConfig.skipAnimations = true;
 	expect(screen.getByText("second")).toBeTruthy();
-	expect(screen.queryByText("first")).toBeNull();
+	await waitFor(() => expect(screen.queryByText("first")).toBeNull());
 });
 
 test("the skeleton kit names what is loading", () => {

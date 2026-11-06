@@ -6,7 +6,7 @@ import { FolderSummary } from "./folder-summary.tsx";
 describe("folder summary", () => {
 	test("an empty folder keeps the summary's shape and says it is empty", () => {
 		render(<FolderSummary entries={[]} partial={false} onOpen={() => {}} />);
-		expect(screen.getAllByText("This folder is empty.")).toHaveLength(2);
+		expect(screen.getAllByText("No files yet.")).toHaveLength(2);
 		expect(screen.getByText("Counts every item in this folder.")).toBeTruthy();
 	});
 
