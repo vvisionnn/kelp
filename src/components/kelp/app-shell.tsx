@@ -1,7 +1,7 @@
 import { type QueryClient, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,10 @@ import { cn } from "@/lib/utils";
 import { type Theme, useTheme } from "../theme-provider.tsx";
 import { KelpMark } from "./brand.tsx";
 import { CommandMenu, useCommandMenu } from "./command-menu.tsx";
+import { SPRING } from "./motion.ts";
 import { itemFor, NAV } from "./nav.ts";
+import { useSpotlight } from "./spotlight.ts";
+import { TextMorph } from "./text-morph.tsx";
 
 declare module "@tanstack/react-router" {
 	interface StaticDataRouteOption {
@@ -64,10 +67,16 @@ function ClusterStatus() {
 	const color = { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[health?.tone ?? "good"];
 	return (
 		<span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-			<span className={cn("size-1.5 shrink-0 rounded-full", health ? color : "bg-tertiary")} />
+			<span
+				className={cn(
+					"size-1.5 shrink-0 rounded-full transition-colors duration-500",
+					health ? color : "bg-tertiary",
+				)}
+			/>
 			<span className="truncate">
-				{health ? health.text.split(".")[0] : "Connecting"}
-				{data && `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}`}
+				<TextMorph>
+					{`${health ? health.text.split(".")[0] : "Connecting"}${data ? `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}` : ""}`}
+				</TextMorph>
 			</span>
 		</span>
 	);
@@ -77,6 +86,7 @@ function ClusterStatus() {
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const current = itemFor(pathname);
+	const [hovered, setHovered] = useState<string | null>(null);
 	return (
 		<div className="flex h-full min-h-0 flex-col">
 			<Link
@@ -93,7 +103,11 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 				</span>
 			</Link>
 
-			<nav aria-label="Pages" className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-3">
+			<nav
+				aria-label="Pages"
+				className="mt-3 min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-3"
+				onPointerLeave={() => setHovered(null)}
+			>
 				{NAV.map((section) => (
 					<div key={section.title}>
 						{section.title !== "Overview" && (
@@ -109,15 +123,28 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 										<Link
 											to={item.to as "/"}
 											onClick={onNavigate}
+											onPointerEnter={() => setHovered(item.to)}
 											data-active={active ? "" : undefined}
 											aria-current={active ? "page" : undefined}
-											className="group/nav relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/80 transition-colors hover:bg-accent/60 hover:text-foreground data-active:font-medium data-active:text-foreground"
+											className="group/nav relative flex h-8 items-center gap-2.5 rounded-md px-2.5 text-[13px] text-foreground/80 transition-colors hover:text-foreground data-active:font-medium data-active:text-foreground"
 										>
+											<AnimatePresence>
+												{hovered === item.to && !active && (
+													<motion.span
+														layoutId="sidebar-hover"
+														className="absolute inset-0 -z-10 rounded-md bg-accent/60"
+														initial={{ opacity: 0 }}
+														animate={{ opacity: 1 }}
+														exit={{ opacity: 0 }}
+														transition={SPRING}
+													/>
+												)}
+											</AnimatePresence>
 											{active && (
 												<motion.span
 													layoutId="sidebar-active"
 													className="absolute inset-0 -z-10 rounded-md bg-accent"
-													transition={{ type: "spring", stiffness: 500, damping: 40 }}
+													transition={SPRING}
 												>
 													<span className="absolute inset-y-2 -left-2 w-[3px] rounded-full bg-[linear-gradient(180deg,#6366f1,#a855f7,#ec4899,#f97316)]" />
 												</motion.span>
@@ -283,7 +310,7 @@ function Toolbar({ onShowSidebar, onSearch }: { onShowSidebar: () => void; onSea
 					aria-hidden={!scrolled}
 					className="min-w-0 truncate font-semibold text-[15px] tracking-[-0.01em]"
 				>
-					{title}
+					{title ? <TextMorph>{title}</TextMorph> : null}
 				</motion.p>
 				<div className="ml-auto flex shrink-0 items-center gap-1">
 					<button
@@ -324,6 +351,7 @@ function useSessionWatcher() {
 export function AppShell() {
 	useSessionWatcher();
 	const command = useCommandMenu();
+	useSpotlight();
 	const [sheetOpen, setSheetOpen] = useState(false);
 	return (
 		<div className="min-h-svh">
@@ -342,7 +370,10 @@ export function AppShell() {
 			</Sheet>
 			<div className="flex min-h-svh min-w-0 flex-col lg:pl-66">
 				<Toolbar onShowSidebar={() => setSheetOpen(true)} onSearch={() => command.setOpen(true)} />
-				<main className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8">
+				<main
+					data-page=""
+					className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8"
+				>
 					<Outlet />
 				</main>
 			</div>

@@ -53,6 +53,9 @@ function headerWithSort<T extends object>(title: string): Column<T>["header"] {
 	return ({ column }) => <DataGridColumnHeader column={column} title={title} />;
 }
 
+const DEFAULT_SKELETON_ROWS = 6;
+const knownRows = new Map<string, number>();
+
 export function DataTable<T extends object>({
 	data,
 	columns,
@@ -135,6 +138,9 @@ export function DataTable<T extends object>({
 	if (error) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
 
 	const showEmpty = !isLoading && data !== undefined && data.length === 0;
+	// The skeleton matches what was here last time, so the page keeps its height when data lands.
+	const rowMemory = `${window.location.pathname}:${columns.length}`;
+	if (!isLoading && data) knownRows.set(rowMemory, Math.min(rows.length, pagination.pageSize));
 
 	return (
 		<div className="space-y-3">
@@ -191,6 +197,7 @@ export function DataTable<T extends object>({
 					recordCount={rows.length}
 					isLoading={Boolean(isLoading)}
 					loadingMode="skeleton"
+					skeletonRows={Math.max(1, knownRows.get(rowMemory) ?? DEFAULT_SKELETON_ROWS)}
 					emptyMessage={query ? `Nothing matches "${query}".` : "No results."}
 					{...(onRowClick ? { onRowClick } : {})}
 					tableLayout={{ headerBackground: false, rowBorder: true, dense: false }}

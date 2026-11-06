@@ -61,7 +61,8 @@ describe("dashboard primitives", () => {
 			/>,
 		);
 		expect(screen.getByText("167 free slots")).toBeTruthy();
-		expect(screen.getByText("B").parentElement?.textContent).toBe("2048B");
+		expect(screen.getByText("2048")).toBeTruthy();
+		expect(screen.getAllByText("B").length).toBeGreaterThan(0);
 	});
 
 	test("the segmented control reports the chosen segment", async () => {

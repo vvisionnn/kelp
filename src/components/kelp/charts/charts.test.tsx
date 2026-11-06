@@ -194,10 +194,10 @@ describe("other charts", () => {
 		rerender(<Sparkline label="trend" values={[1]} />);
 		expect(container.querySelectorAll("path")).toHaveLength(0);
 		rerender(<Kpi label="Errors" value="3" unit="/s" hint="Failing" tone="bad" trend={[1, 2, 3]} />);
-		expect(screen.getByRole("region", { name: "Errors" }).textContent).toContain("3/sFailing");
+		expect(screen.getByRole("region", { name: "Errors" }).textContent).toContain("Failing");
 		rerender(<Kpi label="Users" value={31} />);
 		expect(screen.getByRole("region", { name: "Users" }).textContent).toContain("31");
 		rerender(<Kpi label="Disk" value="85" unit="%" tone="warn" />);
-		expect(screen.getByText("85").className).toContain("text-warning");
+		expect(screen.getByText("85").closest(".text-warning")).toBeTruthy();
 	});
 });

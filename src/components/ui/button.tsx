@@ -1,6 +1,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
+import { Spinner } from "@/components/ui/spinner"
 
 // Kelp: compact rounded rectangles for a dense console, Tide for the primary action; see DESIGN.md.
 const buttonVariants = cva(
@@ -43,14 +44,32 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  pending,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants> & {
+  /** Kelp: a spinner slides in beside the label while an action runs, and slides out after. */
+  pending?: boolean
+}) {
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {pending !== undefined ? (
+        <span
+          data-slot="button-pending"
+          data-on={pending ? "" : undefined}
+          className="-mr-1.5 grid grid-cols-[0fr] opacity-0 transition-[grid-template-columns,margin,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] data-on:mr-0 data-on:grid-cols-[1fr] data-on:opacity-100"
+        >
+          <span className="min-w-0 overflow-hidden">
+            <Spinner {...(pending ? {} : { role: undefined, "aria-hidden": true, "aria-label": undefined })} />
+          </span>
+        </span>
+      ) : null}
+      {children}
+    </ButtonPrimitive>
   )
 }
 

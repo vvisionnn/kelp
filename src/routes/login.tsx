@@ -5,7 +5,6 @@ import { AmbientRays } from "@/components/kelp/ambient.tsx";
 import { KelpMark } from "@/components/kelp/brand.tsx";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { sessionQuery, useSignIn } from "@/lib/session.ts";
 
 export const Route = createFileRoute("/login")({
@@ -83,8 +82,13 @@ function LoginPage() {
 							{signIn.error.message}
 						</p>
 					)}
-					<Button type="submit" size="lg" disabled={signIn.isPending} className="mt-4 w-full rounded-full">
-						{signIn.isPending && <Spinner />}
+					<Button
+						type="submit"
+						size="lg"
+						disabled={signIn.isPending}
+						className="mt-4 w-full rounded-full"
+						pending={signIn.isPending}
+					>
 						Sign in
 					</Button>
 				</form>

@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -123,8 +122,11 @@ export function CreateKeyDialog({ username }: { username: string }) {
 							</CollapsibleContent>
 						</Collapsible>
 						<DialogFooter>
-							<Button type="submit" disabled={create.isPending || customIncomplete}>
-								{create.isPending && <Spinner />}
+							<Button
+								type="submit"
+								disabled={create.isPending || customIncomplete}
+								pending={create.isPending}
+							>
 								Create access key
 							</Button>
 						</DialogFooter>

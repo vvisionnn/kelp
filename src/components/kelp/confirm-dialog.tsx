@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 
 export interface ConfirmDialogProps {
 	/** The element that opens the dialog. */
@@ -87,8 +86,8 @@ export function ConfirmDialog({
 						variant={destructive ? "destructive" : "default"}
 						disabled={!ready || busy}
 						onClick={confirm}
+						pending={busy}
 					>
-						{busy && <Spinner />}
 						{confirmLabel}
 					</Button>
 				</AlertDialogFooter>

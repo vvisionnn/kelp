@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -218,8 +217,8 @@ export function PolicyForm({ policy }: { policy?: IamPolicy }) {
 									disabled={
 										state.status !== "valid" || save.isPending || unchanged || (!policy && !name.trim())
 									}
+									pending={save.isPending}
 								>
-									{save.isPending && <Spinner />}
 									{policy ? "Save policy" : "Create policy"}
 								</Button>
 							</div>

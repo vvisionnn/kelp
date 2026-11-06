@@ -25,14 +25,22 @@ import {
 import { Segmented } from "@/components/kelp/controls.tsx";
 import {
 	CapacityBar,
-	ErrorState,
 	PageHeader,
 	Panel,
-	Reveal,
 	Section,
 	SkeletonBlock,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
+import {
+	ChartGhost,
+	KpiGhost,
+	ListGhost,
+	LoadingRegion,
+	RingGhost,
+	RowsGhost,
+} from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount, formatPercent, formatRelative, ratio } from "@/lib/format.ts";
 import { healthSummary } from "@/lib/health.ts";
@@ -49,37 +57,54 @@ export { healthSummary };
 
 function OverviewPage() {
 	const [range, setRange] = useRange();
-	const { data, error, refetch, isPending } = useQuery(queries.overview());
-	const telemetry = useQuery(queries.telemetry(range)).data;
-	if (isPending) return <OverviewSkeleton />;
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	const health = healthSummary(data);
+	const overview = useQuery(queries.overview());
+	const telemetry = useQuery(queries.telemetry(range));
+	const health = overview.data && healthSummary(overview.data);
 
 	return (
 		<>
 			<PageHeader
 				title="Overview"
 				description={
-					<span className="flex flex-wrap items-center gap-x-2">
-						<StatusDot tone={health.tone} label={health.text} />
-						<span className="text-tertiary">Updated {formatRelative(data.updatedAt)}</span>
-					</span>
-				}
-				actions={
-					telemetry?.enabled && (
-						<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+					health && overview.data ? (
+						<span className="flex flex-wrap items-center gap-x-2">
+							<StatusDot tone={health.tone} label={health.text} />
+							<span className="text-tertiary">
+								<TextMorph>{`Updated ${formatRelative(overview.data.updatedAt)}`}</TextMorph>
+							</span>
+						</span>
+					) : (
+						!overview.error && <SkeletonBlock className="my-0.5 h-4 w-64" />
 					)
 				}
+				actions={
+					<Swap id={telemetry.data?.enabled ? "ranges" : "none"}>
+						{telemetry.data?.enabled && (
+							<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+						)}
+					</Swap>
+				}
 			/>
-			<Reveal>
-				<Headline data={data} telemetry={telemetry} />
-				{telemetry?.enabled ? (
-					<Live data={data} telemetry={telemetry} />
-				) : (
-					<MetricsOff unreachable={telemetry?.unreachable} />
+			<Loaded query={overview} skeleton={<OverviewSkeleton />}>
+				{(data) => (
+					<>
+						<Headline data={data} telemetry={telemetry.data} />
+						<Loaded
+							query={{ data: telemetry.data, error: telemetry.error, refetch: telemetry.refetch }}
+							skeleton={<LiveSkeleton />}
+						>
+							{(metrics) =>
+								metrics.enabled ? (
+									<Live data={data} telemetry={metrics} />
+								) : (
+									<MetricsOff unreachable={metrics.unreachable} />
+								)
+							}
+						</Loaded>
+						<Fleet data={data} telemetry={telemetry.data} />
+					</>
 				)}
-				<Fleet data={data} telemetry={telemetry} />
-			</Reveal>
+			</Loaded>
 		</>
 	);
 }
@@ -202,9 +227,11 @@ function Live({ data, telemetry }: { data: Overview; telemetry: Telemetry }) {
 						center={
 							<>
 								<span className="font-rounded font-semibold text-[24px] leading-7 tracking-[-0.02em]">
-									{formatPercent(ratio(diskUsed, diskTotal))}
+									<RollingValue text={formatPercent(ratio(diskUsed, diskTotal))} />
 								</span>
-								<span className="text-[12px] text-muted-foreground">of {formatBytes(diskTotal)}</span>
+								<span className="text-[12px] text-muted-foreground">
+									<TextMorph>{`of ${formatBytes(diskTotal)}`}</TextMorph>
+								</span>
 							</>
 						}
 					/>
@@ -505,22 +532,38 @@ function ServiceRow({
 	);
 }
 
+function LiveSkeleton() {
+	return (
+		<div className="mt-3 grid gap-3 xl:grid-cols-12">
+			<Panel title="S3 traffic" description="Requests per second by request type" className="xl:col-span-8">
+				<ChartGhost height={220} />
+			</Panel>
+			<Panel title="Capacity" description="What fills the volume servers' disks" className="xl:col-span-4">
+				<RingGhost />
+			</Panel>
+		</div>
+	);
+}
+
 function OverviewSkeleton() {
 	return (
-		<div role="status" aria-busy="true" aria-label="Loading overview">
-			<div className="space-y-1.5 pt-2 pb-6">
-				<SkeletonBlock className="h-7 w-40" />
-				<SkeletonBlock className="h-4 w-64" />
-			</div>
+		<LoadingRegion label="Loading overview">
 			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
 				{[0, 1, 2, 3, 4, 5].map((i) => (
-					<SkeletonBlock key={i} className="h-[104px] rounded-xl" />
+					<KpiGhost key={i} />
 				))}
 			</div>
-			<div className="mt-3 grid gap-3 xl:grid-cols-12">
-				<SkeletonBlock className="h-72 rounded-xl xl:col-span-8" />
-				<SkeletonBlock className="h-72 rounded-xl xl:col-span-4" />
+			<LiveSkeleton />
+			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
+				<Section title="Volume servers" className="mt-0 lg:col-span-7">
+					<ListGhost />
+				</Section>
+				<Section title="Services" className="mt-0 lg:col-span-5">
+					<div className="group-sheet p-4">
+						<RowsGhost rows={5} />
+					</div>
+				</Section>
 			</div>
-		</div>
+		</LoadingRegion>
 	);
 }

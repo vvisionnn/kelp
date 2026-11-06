@@ -15,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -262,8 +261,7 @@ export function SettingsForm({
 							<Button type="button" variant="secondary" disabled={saving} onClick={() => setDraft(initial)}>
 								Discard
 							</Button>
-							<Button type="submit" disabled={saving || invalid}>
-								{saving && <Spinner />}
+							<Button type="submit" disabled={saving || invalid} pending={saving}>
 								Save changes
 							</Button>
 						</div>

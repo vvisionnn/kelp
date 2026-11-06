@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ACCESS_KEY, accessQueries, BUILT_IN_ACTIONS } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
@@ -146,8 +145,11 @@ export function CreateUserDialog() {
 							</div>
 						</Field>
 						<DialogFooter>
-							<Button type="submit" disabled={!username.trim() || create.isPending}>
-								{create.isPending && <Spinner />}
+							<Button
+								type="submit"
+								disabled={!username.trim() || create.isPending}
+								pending={create.isPending}
+							>
 								Create user
 							</Button>
 						</DialogFooter>

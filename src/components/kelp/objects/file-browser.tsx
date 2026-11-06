@@ -596,8 +596,7 @@ function NewFolderDialog({
 						)}
 					</Field>
 					<DialogFooter>
-						<Button type="submit" disabled={invalid || create.isPending}>
-							{create.isPending && <Spinner />}
+						<Button type="submit" disabled={invalid || create.isPending} pending={create.isPending}>
 							Create folder
 						</Button>
 					</DialogFooter>
@@ -646,8 +645,7 @@ function MoveDialog({ entry, onClose }: { entry: FileEntry | null; onClose: () =
 						<FieldDescription>Missing folders on the way are created.</FieldDescription>
 					</Field>
 					<DialogFooter>
-						<Button type="submit" disabled={invalid || move.isPending}>
-							{move.isPending && <Spinner />}
+						<Button type="submit" disabled={invalid || move.isPending} pending={move.isPending}>
 							Move
 						</Button>
 					</DialogFooter>
@@ -692,8 +690,7 @@ function DeleteEntryDialog({
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-					<Button variant="destructive" disabled={busy} onClick={confirm}>
-						{busy && <Spinner />}
+					<Button variant="destructive" disabled={busy} onClick={confirm} pending={busy}>
 						{entry?.isDirectory ? "Delete folder" : "Delete file"}
 					</Button>
 				</AlertDialogFooter>

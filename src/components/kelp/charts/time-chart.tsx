@@ -1,7 +1,18 @@
 import { scaleLinear, scaleTime } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
-import { type KeyboardEvent, type PointerEvent, useMemo, useState } from "react";
+import { animate, motion } from "motion/react";
+import {
+	type KeyboardEvent,
+	memo,
+	type PointerEvent,
+	useEffect,
+	useId,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { cn } from "@/lib/utils";
+import { EASE, SPEED, useInstantMotion, usePrefersReducedMotion } from "../motion.ts";
 import { clock, clockSeconds, compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
@@ -39,6 +50,136 @@ function tickLabels(ticks: Date[], withSeconds: boolean, withDay: boolean) {
 	return labels;
 }
 
+/** Everything a chart draws: the lines by series, their sample times, the window and the axis top. */
+interface Frame {
+	times: number[];
+	lines: Record<string, Array<number | null>>;
+	start: number;
+	end: number;
+	top: number;
+}
+
+/** A line's value at `time`, so a refresh or a new range morphs from what was on screen. */
+function valueAt(times: number[], values: Array<number | null>, time: number): number {
+	if (values.length === 0) return 0;
+	if (time <= (times[0] as number)) return values[0] ?? 0;
+	for (let i = 1; i < times.length; i++) {
+		if (time <= (times[i] as number)) {
+			const [t0, t1] = [times[i - 1] as number, times[i] as number];
+			const [v0, v1] = [values[i - 1] ?? 0, values[i] ?? 0];
+			return v0 + (v1 - v0) * ((time - t0) / (t1 - t0 || 1));
+		}
+	}
+	return values.at(-1) ?? 0;
+}
+
+/**
+ * The frame to draw right now. When samples arrive or the range changes, the lines on screen are
+ * read at the new sample times, then every point, the time window and the axis top glide to their
+ * new place together, so the chart flows on instead of redrawing.
+ */
+function useMorph(target: Frame): Frame {
+	const instant = useInstantMotion();
+	const [frame, setFrame] = useState(target);
+	const current = useRef(target);
+	const key = JSON.stringify([target.times.at(0), target.times.at(-1), target.top, target.lines]);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `key` is the target by value; an identical refetch must not restart the morph.
+	useEffect(() => {
+		if (instant) return;
+		const old = current.current;
+		const from = Object.fromEntries(
+			Object.keys(target.lines).map((label) => {
+				const line = old.lines[label];
+				return [label, target.times.map((t) => (line ? valueAt(old.times, line, t) : 0))];
+			}),
+		);
+		const controls = animate(0, 1, {
+			duration: SPEED.data,
+			ease: EASE,
+			onUpdate: (p) => {
+				const blend = (a: number, b: number) => a + (b - a) * p;
+				current.current = {
+					times: target.times,
+					lines: Object.fromEntries(
+						Object.entries(target.lines).map(([label, line]) => [
+							label,
+							line.map((v, i) => (v === null ? null : blend(from[label]?.[i] ?? v, v))),
+						]),
+					),
+					start: blend(old.start, target.start),
+					end: blend(old.end, target.end),
+					top: blend(old.top, target.top),
+				};
+				setFrame(current.current);
+			},
+		});
+		return () => controls.stop();
+	}, [key, instant]);
+	return instant ? target : frame;
+}
+
+type Lines = Frame["lines"];
+
+/** Each series' band over the ones below it, or null when the chart isn't stacked. */
+function stackBands(mode: string, series: TimeSeries[], lines: Lines, length: number) {
+	if (mode !== "stacked") return null;
+	const sums = new Array<number>(length).fill(0);
+	return series.map((s) =>
+		(lines[s.label] ?? []).map((v, i) => {
+			const low = sums[i] as number;
+			sums[i] = low + (v ?? 0);
+			return [low, sums[i] as number] as const;
+		}),
+	);
+}
+
+/** Every height the chart reaches, which is what the axis has to fit. */
+function valuesOf(mode: string, series: TimeSeries[], lines: Lines, length: number) {
+	const bands = stackBands(mode, series, lines, length);
+	return bands
+		? bands.flatMap((band) => band.map((p) => p[1]))
+		: series.flatMap((s) => s.values.filter((v): v is number => v !== null));
+}
+
+/** The numbers behind a chart for screen readers. Memoized: it only changes with real data. */
+const DataTable = memo(function DataTable({
+	label,
+	times,
+	series,
+	format,
+}: {
+	label: string;
+	times: number[];
+	series: TimeSeries[];
+	format: (value: number) => string;
+}) {
+	return (
+		<div className="sr-only">
+			<table>
+				<caption>{label}</caption>
+				<thead>
+					<tr>
+						<th>Time</th>
+						{series.map((s) => (
+							<th key={s.label}>{s.label}</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{times.map((t, i) => (
+						<tr key={t}>
+							<td>{clock(t, true)}</td>
+							{series.map((s) => (
+								<td key={s.label}>{s.values[i] === null ? "–" : format(s.values[i] as number)}</td>
+							))}
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
+	);
+});
+
 /**
  * A time series chart: lines, washed areas or stacked areas over a shared time axis, with a
  * crosshair that snaps to the nearest sample and lists every series (dataviz rules). Keyboard:
@@ -67,28 +208,26 @@ export function TimeChart({
 }) {
 	const [ref, width] = useWidth<HTMLDivElement>();
 	const [active, setActive] = useState<number | null>(null);
+	const reduced = usePrefersReducedMotion();
+	const clip = useId();
 	const innerWidth = Math.max(10, width - MARGIN.left - MARGIN.right);
 	const innerHeight = height - MARGIN.top - MARGIN.bottom;
 	const spanDays = times.length > 1 ? ((times.at(-1) as number) - (times[0] as number)) / 86_400_000 : 0;
 
-	const stacked = useMemo(() => {
-		if (mode !== "stacked") return null;
-		const sums = times.map(() => 0);
-		return series.map((s) =>
-			s.values.map((v, i) => {
-				const low = sums[i] as number;
-				sums[i] = low + (v ?? 0);
-				return [low, sums[i] as number] as const;
-			}),
-		);
+	const target = useMemo<Frame>(() => {
+		const lines = Object.fromEntries(series.map((s) => [s.label, s.values]));
+		const { top } = robustTop(valuesOf(mode, series, lines, times.length));
+		const nice = scaleLinear()
+			.domain([0, top || 1])
+			.nice(4);
+		return { times, lines, start: times[0] ?? 0, end: times.at(-1) ?? 0, top: nice.domain()[1] as number };
 	}, [mode, series, times]);
-
-	const { top: maxValue, clipped } = useMemo(() => {
-		const values = stacked
-			? stacked.flatMap((s) => s.map((p) => p[1]))
-			: series.flatMap((s) => s.values.filter((v): v is number => v !== null));
-		return robustTop(values);
-	}, [series, stacked]);
+	const clipped = useMemo(
+		() => robustTop(valuesOf(mode, series, target.lines, times.length)).clipped,
+		[mode, series, target, times],
+	);
+	const frame = useMorph(target);
+	const stacked = stackBands(mode, series, frame.lines, frame.times.length);
 
 	if (times.length < 2) {
 		return (
@@ -102,15 +241,9 @@ export function TimeChart({
 		);
 	}
 
-	const x = scaleTime()
-		.domain([times[0] as number, times.at(-1) as number])
-		.range([0, innerWidth]);
-	const y = scaleLinear()
-		.domain([0, maxValue || 1])
-		.nice(4)
-		.range([innerHeight, 0])
-		.clamp(true);
-	const yTicks = y.ticks(4);
+	const x = scaleTime().domain([frame.start, frame.end]).range([0, innerWidth]);
+	const y = scaleLinear().domain([0, frame.top]).range([innerHeight, 0]).clamp(true);
+	const yTicks = scaleLinear().domain([0, target.top]).ticks(4);
 	const xTicks = x.ticks(Math.max(2, Math.min(6, Math.floor(innerWidth / 110))));
 	// Ticks closer than a minute apart need seconds, or the labels repeat.
 	const withSeconds =
@@ -119,19 +252,19 @@ export function TimeChart({
 	const linePath = (values: Array<number | null>) =>
 		line<number | null>()
 			.defined((v) => v !== null)
-			.x((_, i) => x(times[i] as number))
+			.x((_, i) => x(frame.times[i] as number))
 			.y((v) => y(v ?? 0))
 			.curve(curveMonotoneX)(values) ?? "";
 	const areaPath = (values: Array<number | null>) =>
 		area<number | null>()
 			.defined((v) => v !== null)
-			.x((_, i) => x(times[i] as number))
+			.x((_, i) => x(frame.times[i] as number))
 			.y0(innerHeight)
 			.y1((v) => y(v ?? 0))
 			.curve(curveMonotoneX)(values) ?? "";
 	const bandPath = (band: ReadonlyArray<readonly [number, number]>) =>
 		area<readonly [number, number]>()
-			.x((_, i) => x(times[i] as number))
+			.x((_, i) => x(frame.times[i] as number))
 			.y0((p) => y(p[0]))
 			.y1((p) => y(p[1]))
 			.curve(curveMonotoneX)(band) ?? "";
@@ -173,6 +306,18 @@ export function TimeChart({
 				onKeyDown={onKeyDown}
 				className="block touch-pan-y overflow-visible rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
+				<defs>
+					<clipPath id={clip}>
+						<motion.rect
+							x={-4}
+							y={-MARGIN.top}
+							height={height}
+							initial={reduced ? false : { width: 0 }}
+							animate={{ width: innerWidth + 8 }}
+							transition={{ duration: SPEED.data * 1.4, ease: EASE }}
+						/>
+					</clipPath>
+				</defs>
 				<g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
 					{yTicks.map((tick) => (
 						<g key={tick} transform={`translate(0,${y(tick)})`}>
@@ -193,30 +338,34 @@ export function TimeChart({
 							{text}
 						</text>
 					))}
-					{stacked
-						? stacked.map((band, i) => (
-								<path
-									key={series[i]?.label}
-									d={bandPath(band)}
-									fill={series[i]?.color}
-									fillOpacity={0.85}
-									stroke="var(--card)"
-									strokeWidth={1}
-								/>
-							))
-						: series.map((s) => (
-								<g key={s.label}>
-									{mode === "area" && <path d={areaPath(s.values)} fill={s.color} fillOpacity={0.1} />}
+					<g clipPath={`url(#${clip})`}>
+						{stacked
+							? stacked.map((band, i) => (
 									<path
-										d={linePath(s.values)}
-										fill="none"
-										stroke={s.color}
-										strokeWidth={2}
-										strokeLinecap="round"
-										strokeLinejoin="round"
+										key={series[i]?.label}
+										d={bandPath(band)}
+										fill={series[i]?.color}
+										fillOpacity={0.85}
+										stroke="var(--card)"
+										strokeWidth={1}
 									/>
-								</g>
-							))}
+								))
+							: series.map((s) => (
+									<g key={s.label}>
+										{mode === "area" && (
+											<path d={areaPath(frame.lines[s.label] ?? [])} fill={s.color} fillOpacity={0.1} />
+										)}
+										<path
+											d={linePath(frame.lines[s.label] ?? [])}
+											fill="none"
+											stroke={s.color}
+											strokeWidth={2}
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										/>
+									</g>
+								))}
+					</g>
 					{active !== null && (
 						<g>
 							<line
@@ -289,29 +438,7 @@ export function TimeChart({
 					)}
 				</div>
 			)}
-			<div className="sr-only">
-				<table>
-					<caption>{label}</caption>
-					<thead>
-						<tr>
-							<th>Time</th>
-							{series.map((s) => (
-								<th key={s.label}>{s.label}</th>
-							))}
-						</tr>
-					</thead>
-					<tbody>
-						{times.map((t, i) => (
-							<tr key={t}>
-								<td>{clock(t, true)}</td>
-								{series.map((s) => (
-									<td key={s.label}>{s.values[i] === null ? "–" : format(s.values[i] as number)}</td>
-								))}
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+			<DataTable label={label} times={times} series={series} format={format} />
 		</div>
 	);
 }

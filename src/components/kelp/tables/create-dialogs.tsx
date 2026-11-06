@@ -17,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
 
@@ -75,8 +74,7 @@ function FormDialog({
 					</DialogHeader>
 					{children}
 					<DialogFooter>
-						<Button type="submit" disabled={!ready || pending}>
-							{pending && <Spinner />}
+						<Button type="submit" disabled={!ready || pending} pending={pending}>
 							{submitLabel}
 						</Button>
 					</DialogFooter>

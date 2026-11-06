@@ -3,11 +3,12 @@ import {
 	type ReactNode,
 	useCallback,
 	useContext,
-	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useState,
 	useSyncExternalStore,
 } from "react";
+import { flushSync } from "react-dom";
 
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
@@ -46,6 +47,17 @@ function apply(resolved: ResolvedTheme) {
 	requestAnimationFrame(() => style.remove());
 }
 
+/** Where the last press landed; theme changes start from it. */
+const lastPointer = { x: window.innerWidth / 2, y: 0 };
+window.addEventListener(
+	"pointerdown",
+	(event) => {
+		lastPointer.x = event.clientX;
+		lastPointer.y = event.clientY;
+	},
+	{ capture: true, passive: true },
+);
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
 	const [theme, setThemeState] = useState<Theme>(readStored);
 	const systemDark = useSyncExternalStore(
@@ -55,11 +67,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 	);
 	const resolvedTheme: ResolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
 
-	useEffect(() => apply(resolvedTheme), [resolvedTheme]);
+	useLayoutEffect(() => apply(resolvedTheme), [resolvedTheme]);
 
 	const setTheme = useCallback((next: Theme) => {
 		localStorage.setItem(STORAGE_KEY, next);
-		setThemeState(next);
+		// The new theme spreads out from where the person clicked.
+		const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		if (reduced || !document.startViewTransition) return setThemeState(next);
+		const root = document.documentElement;
+		root.style.setProperty("--reveal-x", `${lastPointer.x}px`);
+		root.style.setProperty("--reveal-y", `${lastPointer.y}px`);
+		root.dataset.transition = "theme";
+		document
+			.startViewTransition(() => flushSync(() => setThemeState(next)))
+			.finished.finally(() => delete root.dataset.transition);
 	}, []);
 
 	const value = useMemo(() => ({ theme, resolvedTheme, setTheme }), [theme, resolvedTheme, setTheme]);

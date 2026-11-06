@@ -1,13 +1,13 @@
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { motion } from "motion/react";
 import { type ReactNode, useId } from "react";
-import Counter from "@/components/react-bits/Counter.tsx";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api.ts";
 import { formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
-import { usePrefersReducedMotion } from "./motion.ts";
+import { EASE, SPEED, usePrefersReducedMotion } from "./motion.ts";
+import { RollingValue } from "./text-morph.tsx";
 
 export function PageHeader({
 	title,
@@ -78,7 +78,7 @@ export function Reveal({
 			className={className}
 			initial={reduced ? false : { opacity: 0, y: 6 }}
 			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1], delay }}
+			transition={{ duration: SPEED.slow, ease: EASE, delay }}
 		>
 			{children}
 		</motion.div>
@@ -156,29 +156,10 @@ export function Metric({
 	format?: (n: number) => string;
 	className?: string;
 }) {
-	const reduced = usePrefersReducedMotion();
-	if (format) {
-		// "42.7 MiB": the unit sits lighter and smaller so columns of numbers scan cleanly.
-		const [, number, unit] = /^([-−\d.,]+)\s*(.*)$/.exec(format(value)) ?? [null, format(value), ""];
-		return (
-			<span className={cn("tabular", className)}>
-				{number}
-				{unit && <span className="ml-1 font-medium text-[0.6em] text-muted-foreground">{unit}</span>}
-			</span>
-		);
-	}
-	if (reduced) return <span className={cn("tabular", className)}>{value.toLocaleString("en-US")}</span>;
-	// Digits roll to their new value when data refreshes; unchanged digits stay still.
 	return (
-		<Counter
-			value={value}
-			locale="en-US"
-			fontSize="1em"
-			fontWeight="inherit"
-			textColor="currentColor"
-			tabular
-			motionBlur={false}
-			className={cn("tabular", className)}
+		<RollingValue
+			text={format ? format(value) : value.toLocaleString("en-US")}
+			{...(className ? { className } : {})}
 		/>
 	);
 }
@@ -260,7 +241,7 @@ export function CapacityBar({ used, total, className }: { used: number; total: n
 				className={cn("h-full rounded-full", tone)}
 				initial={{ width: 0 }}
 				animate={{ width: `${fraction * 100}%` }}
-				transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+				transition={{ duration: SPEED.data, ease: EASE }}
 			/>
 		</div>
 	);

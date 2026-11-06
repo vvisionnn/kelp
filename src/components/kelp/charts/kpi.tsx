@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Metric } from "../page.tsx";
+import { RollingValue, TextMorph } from "../text-morph.tsx";
 import { Sparkline } from "./sparkline.tsx";
 import { useWidth } from "./use-width.ts";
 
@@ -39,10 +40,24 @@ export function Kpi({
 					tone === "bad" && "text-destructive",
 				)}
 			>
-				{typeof value === "number" ? <Metric value={value} /> : value}
-				{unit && <span className="ml-1 font-medium text-[15px] text-muted-foreground">{unit}</span>}
+				{typeof value === "number" ? (
+					<Metric value={value} />
+				) : typeof value === "string" ? (
+					<RollingValue text={value} />
+				) : (
+					value
+				)}
+				{unit && (
+					<span className="ml-1 font-medium text-[15px] text-muted-foreground">
+						<TextMorph>{unit}</TextMorph>
+					</span>
+				)}
 			</p>
-			{hint && <p className="truncate text-[12px] text-muted-foreground">{hint}</p>}
+			{hint && (
+				<p className="truncate text-[12px] text-muted-foreground">
+					{typeof hint === "string" ? <TextMorph>{hint}</TextMorph> : hint}
+				</p>
+			)}
 			{trend && trend.length > 1 && <KpiTrend values={trend} color={color} label={`${label} trend`} />}
 		</section>
 	);

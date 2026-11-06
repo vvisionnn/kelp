@@ -45,6 +45,35 @@ describe("ThemeProvider", () => {
 		expect(document.documentElement.classList.contains("light")).toBe(true);
 	});
 
+	test("a theme change spreads out from the pointer, with the new colors applied inside the transition", async () => {
+		mockSystem(false);
+		setMedia("(prefers-reduced-motion: reduce)", false);
+		const root = document.documentElement;
+		let darkInside = false;
+		let finish = () => {};
+		root.ownerDocument.startViewTransition = ((update: () => void) => {
+			update();
+			darkInside = root.classList.contains("dark");
+			return { finished: new Promise<void>((resolve) => (finish = resolve)) };
+		}) as unknown as typeof document.startViewTransition;
+		try {
+			render(
+				<ThemeProvider>
+					<Probe />
+				</ThemeProvider>,
+			);
+			window.dispatchEvent(new PointerEvent("pointerdown", { clientX: 12, clientY: 34 }));
+			act(() => screen.getByText("dark").click());
+			expect(darkInside).toBe(true);
+			expect(root.dataset.transition).toBe("theme");
+			expect(root.style.getPropertyValue("--reveal-x")).toBe("12px");
+			await act(async () => finish());
+			expect(root.dataset.transition).toBeUndefined();
+		} finally {
+			Reflect.deleteProperty(document, "startViewTransition");
+		}
+	});
+
 	test("explicit choices override the system and persist", () => {
 		mockSystem(false);
 		render(

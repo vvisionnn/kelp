@@ -2,7 +2,6 @@ import type { Bucket } from "@shared/objects.ts";
 import { useEffect, useId, useState } from "react";
 import { Panel } from "@/components/kelp/page.tsx";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { formatBytes } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys } from "@/lib/objects-queries.ts";
@@ -39,8 +38,8 @@ function QuotaPanel({ bucket }: { bucket: Bucket }) {
 						className="justify-self-start"
 						disabled={!dirty || !quotaIsValid(quota) || save.isPending}
 						onClick={() => save.mutate(quota)}
+						pending={save.isPending}
 					>
-						{save.isPending && <Spinner />}
 						Save quota
 					</Button>
 				)}
@@ -71,8 +70,8 @@ function OwnerPanel({ bucket }: { bucket: Bucket }) {
 						className="justify-self-start"
 						disabled={owner === bucket.owner || save.isPending}
 						onClick={() => save.mutate(owner)}
+						pending={save.isPending}
 					>
-						{save.isPending && <Spinner />}
 						Save owner
 					</Button>
 				)}

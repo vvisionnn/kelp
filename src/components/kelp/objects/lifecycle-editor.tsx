@@ -18,7 +18,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { formatBytes } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -550,8 +549,7 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 							<Button variant="ghost" onClick={() => setItems(keyed(data ?? []))}>
 								Discard
 							</Button>
-							<Button disabled={save.isPending} onClick={() => save.mutate(rules)}>
-								{save.isPending && <Spinner />}
+							<Button disabled={save.isPending} onClick={() => save.mutate(rules)} pending={save.isPending}>
 								Save rules
 							</Button>
 						</div>

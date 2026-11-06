@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
 /** Starting points for the most common resource policies. */
@@ -169,8 +168,12 @@ export function PolicyEditor({
 				) : (
 					<span />
 				)}
-				<Button type="submit" size="sm" disabled={!dirty || Boolean(problem) || !text.trim() || saving}>
-					{saving && <Spinner />}
+				<Button
+					type="submit"
+					size="sm"
+					disabled={!dirty || Boolean(problem) || !text.trim() || saving}
+					pending={saving}
+				>
 					Save policy
 				</Button>
 			</div>

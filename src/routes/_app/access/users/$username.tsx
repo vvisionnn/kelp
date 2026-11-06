@@ -34,7 +34,6 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ACCESS_KEY, accessQueries, BUILT_IN_ACTIONS } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
@@ -393,8 +392,7 @@ function PermissionsSection({ user, editable }: { user: IamUser; editable: boole
 							<Button type="button" variant="ghost" onClick={reset}>
 								Discard
 							</Button>
-							<Button type="submit" disabled={save.isPending}>
-								{save.isPending && <Spinner />}
+							<Button type="submit" disabled={save.isPending} pending={save.isPending}>
 								Save changes
 							</Button>
 						</motion.div>

@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { formatBytes, formatPercent } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { storageApi, storageKey, VACUUM_THRESHOLD } from "@/lib/storage-queries.ts";
@@ -198,8 +197,7 @@ export function GrowVolumesDialog({
 						</Field>
 					</FieldGroup>
 					<DialogFooter>
-						<Button type="submit" disabled={grow.isPending}>
-							{grow.isPending && <Spinner />}
+						<Button type="submit" disabled={grow.isPending} pending={grow.isPending}>
 							Grow volumes
 						</Button>
 					</DialogFooter>
@@ -253,8 +251,7 @@ export function VacuumClusterDialog({ inventory }: { inventory: StorageInventory
 					</p>
 				</div>
 				<DialogFooter>
-					<Button onClick={() => vacuum.mutate()} disabled={vacuum.isPending}>
-						{vacuum.isPending && <Spinner />}
+					<Button onClick={() => vacuum.mutate()} disabled={vacuum.isPending} pending={vacuum.isPending}>
 						Vacuum cluster
 					</Button>
 				</DialogFooter>

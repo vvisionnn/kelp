@@ -227,25 +227,162 @@
 	}
 }
 
-/* Tide shimmer used by skeletons: a soft band of light sweeping across. */
+/* Tide shimmer used by skeletons: one band of light sweeping across the whole window, so every
+   block on the page shimmers as a single surface instead of each pulsing on its own. */
+@keyframes kelp-skeleton-in {
+	from {
+		opacity: 0;
+	}
+}
+
+.kelp-skeleton-in {
+	animation: kelp-skeleton-in 200ms ease-out 120ms backwards;
+}
+
 @keyframes kelp-tide {
 	from {
-		background-position: 150% 0;
+		background-position: 100vw 0;
 	}
 	to {
-		background-position: -50% 0;
+		background-position: -100vw 0;
 	}
 }
 
 @utility tide {
 	background-image: linear-gradient(
 		100deg,
-		transparent 30%,
-		color-mix(in oklab, var(--foreground) 6%, transparent) 50%,
+		transparent 35%,
+		color-mix(in oklab, var(--foreground) 7%, transparent) 50%,
+		transparent 65%
+	);
+	background-size: 100vw 100%;
+	background-attachment: fixed;
+	animation: kelp-tide 1.8s linear infinite;
+}
+
+/* Rows rise into place the first time they appear; a row that is already there never moves. */
+@keyframes kelp-row-in {
+	from {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+
+[data-slot="data-grid-table-body"] > tr:not(:has([data-slot="skeleton"])) {
+	animation: kelp-row-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+[data-slot="data-grid-table-body"] > tr:nth-child(2) {
+	animation-delay: 24ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(3) {
+	animation-delay: 48ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(4) {
+	animation-delay: 72ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(5) {
+	animation-delay: 96ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(6) {
+	animation-delay: 120ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(7) {
+	animation-delay: 144ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(8) {
+	animation-delay: 168ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(9) {
+	animation-delay: 192ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(10) {
+	animation-delay: 216ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(11) {
+	animation-delay: 240ms;
+}
+[data-slot="data-grid-table-body"] > tr:nth-child(12) {
+	animation-delay: 264ms;
+}
+
+/* Pointer light on sheets: answers the cursor, never moves on its own. */
+.group-sheet {
+	position: relative;
+}
+.group-sheet::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: inherit;
+	pointer-events: none;
+	opacity: var(--spot, 0);
+	transition: opacity 0.3s ease;
+	background: radial-gradient(
+		420px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+		color-mix(in oklab, var(--foreground) 5%, transparent),
 		transparent 70%
 	);
-	background-size: 200% 100%;
-	animation: kelp-tide 1.6s ease-in-out infinite;
+}
+
+/* Moving between pages. The sidebar and toolbar hold still while the page crossfades. */
+[data-page] {
+	view-transition-name: kelp-page;
+}
+aside.glass {
+	view-transition-name: kelp-sidebar;
+}
+[data-toolbar] {
+	view-transition-name: kelp-toolbar;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation: none;
+}
+::view-transition-group(kelp-sidebar),
+::view-transition-group(kelp-toolbar) {
+	animation: none;
+	z-index: 2;
+}
+::view-transition-old(kelp-page) {
+	animation: kelp-page-out 0.14s ease-out both;
+}
+::view-transition-new(kelp-page) {
+	animation: kelp-page-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes kelp-page-out {
+	to {
+		opacity: 0;
+	}
+}
+@keyframes kelp-page-in {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+		filter: blur(4px);
+	}
+}
+
+/* Changing theme: the new one spreads from the click over the whole window. */
+html[data-transition="theme"] [data-page],
+html[data-transition="theme"] aside.glass,
+html[data-transition="theme"] [data-toolbar] {
+	view-transition-name: none;
+}
+html[data-transition="theme"]::view-transition-old(root) {
+	animation: none;
+}
+html[data-transition="theme"]::view-transition-new(root) {
+	animation: kelp-theme-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes kelp-theme-reveal {
+	from {
+		clip-path: circle(0 at var(--reveal-x) var(--reveal-y));
+	}
+	to {
+		clip-path: circle(150vmax at var(--reveal-x) var(--reveal-y));
+	}
 }
 
 @utility spectrum {

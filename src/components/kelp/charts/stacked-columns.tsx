@@ -1,6 +1,7 @@
 import { scaleBand, scaleLinear } from "d3-scale";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTween } from "../motion.ts";
 import { compact } from "./format.ts";
 import { Legend } from "./legend.tsx";
 import { useWidth } from "./use-width.ts";
@@ -62,6 +63,11 @@ export function StackedColumns({
 	const barWidth = Math.min(24, x.bandwidth());
 	const every = Math.max(1, Math.ceil(columns.length / Math.max(1, Math.floor(innerWidth / 52))));
 	const hovered = active === null ? null : columns[active];
+	const glided = useTween(
+		columns.flatMap((c) => series.map((s) => c.values[s.key] ?? 0)),
+		{ intro: true },
+	);
+	const shown = (column: number, part: number) => glided[column * series.length + part] ?? 0;
 
 	return (
 		<div ref={ref} className={cn("relative", className)}>
@@ -90,7 +96,7 @@ export function StackedColumns({
 							const left = cx - barWidth / 2;
 							let base = innerHeight;
 							const parts = series
-								.map((s) => ({ s, value: column.values[s.key] ?? 0 }))
+								.map((s, part) => ({ s, value: column.values[s.key] ?? 0, drawn: shown(i, part) }))
 								.filter((p) => p.value > 0);
 							return (
 								// biome-ignore lint/a11y/useSemanticElements: an SVG column cannot be a button; it is focusable for keyboard readout.
@@ -107,7 +113,7 @@ export function StackedColumns({
 								>
 									<rect x={x(i)} width={x.bandwidth()} y={-MARGIN.top} height={height} fill="transparent" />
 									{parts.map((part, index) => {
-										const top = y(y.invert(base) + part.value);
+										const top = y(y.invert(base) + part.drawn);
 										const segment = Math.max(1, base - top - (index > 0 ? 2 : 0));
 										const isTop = index === parts.length - 1;
 										const r = isTop ? Math.min(4, segment / 2, barWidth / 2) : 0;

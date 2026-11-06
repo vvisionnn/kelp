@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ApiError } from "./lib/api.ts";
-import { createQueryClient } from "./router.tsx";
+import { createAppRouter, createQueryClient } from "./router.tsx";
 
 describe("query client", () => {
 	const retry = createQueryClient().getDefaultOptions().queries?.retry as (
@@ -19,4 +19,13 @@ describe("query client", () => {
 		expect(retry(0, new ApiError(404, "missing"))).toBe(false);
 		expect(retry(0, new ApiError(401, "sign in"))).toBe(false);
 	});
+});
+
+test("only a change of page crossfades; filters in the URL stay put", () => {
+	const { defaultViewTransition } = createAppRouter(createQueryClient()).options;
+	const { types } = defaultViewTransition as unknown as {
+		types: (change: { pathChanged: boolean }) => string[] | false;
+	};
+	expect(types({ pathChanged: true })).toEqual(["page"]);
+	expect(types({ pathChanged: false })).toBe(false);
 });

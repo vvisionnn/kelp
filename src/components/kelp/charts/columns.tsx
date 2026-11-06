@@ -1,6 +1,7 @@
 import { scaleBand, scaleLinear } from "d3-scale";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTween } from "../motion.ts";
 import { compact } from "./format.ts";
 import { useWidth } from "./use-width.ts";
 
@@ -30,6 +31,10 @@ export function Columns({
 }) {
 	const [ref, width] = useWidth<HTMLDivElement>();
 	const [active, setActive] = useState<number | null>(null);
+	const glided = useTween(
+		columns.map((c) => c.value),
+		{ intro: true },
+	);
 	const margin = { top: 18, bottom: 20 };
 	const innerHeight = height - margin.top - margin.bottom;
 	const x = scaleBand<number>()
@@ -49,7 +54,7 @@ export function Columns({
 					<line x2={width} y1={innerHeight} y2={innerHeight} stroke="var(--border)" />
 					{columns.map((column, i) => {
 						const cx = (x(i) ?? 0) + x.bandwidth() / 2;
-						const top = y(column.value);
+						const top = y(glided[i] ?? column.value);
 						const barHeight = innerHeight - top;
 						const r = Math.min(4, barHeight / 2, barWidth / 2);
 						const left = cx - barWidth / 2;

@@ -884,6 +884,8 @@ export interface DataGridProps<
    */
   i18n?: DataGridI18nOverrides
   loadingMode?: "skeleton" | "spinner"
+  /** Kelp: how many skeleton rows to show; defaults to a full page. */
+  skeletonRows?: number
   loadingMessage?: ReactNode | string
   fetchingMoreMessage?: ReactNode | string
   allRowsLoadedMessage?: ReactNode | string

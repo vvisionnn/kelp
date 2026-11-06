@@ -40,7 +40,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
@@ -277,8 +276,8 @@ function CreateServiceAccountDialog() {
 							<Button
 								type="submit"
 								disabled={!parentUser || create.isPending || (choice === "custom" && !date)}
+								pending={create.isPending}
 							>
-								{create.isPending && <Spinner />}
 								Create service account
 							</Button>
 						</DialogFooter>
@@ -427,8 +426,7 @@ function AccountSheet({ account, onClose }: { account: ServiceAccount; onClose: 
 									SeaweedFS cannot remove an expiry once set; move it out instead.
 								</FieldDescription>
 							</Field>
-							<Button type="submit" disabled={!dirty || update.isPending}>
-								{update.isPending && <Spinner />}
+							<Button type="submit" disabled={!dirty || update.isPending} pending={update.isPending}>
 								Save changes
 							</Button>
 						</form>

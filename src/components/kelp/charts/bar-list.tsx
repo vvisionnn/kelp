@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
+import { useTween } from "../motion.ts";
 
 export interface BarListItem {
 	key: string;
@@ -30,12 +31,16 @@ export function BarList({
 	className?: string;
 	empty?: string;
 }) {
+	const max = Math.max(0, ...items.map((i) => i.value));
+	const widths = useTween(
+		items.map((item) => Math.max(1.5, ratio(item.value, max) * 100)),
+		{ intro: true },
+	);
 	if (items.length === 0)
 		return <p className="py-6 text-center text-[13px] text-muted-foreground">{empty}</p>;
-	const max = Math.max(...items.map((i) => i.value));
 	return (
 		<ul aria-label={label} className={cn("space-y-2.5", className)}>
-			{items.map((item) => (
+			{items.map((item, i) => (
 				<li
 					key={item.key}
 					className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-[13px]"
@@ -43,8 +48,8 @@ export function BarList({
 					<span className="truncate">{item.label}</span>
 					<span className="h-1.5 overflow-hidden rounded-full bg-accent">
 						<span
-							className="block h-full rounded-full transition-[width] duration-500"
-							style={{ width: `${Math.max(1.5, ratio(item.value, max) * 100)}%`, background: color }}
+							className="block h-full rounded-full"
+							style={{ width: `${widths[i]}%`, background: color }}
 						/>
 					</span>
 					<span className="flex items-center gap-3">

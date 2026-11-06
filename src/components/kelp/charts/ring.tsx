@@ -1,6 +1,7 @@
 import { arc, pie } from "d3-shape";
 import { type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTween } from "../motion.ts";
 import { Legend } from "./legend.tsx";
 
 export interface RingSlice {
@@ -33,10 +34,18 @@ export function Ring({
 }) {
 	const [active, setActive] = useState<number | null>(null);
 	const radius = size / 2;
+	const glided = useTween(
+		slices.map((s) => s.value),
+		{ intro: true },
+	);
+	const total = slices.reduce((sum, s) => sum + s.value, 0);
+	// While the ring sweeps in, the gap to the full total stays empty.
+	const remainder = Math.max(0, total - glided.reduce((sum, v) => sum + v, 0));
 	const arcs = pie<RingSlice>()
 		.sort(null)
-		.value((s) => s.value)
-		.padAngle(slices.filter((s) => s.value > 0).length > 1 ? 0.02 : 0)(slices);
+		.value((s) => glided[slices.indexOf(s)] ?? s.value)
+		.padAngle(slices.filter((s) => s.value > 0).length > 1 ? 0.02 : 0)
+		.endAngle(2 * Math.PI * (total ? 1 - remainder / total : 1))(slices);
 	const shape = arc<(typeof arcs)[number]>()
 		.innerRadius(radius - thickness)
 		.outerRadius(radius)

@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 import { ACCESS_KEY, accessQueries } from "@/lib/access-queries.ts";
 import { api } from "@/lib/api.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -118,8 +117,7 @@ function CreateGroupDialog() {
 						/>
 					</Field>
 					<DialogFooter>
-						<Button type="submit" disabled={!name.trim() || create.isPending}>
-							{create.isPending && <Spinner />}
+						<Button type="submit" disabled={!name.trim() || create.isPending} pending={create.isPending}>
 							Create group
 						</Button>
 					</DialogFooter>

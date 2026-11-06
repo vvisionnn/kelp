@@ -2808,7 +2808,7 @@ function DataGridTableBodyRows<TData extends object>({
 
     return (
       <>
-        {Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
+        {Array.from({ length: props.skeletonRows ?? pagination.pageSize }).map((_, rowIndex) => (
           <DataGridTableBodyRowSkeleton key={rowIndex}>
             {[...leftVisibleColumns, ...centerVisibleColumns].map((column) => (
               <DataGridTableBodyRowSkeletonCell column={column} key={column.id}>

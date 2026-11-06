@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
 import { formatBytes, formatDateTime } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { contentUrl, objectApi, objectKeys, objectQueries, s3Url } from "@/lib/objects-queries.ts";
@@ -225,8 +224,8 @@ function TagsEditor({ file }: { file: FileDetails }) {
 							size="sm"
 							disabled={!keysValid || save.isPending}
 							onClick={() => save.mutate(Object.fromEntries(rows.map((r) => [r.key, r.value])))}
+							pending={save.isPending}
 						>
-							{save.isPending && <Spinner />}
 							Save tags
 						</Button>
 					)}

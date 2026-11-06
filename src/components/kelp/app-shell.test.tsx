@@ -24,6 +24,20 @@ describe("app shell", () => {
 		expect(within(pages).getByText("Storage")).toBeTruthy();
 	});
 
+	test("hovering the sidebar slides a pill under the link, never under the current page", async () => {
+		const { routes } = await clusterApi();
+		renderApp("/cluster", routes);
+		await screen.findByText("Leader");
+		const pages = screen.getByRole("navigation", { name: "Pages" });
+		const overview = within(pages).getByRole("link", { name: "Overview" });
+		fireEvent.pointerEnter(overview);
+		await waitFor(() => expect(overview.querySelector(".bg-accent\\/60")).toBeTruthy());
+		const current = within(pages).getByRole("link", { name: "Nodes" });
+		fireEvent.pointerEnter(current);
+		await waitFor(() => expect(overview.querySelector(".bg-accent\\/60")).toBeNull());
+		expect(current.querySelector(".bg-accent\\/60")).toBeNull();
+	});
+
 	test("detail pages lead back to their list and name the item, not the raw URL segment", async () => {
 		const { routes, vacuumConfig } = await maintenanceApi();
 		renderApp("/maintenance/vacuum", routes);
@@ -39,7 +53,7 @@ describe("app shell", () => {
 		const { routes } = await clusterApi();
 		renderApp("/", routes);
 		await screen.findByText("Disk used");
-		const title = within(toolbar()).getByText("Overview");
+		const title = within(toolbar()).getByText("Overview").closest("p") as HTMLElement;
 		expect(title.getAttribute("aria-hidden")).toBe("true");
 		await act(async () => {
 			Object.defineProperty(window, "scrollY", { configurable: true, value: 200 });

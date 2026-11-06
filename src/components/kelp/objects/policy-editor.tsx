@@ -12,7 +12,6 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
@@ -203,8 +202,8 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 					<Button
 						disabled={!dirty || !parsed || Boolean(problem) || save.isPending}
 						onClick={() => parsed && "policy" in parsed && save.mutate(parsed.policy)}
+						pending={save.isPending}
 					>
-						{save.isPending && <Spinner />}
 						Save policy
 					</Button>
 					{dirty && (

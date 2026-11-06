@@ -32,7 +32,6 @@ import {
 } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api.ts";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
@@ -169,8 +168,7 @@ function RetentionPanel({ topic }: { topic: TopicDetail }) {
 								Discard
 							</Button>
 						)}
-						<Button type="submit" disabled={!dirty || save.isPending}>
-							{save.isPending && <Spinner />}
+						<Button type="submit" disabled={!dirty || save.isPending} pending={save.isPending}>
 							Save retention
 						</Button>
 					</div>

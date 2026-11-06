@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api.ts";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
@@ -363,8 +362,7 @@ export function CreateTopicDialog() {
 					</div>
 					<RetentionFields draft={retention} onChange={setRetention} />
 					<DialogFooter>
-						<Button type="submit" disabled={!ready || create.isPending}>
-							{create.isPending && <Spinner />}
+						<Button type="submit" disabled={!ready || create.isPending} pending={create.isPending}>
 							Create topic
 						</Button>
 					</DialogFooter>

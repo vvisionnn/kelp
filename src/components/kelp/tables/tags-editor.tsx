@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
 
 interface Row {
 	/** Saved rows are keyed by their tag key, so re-syncing never re-animates them. */
@@ -143,8 +142,7 @@ export function TagsEditor({
 					<Plus />
 					Add tag
 				</Button>
-				<Button type="submit" size="sm" disabled={!dirty || Boolean(error) || saving}>
-					{saving && <Spinner />}
+				<Button type="submit" size="sm" disabled={!dirty || Boolean(error) || saving} pending={saving}>
 					Save tags
 				</Button>
 			</div>

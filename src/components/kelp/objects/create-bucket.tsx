@@ -18,7 +18,6 @@ import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
@@ -263,8 +262,11 @@ export function CreateBucketDialog() {
 					</div>
 
 					<DialogFooter>
-						<Button type="submit" disabled={create.isPending || (touched && !valid)}>
-							{create.isPending && <Spinner />}
+						<Button
+							type="submit"
+							disabled={create.isPending || (touched && !valid)}
+							pending={create.isPending}
+						>
 							Create bucket
 						</Button>
 					</DialogFooter>
