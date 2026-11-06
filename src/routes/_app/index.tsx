@@ -74,18 +74,30 @@ function OverviewPage() {
 							</span>
 						</span>
 					) : (
-						!overview.error && <SkeletonBlock className="my-0.5 h-4 w-64" />
+						!overview.error && <SkeletonBlock className="my-0.5 h-3.5 w-64 max-w-full" />
 					)
 				}
 				actions={
-					<Swap id={telemetry.data?.enabled ? "ranges" : "none"}>
-						{telemetry.data?.enabled && (
-							<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+					<Swap id={telemetry.isPending ? "pending" : telemetry.data?.enabled ? "ranges" : "none"}>
+						{telemetry.isPending ? (
+							<SkeletonBlock className="h-7 w-[168px] rounded-lg" />
+						) : (
+							telemetry.data?.enabled && (
+								<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+							)
 						)}
 					</Swap>
 				}
 			/>
-			<Loaded query={overview} skeleton={<OverviewSkeleton />}>
+			{/* The tiles' trend lines come from telemetry, so the page lands once both have answered. */}
+			<Loaded
+				query={{
+					data: telemetry.data || telemetry.error ? overview.data : undefined,
+					error: overview.error,
+					refetch: overview.refetch,
+				}}
+				skeleton={<OverviewSkeleton />}
+			>
 				{(data) => (
 					<>
 						<Headline data={data} telemetry={telemetry.data} />
