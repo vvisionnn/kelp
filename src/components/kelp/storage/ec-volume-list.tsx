@@ -3,10 +3,11 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { Blocks } from "lucide-react";
 import { useMemo } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { EmptyState, StatusDot } from "@/components/kelp/page.tsx";
+import { EmptyState, SkeletonBlock, StatusDot } from "@/components/kelp/page.tsx";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes, formatCount } from "@/lib/format.ts";
 import { collectionLabel, serverPalette } from "@/lib/storage-queries.ts";
+import { ghostCells, SearchGhost } from "./common.tsx";
 import { ServerLegend, ShardMap } from "./shard-map.tsx";
 
 export function ecHealth(ec: EcVolume): { tone: "good" | "warn" | "bad"; label: string } {
@@ -32,14 +33,10 @@ export function shardCounts(ecVolumes: EcVolume[]): Map<string, number> {
 export function EcVolumeList({
 	ecVolumes,
 	isLoading,
-	error,
-	onRetry,
 	showCollection = true,
 }: {
 	ecVolumes: EcVolume[] | undefined;
 	isLoading?: boolean;
-	error?: unknown;
-	onRetry?: () => void;
 	showCollection?: boolean;
 }) {
 	const navigate = useNavigate();
@@ -110,11 +107,13 @@ export function EcVolumeList({
 					),
 			},
 		];
-		return all.filter((c): c is Column<EcVolume> => Boolean(c));
-	}, [palette, showCollection]);
+		const shown = all.filter((c): c is Column<EcVolume> => Boolean(c));
+		return isLoading ? ghostCells(shown) : shown;
+	}, [palette, showCollection, isLoading]);
 
 	return (
 		<div className="space-y-4">
+			{isLoading && <SkeletonBlock className="h-4 w-96 max-w-full" />}
 			{counts.size > 0 && (
 				<ServerLegend
 					palette={palette}
@@ -127,9 +126,12 @@ export function EcVolumeList({
 				columns={columns}
 				getRowId={(ec) => String(ec.id)}
 				isLoading={isLoading}
-				error={error}
-				{...(onRetry ? { onRetry } : {})}
-				searchText={(ec) => `${ec.id} ${ec.collection} ${ec.placements.map((p) => p.server).join(" ")}`}
+				{...(isLoading
+					? { toolbar: <SearchGhost /> }
+					: {
+							searchText: (ec: EcVolume) =>
+								`${ec.id} ${ec.collection} ${ec.placements.map((p) => p.server).join(" ")}`,
+						})}
 				searchPlaceholder="Search EC volumes"
 				initialSorting={[{ id: "id", desc: false }]}
 				onRowClick={(ec) =>

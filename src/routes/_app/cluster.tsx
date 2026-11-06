@@ -1,6 +1,13 @@
-import type { ClusterNode, MountClient, TopologyDataCenter, VolumeServer } from "@shared/api.ts";
+import type {
+	ClusterNode,
+	MasterNode,
+	MountClient,
+	Overview,
+	TopologyDataCenter,
+	VolumeServer,
+} from "@shared/api.ts";
 import type { Telemetry, TelemetryPoint, TrafficSample } from "@shared/telemetry.ts";
-import { useQuery } from "@tanstack/react-query";
+import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Cable, Crown, Network, Server } from "lucide-react";
 import { z } from "zod";
@@ -14,19 +21,27 @@ import {
 	type TimeSeries,
 	useRange,
 } from "@/components/kelp/charts/index.ts";
-import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
+import { type Column, DataTable, type DataTableProps } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
 	CapacityBar,
 	EmptyState,
 	PageHeader,
 	Panel,
-	Reveal,
 	SkeletonBlock,
 	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { MetricsOffNote, RangeControl, useTelemetry } from "@/components/kelp/storage/live.tsx";
+import { LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
+import { Frozen, ghostCells, PlotGhost, SearchGhost, StatsGhost } from "@/components/kelp/storage/common.tsx";
+import {
+	MetricsOffNote,
+	RangeControl,
+	useTelemetry,
+	withTelemetry,
+} from "@/components/kelp/storage/live.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
@@ -51,6 +66,7 @@ function ClusterPage() {
 	const { tab = "masters" } = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
 	const [range, setRange] = useRange();
+	const overview = useQuery(queries.overview());
 	const telemetry = useTelemetry(range);
 	return (
 		<>
@@ -59,14 +75,19 @@ function ClusterPage() {
 				description="Every process that makes up your SeaweedFS cluster."
 				actions={<RangeControl telemetry={telemetry} range={range} onChange={setRange} />}
 			/>
-			<Reveal>
-				<NodeCounts />
-				<NodeActivity telemetry={telemetry} />
-				<TopologyMap />
-			</Reveal>
+			<Loaded query={withTelemetry(overview, telemetry)} skeleton={<NodesSkeleton />}>
+				{(data) => (
+					<>
+						<NodeCounts data={data} />
+						<NodeActivity overview={data} telemetry={telemetry.data} />
+					</>
+				)}
+			</Loaded>
+			<TopologyMap />
 			<Tabs
 				value={tab}
-				onValueChange={(value) => navigate({ search: { tab: value as Tab } })}
+				// Switching tabs keeps the reader where they are; the router would otherwise scroll to the top.
+				onValueChange={(value) => navigate({ search: { tab: value as Tab }, resetScroll: false })}
 				className="mt-8"
 			>
 				<TabsList className={SEGMENTED_TABS}>
@@ -89,37 +110,42 @@ function ClusterPage() {
 						Mounts
 					</TabsTrigger>
 				</TabsList>
-				<TabsContent value="masters">
-					<MastersTab />
-				</TabsContent>
-				<TabsContent value="volume-servers">
-					<VolumeServersTab />
-				</TabsContent>
-				<TabsContent value="filers">
-					<NodesTab type="filers" noun="filers" description="Filers keep the file and bucket metadata." />
-				</TabsContent>
-				<TabsContent value="s3">
-					<NodesTab type="s3" noun="S3 gateways" description="S3 gateways serve the S3 API." />
-				</TabsContent>
-				<TabsContent value="brokers">
-					<NodesTab
-						type="brokers"
-						noun="message brokers"
-						description="Start `weed mq.broker` to enable the message queue."
-					/>
-				</TabsContent>
-				<TabsContent value="mounts">
-					<MountsTab />
+				{/* One panel whose content crossfades, so the old tab can fade out as the new one arrives. */}
+				<TabsContent value={tab}>
+					<Swap id={tab}>
+						<TabView tab={tab} />
+					</Swap>
 				</TabsContent>
 			</Tabs>
 		</>
 	);
 }
 
+function TabView({ tab }: { tab: Tab }) {
+	switch (tab) {
+		case "volume-servers":
+			return <VolumeServersTab />;
+		case "filers":
+			return <NodesTab type="filers" noun="filers" description="Filers keep the file and bucket metadata." />;
+		case "s3":
+			return <NodesTab type="s3" noun="S3 gateways" description="S3 gateways serve the S3 API." />;
+		case "brokers":
+			return (
+				<NodesTab
+					type="brokers"
+					noun="message brokers"
+					description="Start `weed mq.broker` to enable the message queue."
+				/>
+			);
+		case "mounts":
+			return <MountsTab />;
+		default:
+			return <MastersTab />;
+	}
+}
+
 /** How many of each process the cluster runs, as a row of widgets. */
-function NodeCounts() {
-	const { data } = useQuery(queries.overview());
-	if (!data) return <SkeletonBlock className="h-[88px] rounded-xl" />;
+function NodeCounts({ data }: { data: Overview }) {
 	return (
 		<StatBand
 			className="sm:grid-cols-3 lg:grid-cols-6"
@@ -136,8 +162,13 @@ function NodeCounts() {
 }
 
 /** Request rates and latency per component, and what the SeaweedFS processes cost to run. */
-export function NodeActivity({ telemetry }: { telemetry: Telemetry | undefined }) {
-	const { data: overview } = useQuery(queries.overview());
+export function NodeActivity({
+	overview,
+	telemetry,
+}: {
+	overview: Overview;
+	telemetry: Telemetry | undefined;
+}) {
 	const points = telemetry?.points ?? [];
 	const times = points.map((p) => p.t);
 	const cpu = points.map((p) => p.process.cpuPercent);
@@ -200,23 +231,19 @@ export function NodeActivity({ telemetry }: { telemetry: Telemetry | undefined }
 					description="Volumes each server holds, of its maximum"
 					className="min-w-0 xl:col-span-5"
 				>
-					{overview ? (
-						<ul aria-label="Volume slots by server" className="space-y-3">
-							{overview.volumeServers.map((server) => (
-								<li key={server.id} className="text-[13px]">
-									<div className="flex items-center justify-between gap-3">
-										<span className="truncate font-mono">{server.address}</span>
-										<span className="shrink-0 text-muted-foreground tabular">
-											{formatCount(server.volumes)} of {formatCount(server.maxVolumes)}
-										</span>
-									</div>
-									<CapacityBar used={server.volumes} total={server.maxVolumes} className="mt-1.5" />
-								</li>
-							))}
-						</ul>
-					) : (
-						<SkeletonBlock className="h-24" />
-					)}
+					<ul aria-label="Volume slots by server" className="space-y-3">
+						{overview.volumeServers.map((server) => (
+							<li key={server.id} className="text-[13px]">
+								<div className="flex items-center justify-between gap-3">
+									<span className="truncate font-mono">{server.address}</span>
+									<span className="shrink-0 text-muted-foreground tabular">
+										<TextMorph>{`${formatCount(server.volumes)} of ${formatCount(server.maxVolumes)}`}</TextMorph>
+									</span>
+								</div>
+								<CapacityBar used={server.volumes} total={server.maxVolumes} className="mt-1.5" />
+							</li>
+						))}
+					</ul>
 				</Panel>
 			</div>
 		</>
@@ -250,7 +277,9 @@ function ProcessStat({
 		<div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
 			<div>
 				<dt className="text-[13px] text-muted-foreground">{label}</dt>
-				<dd className="font-rounded font-semibold text-[20px] leading-6">{value}</dd>
+				<dd className="font-rounded font-semibold text-[20px] leading-6">
+					<RollingValue text={value} />
+				</dd>
 			</div>
 			<Sparkline values={trend} color={color} width={120} height={32} label={`${label} trend`} />
 		</div>
@@ -262,21 +291,28 @@ function ProcessStat({
  * row with its live fill level.
  */
 export function TopologyMap() {
-	const { data, isPending, error } = useQuery(queries.topology());
-	if (isPending) return <SkeletonBlock className="mt-3 h-44 rounded-xl" />;
-	if (error) return null;
-	const racks = data.reduce((sum, dc) => sum + dc.racks.length, 0);
+	const { data, error } = useQuery(queries.topology());
 	return (
-		<AuroraCard className="mt-3 p-4">
+		<Loaded className="mt-3" query={{ data, error }} skeleton={<TopologySkeleton />}>
+			{(dataCenters) => <Topology dataCenters={dataCenters} />}
+		</Loaded>
+	);
+}
+
+function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
+	const racks = dataCenters.reduce((sum, dc) => sum + dc.racks.length, 0);
+	return (
+		<AuroraCard className="p-4">
 			<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 				<h2 className="font-semibold text-[13px]">Topology</h2>
 				<p className="text-[12px] text-muted-foreground">
-					{data.length} {data.length === 1 ? "data center" : "data centers"}, {racks}{" "}
-					{racks === 1 ? "rack" : "racks"}
+					<TextMorph>
+						{`${dataCenters.length} ${dataCenters.length === 1 ? "data center" : "data centers"}, ${racks} ${racks === 1 ? "rack" : "racks"}`}
+					</TextMorph>
 				</p>
 			</div>
 			<div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-				{data.map((dc: TopologyDataCenter) => (
+				{dataCenters.map((dc) => (
 					<section key={dc.id} className="min-w-0">
 						<h3 className="font-medium text-[13px]">{dc.id}</h3>
 						<div className="mt-2 space-y-3">
@@ -292,13 +328,15 @@ export function TopologyMap() {
 														<span className="truncate font-mono">{node.address}</span>
 													</span>
 													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
-														{formatCount(node.volumes)} volumes
+														<TextMorph>{`${formatCount(node.volumes)} volumes`}</TextMorph>
 													</span>
 												</div>
 												<div className="mt-2 flex items-center gap-3">
 													<CapacityBar used={node.diskUsage} total={node.diskCapacity} />
 													<span className="shrink-0 text-[12px] text-muted-foreground tabular">
-														{formatBytes(node.diskUsage)} of {formatBytes(node.diskCapacity)}
+														<TextMorph>
+															{`${formatBytes(node.diskUsage)} of ${formatBytes(node.diskCapacity)}`}
+														</TextMorph>
 													</span>
 												</div>
 											</li>
@@ -314,49 +352,177 @@ export function TopologyMap() {
 	);
 }
 
-function MastersTab() {
-	const { data, isPending, error, refetch } = useQuery(queries.masters());
+/** One rack with one node: the smallest real shape, so a cluster only ever grows from the ghost. */
+function TopologySkeleton() {
 	return (
-		<div className="space-y-3">
-			{data && (
-				<p className="text-[13px] text-muted-foreground">
-					Leader <span className="font-mono text-foreground">{data.leader}</span>. Highest volume id{" "}
-					{formatCount(data.maxVolumeId)}.
-				</p>
+		<LoadingRegion label="Loading topology">
+			<AuroraCard className="p-4">
+				<div className="flex items-baseline justify-between gap-4">
+					<h2 className="font-semibold text-[13px]">Topology</h2>
+					<SkeletonBlock className="h-3 w-32" />
+				</div>
+				<div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+					<div>
+						<div className="flex h-5 items-center">
+							<SkeletonBlock className="h-3.5 w-36" />
+						</div>
+						<div className="mt-2 mb-1 flex h-5 items-center">
+							<SkeletonBlock className="h-3 w-24" />
+						</div>
+						<div className="space-y-2 rounded-lg bg-raised px-3 py-2">
+							<div className="flex h-5 items-center">
+								<SkeletonBlock className="h-3.5 w-full" />
+							</div>
+							<div className="flex h-5 items-center">
+								<SkeletonBlock className="h-1.5 w-full" />
+							</div>
+						</div>
+					</div>
+				</div>
+			</AuroraCard>
+		</LoadingRegion>
+	);
+}
+
+function NodesSkeleton() {
+	return (
+		<LoadingRegion label="Loading nodes">
+			<StatsGhost count={6} hint={false} className="sm:grid-cols-3 lg:grid-cols-6" />
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel title="Requests" description="Per second, by component" className="min-w-0 xl:col-span-8">
+					<PlotGhost height={200} />
+				</Panel>
+				<Panel
+					title="Processes"
+					description="Summed over every SeaweedFS process"
+					className="min-w-0 xl:col-span-4"
+				>
+					<div className="space-y-4">
+						{[0, 1, 2].map((i) => (
+							<div key={i} className="flex h-[52px] items-center justify-between gap-3">
+								<div className="space-y-2">
+									<SkeletonBlock className="h-3.5 w-16" />
+									<SkeletonBlock className="h-5 w-24" />
+								</div>
+								<SkeletonBlock className="h-8 w-[120px]" />
+							</div>
+						))}
+					</div>
+				</Panel>
+			</div>
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel title="Latency" description="95th percentile, by component" className="min-w-0 xl:col-span-7">
+					<PlotGhost height={180} />
+				</Panel>
+				<Panel
+					title="Volume slots"
+					description="Volumes each server holds, of its maximum"
+					className="min-w-0 xl:col-span-5"
+				>
+					<div className="flex h-8 flex-col justify-between">
+						<RowsGhost rows={1} />
+						<SkeletonBlock className="h-1.5 w-full" />
+					</div>
+				</Panel>
+			</div>
+		</LoadingRegion>
+	);
+}
+
+/** A tab's table: its own loading rows and error, with the data staying put through failed refreshes. */
+function TabTable<T extends object>({
+	query,
+	label,
+	searchText,
+	ghostHeight,
+	...table
+}: { query: UseQueryResult<T[]>; label: string; ghostHeight?: number } & Omit<DataTableProps<T>, "data">) {
+	const { data, error, refetch } = query;
+	return (
+		<Loaded
+			query={{ data, error, refetch }}
+			skeleton={
+				<LoadingRegion label={label}>
+					<Frozen>
+						<DataTable
+							{...table}
+							columns={ghostCells(table.columns, ghostHeight)}
+							data={undefined}
+							isLoading
+							{...(searchText ? { toolbar: <SearchGhost /> } : {})}
+						/>
+					</Frozen>
+				</LoadingRegion>
+			}
+		>
+			{(rows) => <DataTable {...table} {...(searchText ? { searchText } : {})} data={rows} />}
+		</Loaded>
+	);
+}
+
+const masterColumns: Array<Column<MasterNode>> = [
+	{
+		accessorKey: "address",
+		header: "Address",
+		cell: ({ row }) => <span className="font-mono">{row.original.address}</span>,
+	},
+	{
+		id: "role",
+		header: "Role",
+		cell: ({ row }) =>
+			row.original.isLeader ? (
+				<StatusDot tone="good" label="Leader" />
+			) : (
+				<StatusDot tone="idle" label="Follower" />
+			),
+	},
+	{ accessorKey: "suffrage", header: "Raft", cell: ({ row }) => row.original.suffrage ?? "—" },
+];
+
+function MastersTable({ masters, isLoading }: { masters: MasterNode[] | undefined; isLoading?: boolean }) {
+	return (
+		<DataTable
+			data={masters}
+			isLoading={isLoading}
+			getRowId={(m) => m.address}
+			empty={
+				<EmptyState
+					icon={<Crown />}
+					title="No masters reported"
+					description="Kelp could not find any master servers."
+				/>
+			}
+			columns={isLoading ? ghostCells(masterColumns) : masterColumns}
+		/>
+	);
+}
+
+function MastersTab() {
+	const { data, error, refetch } = useQuery(queries.masters());
+	return (
+		<Loaded
+			query={{ data, error, refetch }}
+			skeleton={
+				<LoadingRegion label="Loading masters" className="space-y-3">
+					<div className="flex h-[19.5px] items-center">
+						<SkeletonBlock className="h-3.5 w-80 max-w-full" />
+					</div>
+					<Frozen>
+						<MastersTable masters={undefined} isLoading />
+					</Frozen>
+				</LoadingRegion>
+			}
+		>
+			{({ masters, leader, maxVolumeId }) => (
+				<div className="space-y-3">
+					<p className="text-[13px] text-muted-foreground">
+						Leader <span className="font-mono text-foreground">{leader}</span>.{" "}
+						<TextMorph>{`Highest volume id ${formatCount(maxVolumeId)}.`}</TextMorph>
+					</p>
+					<MastersTable masters={masters} />
+				</div>
 			)}
-			<DataTable
-				data={data?.masters}
-				isLoading={isPending}
-				error={error}
-				onRetry={() => refetch()}
-				getRowId={(m) => m.address}
-				empty={
-					<EmptyState
-						icon={<Crown />}
-						title="No masters reported"
-						description="Kelp could not find any master servers."
-					/>
-				}
-				columns={[
-					{
-						accessorKey: "address",
-						header: "Address",
-						cell: ({ row }) => <span className="font-mono">{row.original.address}</span>,
-					},
-					{
-						id: "role",
-						header: "Role",
-						cell: ({ row }) =>
-							row.original.isLeader ? (
-								<StatusDot tone="good" label="Leader" />
-							) : (
-								<StatusDot tone="idle" label="Follower" />
-							),
-					},
-					{ accessorKey: "suffrage", header: "Raft", cell: ({ row }) => row.original.suffrage ?? "—" },
-				]}
-			/>
-		</div>
+		</Loaded>
 	);
 }
 
@@ -419,13 +585,11 @@ export const volumeServerColumns: Array<Column<VolumeServer>> = [
 ];
 
 function VolumeServersTab() {
-	const { data, isPending, error, refetch } = useQuery(queries.volumeServers());
 	return (
-		<DataTable
-			data={data}
-			isLoading={isPending}
-			error={error}
-			onRetry={() => refetch()}
+		<TabTable
+			query={useQuery(queries.volumeServers())}
+			label="Loading volume servers"
+			ghostHeight={38}
 			getRowId={(s) => s.id}
 			searchText={(s) => `${s.address} ${s.dataCenter} ${s.rack}`}
 			searchPlaceholder="Search volume servers"
@@ -476,13 +640,10 @@ function NodesTab({
 	noun: string;
 	description: string;
 }) {
-	const { data, isPending, error, refetch } = useQuery(queries.nodes(type));
 	return (
-		<DataTable
-			data={data}
-			isLoading={isPending}
-			error={error}
-			onRetry={() => refetch()}
+		<TabTable
+			query={useQuery(queries.nodes(type))}
+			label={`Loading ${noun}`}
 			getRowId={(n) => n.address}
 			empty={<EmptyState icon={<Network />} title={`No ${noun} running`} description={description} />}
 			columns={nodeColumns}
@@ -521,13 +682,10 @@ const mountColumns: Array<Column<MountClient>> = [
 ];
 
 function MountsTab() {
-	const { data, isPending, error, refetch } = useQuery(queries.mountClients());
 	return (
-		<DataTable
-			data={data}
-			isLoading={isPending}
-			error={error}
-			onRetry={() => refetch()}
+		<TabTable
+			query={useQuery(queries.mountClients())}
+			label="Loading mounts"
 			getRowId={(m) => `${m.filer}-${m.clientId}-${m.address}`}
 			searchText={(m) => `${m.address} ${m.path} ${m.filer}`}
 			searchPlaceholder="Search mounts"

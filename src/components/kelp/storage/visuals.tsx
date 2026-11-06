@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
-import { usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { formatBytes, formatPercent, ratio } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { PARITY_TEXTURE } from "./shard-map.tsx";
@@ -34,7 +35,7 @@ export function FillGauge({ size, deleted, limit }: { size: number; deleted: num
 							className={cn("block h-full first:rounded-l-full", segment.fill)}
 							initial={reduced ? false : { width: 0 }}
 							animate={{ width: `${ratio(segment.value, capacity) * 100}%` }}
-							transition={{ duration: 0.8, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+							transition={{ duration: SPEED.data, delay: index * 0.1, ease: EASE }}
 						/>
 					) : null,
 				)}
@@ -47,7 +48,9 @@ export function FillGauge({ size, deleted, limit }: { size: number; deleted: num
 								<span className={cn("size-2 rounded-[2px]", segment.fill)} />
 								{segment.label}
 							</dt>
-							<dd className="mt-0.5 font-medium text-[13px] tabular">{formatBytes(segment.value)}</dd>
+							<dd className="mt-0.5 font-medium text-[13px] tabular">
+								<TextMorph>{formatBytes(segment.value)}</TextMorph>
+							</dd>
 						</div>
 					),
 				)}

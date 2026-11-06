@@ -1,4 +1,4 @@
-import type { EcPlacement } from "@shared/storage.ts";
+import type { EcPlacement, EcVolume, StorageInventory } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Blocks } from "lucide-react";
@@ -7,16 +7,23 @@ import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
 	AuroraCard,
 	EmptyState,
-	ErrorState,
 	PageHeader,
-	Reveal,
 	Section,
+	SkeletonBlock,
 	StatBand,
 	StatusDot,
 } from "@/components/kelp/page.tsx";
-import { PageSkeleton } from "@/components/kelp/storage/common.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import {
+	Collapse,
+	DescriptionGhost,
+	Frozen,
+	ghostCells,
+	StatsGhost,
+} from "@/components/kelp/storage/common.tsx";
 import { ecHealth, shardCounts } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ServerLegend, ShardMap, serverFill, shardRanges } from "@/components/kelp/storage/shard-map.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatCount, formatDateTime } from "@/lib/format.ts";
@@ -69,65 +76,83 @@ function placementColumns(palette: Map<string, number>): Array<Column<EcPlacemen
 
 function EcVolumePage() {
 	const { volumeId } = Route.useParams();
-	const { data, error, refetch } = useQuery(storageQueries.inventory());
+	const inventory = useQuery(storageQueries.inventory());
+	const { data, error } = inventory;
 	const ec = data?.ecVolumes.find((v) => v.id === Number(volumeId));
-	const counts = useMemo(() => shardCounts(ec ? [ec] : []), [ec]);
-	const palette = useMemo(() => serverPalette([...counts.keys()]), [counts]);
+	const loading = !data && !error;
+	const health = ec && ecHealth(ec);
 
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-	if (!data) return <PageSkeleton />;
-	if (!ec) {
-		const plain = data.volumes.some((v) => v.id === Number(volumeId));
-		return (
-			<EmptyState
-				icon={<Blocks />}
-				title={plain ? `Volume ${volumeId} is not erasure coded` : `Volume ${volumeId} is not in the cluster`}
-				description={
-					plain ? "It is stored as a regular volume with full copies." : "It may have been deleted."
-				}
-				action={
-					plain ? (
-						<Button
-							size="sm"
-							variant="outline"
-							render={<Link to="/volumes/$volumeId" params={{ volumeId }} />}
-						>
-							View the volume
-						</Button>
-					) : (
-						<Button size="sm" variant="outline" render={<Link to="/erasure-coding" />}>
-							<ArrowLeft />
-							All EC volumes
-						</Button>
-					)
-				}
-			/>
-		);
-	}
-
-	const health = ecHealth(ec);
 	return (
 		<>
 			<PageHeader
-				title={`Volume ${ec.id}`}
+				title={`Volume ${volumeId}`}
 				description={
-					<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-						<StatusDot tone={health.tone} label={health.label} />
-						<span>
-							Erasure coded, in{" "}
-							<Link
-								to="/collections/$name"
-								params={{ name: collectionParam(ec.collection) }}
-								className="text-primary hover:underline"
-							>
-								{collectionLabel(ec.collection)}
-							</Link>{" "}
-							collection
-						</span>
-					</span>
+					<Swap id={ec ? "volume" : loading ? "pending" : "none"}>
+						{ec && health ? (
+							<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+								<StatusDot tone={health.tone} label={health.label} />
+								<span>
+									Erasure coded, in{" "}
+									<Link
+										to="/collections/$name"
+										params={{ name: collectionParam(ec.collection) }}
+										className="text-primary hover:underline"
+									>
+										{collectionLabel(ec.collection)}
+									</Link>{" "}
+									collection
+								</span>
+							</span>
+						) : (
+							loading && <DescriptionGhost width="w-72" />
+						)}
+					</Swap>
 				}
 			/>
-			{ec.missingShards.length > 0 && (
+			<Loaded query={inventory} skeleton={<EcVolumeSkeleton />}>
+				{(inv) => (
+					<Swap id={ec ? "volume" : "missing"}>
+						{ec ? <EcDetail ec={ec} /> : <EcMissing id={volumeId} inventory={inv} />}
+					</Swap>
+				)}
+			</Loaded>
+		</>
+	);
+}
+
+function EcMissing({ id, inventory }: { id: string; inventory: StorageInventory }) {
+	const plain = inventory.volumes.some((v) => v.id === Number(id));
+	return (
+		<EmptyState
+			icon={<Blocks />}
+			title={plain ? `Volume ${id} is not erasure coded` : `Volume ${id} is not in the cluster`}
+			description={plain ? "It is stored as a regular volume with full copies." : "It may have been deleted."}
+			action={
+				plain ? (
+					<Button
+						size="sm"
+						variant="outline"
+						render={<Link to="/volumes/$volumeId" params={{ volumeId: id }} />}
+					>
+						View the volume
+					</Button>
+				) : (
+					<Button size="sm" variant="outline" render={<Link to="/erasure-coding" />}>
+						<ArrowLeft />
+						All EC volumes
+					</Button>
+				)
+			}
+		/>
+	);
+}
+
+function EcDetail({ ec }: { ec: EcVolume }) {
+	const counts = useMemo(() => shardCounts([ec]), [ec]);
+	const palette = useMemo(() => serverPalette([...counts.keys()]), [counts]);
+	return (
+		<>
+			<Collapse open={ec.missingShards.length > 0}>
 				<Alert variant="destructive" className="mb-6 rounded-xl">
 					<AlertTitle>
 						{ec.missingShards.length} {ec.missingShards.length === 1 ? "shard is" : "shards are"} missing
@@ -138,28 +163,26 @@ function EcVolumePage() {
 							: "Too many shards are gone to rebuild this volume. Bring the servers that held them back online."}
 					</AlertDescription>
 				</Alert>
-			)}
-			<Reveal>
-				<StatBand
-					stats={[
-						{ label: "Stored", value: ec.size, format: formatBytes },
-						{ label: "Shards present", value: ec.presentShards.length, hint: `of ${ec.totalShards}` },
-						ec.fileCount > 0 || ec.deleteCount > 0
-							? { label: "Files", value: ec.fileCount, hint: `${formatCount(ec.deleteCount)} deleted` }
-							: {
-									label: "Files",
-									value: 0,
-									format: () => "—",
-									hint: "SeaweedFS does not count files in encoded volumes",
-								},
-						{
-							label: "Servers",
-							value: ec.placements.length,
-							hint: ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires",
-						},
-					]}
-				/>
-			</Reveal>
+			</Collapse>
+			<StatBand
+				stats={[
+					{ label: "Stored", value: ec.size, format: formatBytes },
+					{ label: "Shards present", value: ec.presentShards.length, hint: `of ${ec.totalShards}` },
+					ec.fileCount > 0 || ec.deleteCount > 0
+						? { label: "Files", value: ec.fileCount, hint: `${formatCount(ec.deleteCount)} deleted` }
+						: {
+								label: "Files",
+								value: 0,
+								format: () => "—",
+								hint: "SeaweedFS does not count files in encoded volumes",
+							},
+					{
+						label: "Servers",
+						value: ec.placements.length,
+						hint: ec.expiresAt ? `Expires ${formatDateTime(ec.expiresAt)}` : "Never expires",
+					},
+				]}
+			/>
 			<Section
 				title="Shard map"
 				description={
@@ -187,5 +210,46 @@ function EcVolumePage() {
 				/>
 			</Section>
 		</>
+	);
+}
+
+const NO_SERVERS = new Map<string, number>();
+
+function EcVolumeSkeleton() {
+	return (
+		<LoadingRegion label="Loading">
+			<StatsGhost />
+			<Section title="Shard map" description="Hover a shard to see where it lives.">
+				<AuroraCard className="space-y-4 overflow-x-auto p-4">
+					<div className="flex flex-wrap items-end gap-4">
+						{[10, 4].map((shards) => (
+							<div key={shards}>
+								<div className="mb-1.5 flex h-5 items-center">
+									<SkeletonBlock className="h-3 w-10" />
+								</div>
+								<div className="flex gap-1 pb-[22px] sm:gap-1.5">
+									{Array.from({ length: shards }, (_, i) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: identical placeholders.
+										<SkeletonBlock key={i} className="size-6 rounded-[5px] sm:size-7" />
+									))}
+								</div>
+							</div>
+						))}
+					</div>
+					<SkeletonBlock className="h-[18px] w-80 max-w-full max-sm:h-10" />
+				</AuroraCard>
+			</Section>
+			<Section title="Servers" description="Where each shard is stored.">
+				<Frozen>
+					<DataTable
+						data={undefined}
+						isLoading
+						columns={ghostCells(placementColumns(NO_SERVERS), 34)}
+						getRowId={(p) => p.server}
+						empty={null}
+					/>
+				</Frozen>
+			</Section>
+		</LoadingRegion>
 	);
 }

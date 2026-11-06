@@ -2,11 +2,14 @@ import type { StorageInventory } from "@shared/storage.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Columns, dataColor, Kpi, Ring, splitUnit } from "@/components/kelp/charts/index.ts";
-import { PageHeader, Panel, Reveal } from "@/components/kelp/page.tsx";
-import { HeroSkeleton } from "@/components/kelp/storage/common.tsx";
+import { PageHeader, Panel } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { ColumnsGhost, Frozen, KpiRowGhost, RingLegendGhost } from "@/components/kelp/storage/common.tsx";
 import { EcVolumeList } from "@/components/kelp/storage/ec-volume-list.tsx";
 import { ecSavings, protectionSlices, shardsPerServer } from "@/components/kelp/storage/insights.ts";
 import { EcScheme } from "@/components/kelp/storage/visuals.tsx";
+import { RollingValue } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import { formatBytes, formatCount, formatPercent, ratio } from "@/lib/format.ts";
 import { storageQueries } from "@/lib/storage-queries.ts";
@@ -18,8 +21,7 @@ export const Route = createFileRoute("/_app/erasure-coding/")({
 });
 
 function ErasureCodingPage() {
-	const { data, isPending, error, refetch } = useQuery(storageQueries.inventory());
-	const ecVolumes = data?.ecVolumes;
+	const inventory = useQuery(storageQueries.inventory());
 
 	return (
 		<>
@@ -33,17 +35,17 @@ function ErasureCodingPage() {
 					</Button>
 				}
 			/>
-			{data ? (
-				<Reveal>
-					<EcNumbers inventory={data} />
-					<EcCharts inventory={data} />
-				</Reveal>
-			) : (
-				!error && <HeroSkeleton />
-			)}
-			<div className="mt-8">
-				<EcVolumeList ecVolumes={ecVolumes} isLoading={isPending} error={error} onRetry={() => refetch()} />
-			</div>
+			<Loaded query={inventory} skeleton={<EcSkeleton />}>
+				{(data) => (
+					<>
+						<EcNumbers inventory={data} />
+						<EcCharts inventory={data} />
+						<div className="mt-8">
+							<EcVolumeList ecVolumes={data.ecVolumes} />
+						</div>
+					</>
+				)}
+			</Loaded>
 		</>
 	);
 }
@@ -108,19 +110,21 @@ function EcCharts({ inventory }: { inventory: StorageInventory }) {
 				description="An even spread survives the loss of any one server"
 				className="min-w-0 xl:col-span-5"
 			>
-				{perServer.length > 0 ? (
-					<Columns
-						height={170}
-						color={dataColor(3)}
-						label="EC shards held by each server"
-						format={formatCount}
-						columns={perServer}
-					/>
-				) : (
-					<p className="py-10 text-center text-[13px] text-muted-foreground">
-						No volume is erasure coded yet.
-					</p>
-				)}
+				<Swap id={perServer.length > 0 ? "columns" : "empty"}>
+					{perServer.length > 0 ? (
+						<Columns
+							height={170}
+							color={dataColor(3)}
+							label="EC shards held by each server"
+							format={formatCount}
+							columns={perServer}
+						/>
+					) : (
+						<p className="py-10 text-center text-[13px] text-muted-foreground">
+							No volume is erasure coded yet.
+						</p>
+					)}
+				</Swap>
 			</Panel>
 			<Panel
 				title="Protection"
@@ -135,20 +139,56 @@ function EcCharts({ inventory }: { inventory: StorageInventory }) {
 					center={
 						<>
 							<span className="font-rounded font-semibold text-[20px] leading-6">
-								{formatPercent(ratio(protection[1]?.value ?? 0, total))}
+								<RollingValue text={formatPercent(ratio(protection[1]?.value ?? 0, total))} />
 							</span>
 							<span className="text-[12px] text-muted-foreground">as shards</span>
 						</>
 					}
 				/>
 			</Panel>
-			<Panel title="How it works" className="min-w-0 xl:col-span-3">
-				<EcScheme />
-				<p className="mt-3 text-[13px] text-muted-foreground">
-					<span className="font-semibold text-foreground">1.4×</span> the size instead of 2× or 3× for full
-					copies. Lose any 4 shards and the volume still reads.
-				</p>
-			</Panel>
+			<HowItWorks />
 		</div>
+	);
+}
+
+function HowItWorks() {
+	return (
+		<Panel title="How it works" className="min-w-0 xl:col-span-3">
+			<EcScheme />
+			<p className="mt-3 text-[13px] text-muted-foreground">
+				<span className="font-semibold text-foreground">1.4×</span> the size instead of 2× or 3× for full
+				copies. Lose any 4 shards and the volume still reads.
+			</p>
+		</Panel>
+	);
+}
+
+function EcSkeleton() {
+	return (
+		<LoadingRegion label="Loading storage">
+			<KpiRowGhost trend={false} />
+			<div className="mt-3 grid gap-3 xl:grid-cols-12">
+				<Panel
+					title="Shards per server"
+					description="An even spread survives the loss of any one server"
+					className="min-w-0 xl:col-span-5"
+				>
+					<ColumnsGhost height={170} count={3} />
+				</Panel>
+				<Panel
+					title="Protection"
+					description="Bytes on disk by how they are protected"
+					className="min-w-0 xl:col-span-4"
+				>
+					<RingLegendGhost size={136} rows={2} legendClassName="max-sm:w-full xl:w-full" />
+				</Panel>
+				<HowItWorks />
+			</div>
+			<div className="mt-8">
+				<Frozen>
+					<EcVolumeList ecVolumes={undefined} isLoading />
+				</Frozen>
+			</div>
+		</LoadingRegion>
 	);
 }

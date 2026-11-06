@@ -9,6 +9,7 @@ describe("volume detail", () => {
 	test("shows size, copies across servers and the facts that matter", async () => {
 		renderApp("/volumes/1", { "GET /storage": busyInventory() });
 		expect(await screen.findByRole("heading", { name: "Volume 1" })).toBeTruthy();
+		await screen.findByRole("list", { name: "Size of each copy" });
 		// Each copy appears in the size comparison and in the copies table.
 		expect(screen.getAllByText("a:8080")).toHaveLength(2);
 		expect(screen.getAllByText("b:8080")).toHaveLength(2);
@@ -64,7 +65,7 @@ describe("volume detail", () => {
 
 	test("viewers see writes as status, not switches", async () => {
 		renderApp("/volumes/3", { "GET /storage": busyInventory() }, viewerUser);
-		await screen.findByRole("heading", { name: "Volume 3" });
+		await screen.findByText("Keep forever");
 		// The page status and the copy's status both say so.
 		expect(screen.getAllByText("Read-only").length).toBeGreaterThanOrEqual(2);
 		expect(screen.queryByRole("switch")).toBeNull();
@@ -94,8 +95,10 @@ describe("volume detail", () => {
 					: busyInventory(),
 		});
 		expect(await screen.findByText("SeaweedFS admin reported a problem")).toBeTruthy();
+		// The title is known from the URL, so it stays through the failure.
+		expect(screen.getByRole("heading", { name: "Volume 1" })).toBeTruthy();
 		fail = false;
 		fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-		expect(await screen.findByRole("heading", { name: "Volume 1" })).toBeTruthy();
+		expect(await screen.findByText("Size rank")).toBeTruthy();
 	});
 });
