@@ -239,7 +239,7 @@ Concentric with the window: sidebar 16, groups and widgets 12, controls and side
 - No landing-page patterns: hero headlines, marketing copy, giant stat bands, bento grids of links, decorative gradients.
 - No glass on content, no nested cards, no borders and shadows stacked on the same element.
 - No color for decoration; the spectrum is only for the sidebar marker, meters and sign-in; status colors only for state.
-- No ambient or looping animation inside the app.
+- No ambient or looping animation inside the app. A skeleton's tide runs only while something loads, and the sheet spotlight only answers the pointer.
 - No all-caps labels or letter-spaced eyebrows.
 
 ## 8. Responsive Behavior
@@ -288,7 +288,7 @@ Big-screen operations dashboard: floating glass sidebar with quiet line icons an
 2. Could any box be removed and replaced by spacing?
 3. Does every color mean something?
 4. Are numbers aligned and units lighter?
-5. Does every animation answer an action?
+5. Does every animation answer an action or new data?
 
 ## Optional Appendix: Interaction Patterns
 
@@ -308,3 +308,16 @@ Big-screen operations dashboard: floating glass sidebar with quiet line icons an
 
 - From x.ai: the restraint of a monochrome chrome with color reserved for meaning, and quiet, confident numbers. Its marketing patterns (hero headlines, mesh-gradient cards, bento links) were deliberately left behind; they belong on a landing page, not in a console.
 - From Apple's Human Interface Guidelines (Materials, Sidebars) and WWDC25 "Get to know the new design system": navigation on a floating glass layer above content; capsules for standout actions while dense desktop controls stay rounded rectangles; concentric radii; rounded numerals for metrics. Colored icon tiles were tried and dropped: they read as mobile, not desktop.
+
+## Loading and change
+
+Nothing on screen jumps. Data arrives, it doesn't appear.
+
+- **Loading**: `Loaded` holds skeleton, error and content in one grid cell and crossfades between them. The header stays mounted. The skeleton is the page's real structure, with real `Panel` and `Section` titles around ghosts from `skeletons.tsx`, so content lands where its placeholder stood. It stays hidden for the first 120 ms, so a fast answer shows none.
+- **Reveal**: content sharpens in from a 6 px blur over `SPEED.slow`. Content that was cached when the page opened shows at once.
+- **Refresh**: a refetch with no news changes nothing. New numbers roll, charts morph one frame across lines, window and axis, and a failed refresh keeps the data on screen. The toolbar edge lights only for requests that take longer than 700 ms.
+- **Text**: changing short text goes through `TextMorph`, per letter (per word above 32 characters). Numbers with units go through `RollingValue`.
+- **Swaps**: tabs, modes and empty states crossfade through `Swap`.
+- **Pages**: path changes use a native view transition; sidebar and toolbar stay outside it. Filters in the URL don't animate the page. The theme spreads from the pointer in a circle.
+- **Measure**: `scripts/motion-qa.ts` screenshots each route loading and loaded, and `e2e/motion.spec.ts` fails a route whose layout shift reaches 0.03.
+- **Tokens**: `EASE`, `SPEED` and `SPRING` in `motion.ts`. Never hard-code a curve or duration in a component.
