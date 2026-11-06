@@ -4,7 +4,7 @@ import LatticeLoader from "@/components/react-bits/LatticeLoader.tsx";
 export function BootLoader() {
 	return (
 		<main
-			className="flex min-h-svh items-center justify-center bg-background"
+			className="kelp-skeleton-in flex min-h-svh items-center justify-center bg-background"
 			role="status"
 			aria-live="polite"
 		>

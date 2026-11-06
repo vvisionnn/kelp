@@ -3,6 +3,7 @@ import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from
 import { ChevronLeft, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
+import GradualBlur from "@/components/react-bits/GradualBlur.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -327,7 +328,13 @@ function Toolbar({ onShowSidebar, onSearch }: { onShowSidebar: () => void; onSea
 				</div>
 			</div>
 			<div className="absolute inset-x-0 bottom-0 h-px overflow-hidden" aria-hidden="true">
-				{fetching && <div className="tide h-full w-full bg-primary/40" />}
+				{/* Waits out the quick polls, so a live page isn't blinking at its edge. */}
+				<div
+					className={cn(
+						"tide h-full w-full bg-primary/40 opacity-0 transition-opacity duration-300",
+						fetching && "opacity-100 delay-700",
+					)}
+				/>
 			</div>
 		</header>
 	);
@@ -376,6 +383,17 @@ export function AppShell() {
 				>
 					<Outlet />
 				</main>
+				{/* Pages sink softly under the bottom edge, and the edge clears at the end of the page. */}
+				<div className="pointer-events-none sticky bottom-0 z-20 h-0" aria-hidden="true">
+					<GradualBlur
+						target="page"
+						position="bottom"
+						height="3.5rem"
+						strength={1.25}
+						autoHide
+						style={{ position: "absolute" }}
+					/>
+				</div>
 			</div>
 			<CommandMenu open={command.open} onOpenChange={command.setOpen} />
 		</div>

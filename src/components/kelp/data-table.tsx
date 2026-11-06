@@ -16,7 +16,10 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
+import { EASE, SPEED } from "./motion.ts";
 import { ErrorState } from "./page.tsx";
+import { TextMorph } from "./text-morph.tsx";
+import { Swap } from "./transitions.tsx";
 
 export type Column<T extends object> = ColumnDef<DataGridFeatures, T>;
 
@@ -135,7 +138,8 @@ export function DataTable<T extends object>({
 	const selected = rows.filter((row) => rowSelection[getRowId(row)]);
 	const clear = () => setRowSelection({});
 
-	if (error) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
+	// A failed refresh leaves the rows up; only a table with nothing to show turns into the error.
+	if (error && !data) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
 
 	const showEmpty = !isLoading && data !== undefined && data.length === 0;
 	// The skeleton matches what was here last time, so the page keeps its height when data lands.
@@ -175,43 +179,50 @@ export function DataTable<T extends object>({
 			<AnimatePresence>
 				{bulkActions && selected.length > 0 && (
 					<motion.div
-						initial={{ opacity: 0, y: -4 }}
-						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: -4 }}
-						className="flex flex-wrap items-center gap-2 rounded-lg bg-primary/10 py-1.5 pr-1.5 pl-3 text-[13px]"
+						className="overflow-hidden"
+						initial={{ opacity: 0, height: 0 }}
+						animate={{ opacity: 1, height: "auto" }}
+						exit={{ opacity: 0, height: 0 }}
+						transition={{ duration: SPEED.base, ease: EASE }}
 					>
-						<span className="font-medium tabular">{selected.length} selected</span>
-						<div className="ml-auto flex flex-wrap gap-2">{bulkActions(selected, clear)}</div>
-						<Button variant="ghost" size="sm" onClick={clear}>
-							Clear
-						</Button>
+						<div className="flex flex-wrap items-center gap-2 rounded-lg bg-primary/10 py-1.5 pr-1.5 pl-3 text-[13px]">
+							<span className="font-medium">
+								<TextMorph>{`${selected.length} selected`}</TextMorph>
+							</span>
+							<div className="ml-auto flex flex-wrap gap-2">{bulkActions(selected, clear)}</div>
+							<Button variant="ghost" size="sm" onClick={clear}>
+								Clear
+							</Button>
+						</div>
 					</motion.div>
 				)}
 			</AnimatePresence>
 
-			{showEmpty ? (
-				empty
-			) : (
-				<DataGrid
-					table={table}
-					recordCount={rows.length}
-					isLoading={Boolean(isLoading)}
-					loadingMode="skeleton"
-					skeletonRows={Math.max(1, knownRows.get(rowMemory) ?? DEFAULT_SKELETON_ROWS)}
-					emptyMessage={query ? `Nothing matches "${query}".` : "No results."}
-					{...(onRowClick ? { onRowClick } : {})}
-					tableLayout={{ headerBackground: false, rowBorder: true, dense: false }}
-				>
-					<div className="w-full space-y-2.5">
-						<DataGridContainer className="group-sheet px-1">
-							<DataGridScrollArea>
-								<DataGridTable />
-							</DataGridScrollArea>
-						</DataGridContainer>
-						{rows.length > pagination.pageSize && <DataGridPagination />}
-					</div>
-				</DataGrid>
-			)}
+			<Swap id={showEmpty ? "empty" : "rows"}>
+				{showEmpty ? (
+					empty
+				) : (
+					<DataGrid
+						table={table}
+						recordCount={rows.length}
+						isLoading={Boolean(isLoading)}
+						loadingMode="skeleton"
+						skeletonRows={Math.max(1, knownRows.get(rowMemory) ?? DEFAULT_SKELETON_ROWS)}
+						emptyMessage={query ? `Nothing matches "${query}".` : "No results."}
+						{...(onRowClick ? { onRowClick } : {})}
+						tableLayout={{ headerBackground: false, rowBorder: true, dense: false }}
+					>
+						<div className="w-full space-y-2.5">
+							<DataGridContainer className="group-sheet px-1">
+								<DataGridScrollArea>
+									<DataGridTable />
+								</DataGridScrollArea>
+							</DataGridContainer>
+							{rows.length > pagination.pageSize && <DataGridPagination />}
+						</div>
+					</DataGrid>
+				)}
+			</Swap>
 		</div>
 	);
 }
