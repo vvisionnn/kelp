@@ -6,8 +6,20 @@ import type { Bucket, FileEntry } from "@shared/objects.ts";
 import type { BucketTraffic, Telemetry, TelemetryPoint } from "@shared/telemetry.ts";
 import { formatBytes, ratio } from "@/lib/format.ts";
 
+/**
+ * Telemetry as a page should wait on it: undefined until it has answered, null once it has failed.
+ * A first failure counts, so a retrying sampler never holds a page back.
+ */
+export function settledTelemetry(query: {
+	data: Telemetry | undefined;
+	error: unknown;
+	failureCount: number;
+}): Telemetry | null | undefined {
+	return query.data ?? (query.error || query.failureCount > 0 ? null : undefined);
+}
+
 /** Per-bucket S3 traffic from telemetry, keyed by bucket name. */
-export function trafficByBucket(telemetry: Telemetry | undefined): Map<string, BucketTraffic> {
+export function trafficByBucket(telemetry: Telemetry | null | undefined): Map<string, BucketTraffic> {
 	return new Map((telemetry?.buckets ?? []).map((b) => [b.bucket, b]));
 }
 

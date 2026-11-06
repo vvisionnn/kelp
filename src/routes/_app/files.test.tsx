@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { UNAUTHORIZED_EVENT } from "@/lib/api.ts";
 import "../../../test/objects-helpers.ts";
+import { setMedia } from "../../../test/media.ts";
 import { details, entry, objectsApi } from "../../../test/objects-fixtures.ts";
 import { type ApiCall, renderApp, viewerUser } from "../../../test/render-app.tsx";
 import { settle } from "../../../test/settle.ts";
@@ -84,6 +85,67 @@ describe("files page", () => {
 		);
 		fireEvent.click(within(crumbs).getByRole("button", { name: "All files" }));
 		await waitFor(() => expect(app.router.state.location.search).toEqual({}));
+	});
+
+	test("moving between folders keeps the list until the next one answers", async () => {
+		const { routes } = await objectsApi();
+		let answer: (value: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		const list = routes["GET /files/list"] as (call: ApiCall) => unknown;
+		renderApp("/files", {
+			...routes,
+			"GET /files/list": async (call: ApiCall) => {
+				if (call.query.get("path") === "/projects") await held;
+				return list(call);
+			},
+		});
+		const previous = await screen.findByRole("button", { name: "projects" });
+		fireEvent.click(previous);
+		const crumbs = screen.getByRole("navigation", { name: "Folder path" });
+		await waitFor(() => expect(crumbs.textContent).toContain("projects"));
+		expect(screen.getByRole("button", { name: "projects" })).toBe(previous);
+		expect(screen.queryByRole("status", { name: "Loading folder" })).toBeNull();
+		expect(previous.closest("[aria-busy]")).toBeTruthy();
+		answer(null);
+		expect(await screen.findByRole("button", { name: "kelp" })).toBeTruthy();
+		await settle();
+		expect(screen.queryByRole("button", { name: "projects" })).toBeNull();
+	});
+
+	test("the first load holds the folder's structure, and more rows stand ready at the end", async () => {
+		const { routes } = await objectsApi();
+		let answer: (value: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		const list = routes["GET /files/list"] as (call: ApiCall) => unknown;
+		renderApp("/files?path=/projects/kelp", {
+			...routes,
+			"GET /files/list": async (call: ApiCall) => {
+				await held;
+				if (call.query.get("cursor")) await new Promise(() => {});
+				return list(call);
+			},
+		});
+		expect(await screen.findByRole("status", { name: "Loading folder" })).toBeTruthy();
+		expect(screen.getByRole("status", { name: "Loading folder summary" })).toBeTruthy();
+		answer(null);
+		expect(await screen.findByRole("status", { name: "Loading more" })).toBeTruthy();
+		expect(await screen.findByText("data.json")).toBeTruthy();
+	});
+
+	test("the refresh button only turns for the person who pressed it", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/files", routes);
+		await screen.findByRole("button", { name: "projects" });
+		const button = screen.getByRole("button", { name: "Refresh" });
+		const icon = button.querySelector("svg") as SVGElement;
+		expect(icon.getAttribute("class")).not.toContain("animate-spin");
+		fireEvent.click(button);
+		await waitFor(() => expect(icon.getAttribute("class")).toContain("animate-spin"));
+		await waitFor(() => expect(icon.getAttribute("class")).not.toContain("animate-spin"));
 	});
 
 	test("filters the loaded folder and explains when nothing matches", async () => {
@@ -296,6 +358,37 @@ describe("files page", () => {
 		const s3 = within(within(sheet).getByRole("region", { name: "S3 object tags" }));
 		expect(s3.getByText("team")).toBeTruthy();
 		expect(s3.getByText("design")).toBeTruthy();
+	});
+
+	test("a preview holds its stage, then the picture sharpens in, with motion on", async () => {
+		setMedia("(prefers-reduced-motion: reduce)", false);
+		const { routes } = await objectsApi();
+		const path = "/buckets/media/cat.png";
+		let answer: (value: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		renderApp("/files?path=/buckets/media", {
+			...routes,
+			"GET /files/list": { path: "/buckets/media", entries: [entry(path)], nextCursor: null },
+			"GET /files/entry": async () => {
+				await held;
+				return details(path, { mime: "image/png" });
+			},
+		});
+		fireEvent.click(await screen.findByRole("button", { name: "cat.png" }));
+		const sheet = await screen.findByRole("dialog");
+		expect(await within(sheet).findByRole("status", { name: "Loading file" })).toBeTruthy();
+		answer(null);
+		const image = await within(sheet).findByRole("img", { name: "cat.png" });
+		const stage = image.parentElement?.parentElement as HTMLElement;
+		expect(stage.querySelectorAll('[data-slot="skeleton"]').length).toBe(1);
+		fireEvent.load(image);
+		await settle(100);
+		expect(stage.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
+		fireEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+		await settle(300);
+		expect(screen.queryByRole("dialog")).toBeNull();
 	});
 
 	test("a missing file explains itself in the preview", async () => {

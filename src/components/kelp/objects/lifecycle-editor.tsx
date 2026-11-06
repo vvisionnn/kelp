@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Pencil, Plus, ScrollText, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type FormEvent, useEffect, useId, useState } from "react";
-import { EmptyState, ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { EmptyState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -23,6 +27,7 @@ import { formatBytes } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
+import { Appear } from "./appear.tsx";
 
 export function emptyRule(): LifecycleRule {
 	return {
@@ -335,7 +340,7 @@ function RuleSheet({
 									<RadioGroupItem id={`${id}-days`} value="days" />
 									Delete a number of days after creation
 								</label>
-								{expiry === "days" && (
+								<Appear show={expiry === "days"}>
 									<div className="pl-6">
 										<DaysInput
 											label="Days until deletion"
@@ -343,12 +348,12 @@ function RuleSheet({
 											onChange={(expirationDays) => set({ expirationDays })}
 										/>
 									</div>
-								)}
+								</Appear>
 								<label htmlFor={`${id}-date`} className="flex items-center gap-2 text-sm">
 									<RadioGroupItem id={`${id}-date`} value="date" />
 									Delete on a date
 								</label>
-								{expiry === "date" && (
+								<Appear show={expiry === "date"}>
 									<div className="pl-6">
 										<Input
 											aria-label="Deletion date"
@@ -357,7 +362,7 @@ function RuleSheet({
 											onChange={(e) => set({ expirationDate: e.target.value || null })}
 										/>
 									</div>
-								)}
+								</Appear>
 							</RadioGroup>
 						</fieldset>
 
@@ -421,14 +426,70 @@ function RuleSheet({
 let lastKey = 0;
 const nextKey = () => ++lastKey;
 type Item = { key: number; rule: LifecycleRule };
-const keyed = (rules: LifecycleRule[]): Item[] => rules.map((rule) => ({ key: nextKey(), rule }));
+/** Rows for `rules`. A rule still in its place keeps its row, so a save or a refetch replays nothing. */
+const keyed = (rules: LifecycleRule[], current: Item[] = []): Item[] =>
+	rules.map((rule, index) => {
+		const same = current[index];
+		return { key: same && same.rule.id === rule.id ? same.key : nextKey(), rule };
+	});
 
-export function LifecycleEditor({ bucket }: { bucket: string }) {
+const INTRO = "Lifecycle rules delete objects, old versions and abandoned uploads on a schedule.";
+
+/** `ruleCount` is what the bucket reports, when known, so the ghost holds the rows that land. */
+function LifecycleGhost({ ruleCount }: { ruleCount: number | undefined }) {
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(objectQueries.lifecycle(bucket));
-	const [items, setItems] = useState<Item[]>([]);
+	return (
+		<LoadingRegion label="Loading lifecycle rules" className="grid gap-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<p className="max-w-prose text-muted-foreground text-sm">{INTRO}</p>
+				{canWrite && <SkeletonBlock className="h-8 w-24" />}
+			</div>
+			{ruleCount === 0 ? (
+				<SkeletonBlock className="h-[214px] rounded-xl" />
+			) : (
+				<div className="group-sheet divide-y divide-border">
+					{Array.from({ length: ruleCount ?? 2 }, (_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: ghosts have no identity.
+						<div key={i} className="grid gap-1.5 px-4 py-3">
+							<SkeletonBlock className="h-[21px] w-40" />
+							<SkeletonBlock className="h-4 w-56" />
+							<SkeletonBlock className="h-5 w-64" />
+						</div>
+					))}
+				</div>
+			)}
+		</LoadingRegion>
+	);
+}
+
+export function LifecycleEditor({
+	bucket,
+	ready = true,
+	ruleCount,
+}: {
+	bucket: string;
+	/** False holds the rules back until the page knows the bucket exists. */
+	ready?: boolean;
+	ruleCount?: number | undefined;
+}) {
+	const lifecycle = useQuery({ ...objectQueries.lifecycle(bucket), enabled: ready });
+	return (
+		<Loaded query={lifecycle} skeleton={<LifecycleGhost ruleCount={ruleCount} />}>
+			{(data) => <RulesEditor key={bucket} bucket={bucket} data={data} />}
+		</Loaded>
+	);
+}
+
+function RulesEditor({ bucket, data }: { bucket: string; data: LifecycleRule[] }) {
+	const canWrite = useCanWrite();
+	const reduced = usePrefersReducedMotion();
+	const [items, setItems] = useState(() => keyed(data));
+	const [seen, setSeen] = useState(data);
+	if (seen !== data) {
+		setSeen(data);
+		setItems(keyed(data, items));
+	}
 	const [editing, setEditing] = useState<{ index: number; rule: LifecycleRule } | null>(null);
-	useEffect(() => setItems(keyed(data ?? [])), [data]);
 	const rules = items.map((item) => item.rule);
 
 	const save = useAction({
@@ -436,9 +497,6 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 		success: (_out, next) => (next.length === 0 ? "Lifecycle rules removed" : "Lifecycle rules saved"),
 		invalidate: [objectKeys.bucket(bucket), objectKeys.buckets],
 	});
-
-	if (isPending) return <SkeletonBlock className="h-40 rounded-lg" />;
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
 
 	const dirty = JSON.stringify(rules) !== JSON.stringify(data);
 	const keep = (rule: LifecycleRule) => {
@@ -453,9 +511,7 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="max-w-prose text-muted-foreground text-sm">
-					Lifecycle rules delete objects, old versions and abandoned uploads on a schedule.
-				</p>
+				<p className="max-w-prose text-muted-foreground text-sm">{INTRO}</p>
 				{canWrite && (
 					<Button variant="outline" onClick={() => setEditing({ index: -1, rule: emptyRule() })}>
 						<Plus />
@@ -464,89 +520,93 @@ export function LifecycleEditor({ bucket }: { bucket: string }) {
 				)}
 			</div>
 
-			{rules.length === 0 ? (
-				<EmptyState
-					icon={<ScrollText />}
-					title="No lifecycle rules"
-					description="Objects stay until someone deletes them."
-				/>
-			) : (
-				<ul className="group-sheet divide-y divide-border">
-					<AnimatePresence initial={false}>
-						{items.map(({ key, rule }, index) => (
-							<motion.li
-								key={key}
-								layout
-								initial={{ opacity: 0, y: 6 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, x: -12 }}
-								className="flex flex-wrap items-start gap-4 px-4 py-3"
-							>
-								<div className="grid min-w-0 flex-1 gap-1.5">
-									<div className="flex flex-wrap items-center gap-2">
-										<span className="font-semibold text-[13px]">{rule.id || `Rule ${index + 1}`}</span>
-										<Badge
-											variant={rule.enabled ? "secondary" : "outline"}
-											className={rule.enabled ? "bg-success/12 text-success-foreground" : undefined}
-										>
-											{rule.enabled ? "Active" : "Paused"}
-										</Badge>
+			<Swap id={rules.length === 0 ? "empty" : "list"}>
+				{rules.length === 0 ? (
+					<EmptyState
+						icon={<ScrollText />}
+						title="No lifecycle rules"
+						description="Objects stay until someone deletes them."
+					/>
+				) : (
+					<ul className="group-sheet divide-y divide-border">
+						<AnimatePresence initial={false}>
+							{items.map(({ key, rule }, index) => (
+								<motion.li
+									key={key}
+									layout={!reduced}
+									initial={reduced ? false : { opacity: 0, y: 6 }}
+									animate={{ opacity: 1, y: 0 }}
+									exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, x: -12 }}
+									transition={{ duration: SPEED.base, ease: EASE }}
+									className="flex flex-wrap items-start gap-4 px-4 py-3"
+								>
+									<div className="grid min-w-0 flex-1 gap-1.5">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="font-semibold text-[13px]">{rule.id || `Rule ${index + 1}`}</span>
+											<Badge
+												variant={rule.enabled ? "secondary" : "outline"}
+												className={rule.enabled ? "bg-success/12 text-success-foreground" : undefined}
+											>
+												<TextMorph>{rule.enabled ? "Active" : "Paused"}</TextMorph>
+											</Badge>
+										</div>
+										<p className="text-[12px] text-muted-foreground">{describeScope(rule)}</p>
+										<ul className="grid gap-0.5 text-[13px]">
+											{describeActions(rule).map((action) => (
+												<li key={action}>{action}</li>
+											))}
+										</ul>
 									</div>
-									<p className="text-[12px] text-muted-foreground">{describeScope(rule)}</p>
-									<ul className="grid gap-0.5 text-[13px]">
-										{describeActions(rule).map((action) => (
-											<li key={action}>{action}</li>
-										))}
-									</ul>
-								</div>
-								{canWrite && (
-									<div className="flex items-center gap-1">
-										<Switch
-											aria-label={`${rule.enabled ? "Pause" : "Activate"} ${rule.id || `rule ${index + 1}`}`}
-											checked={rule.enabled}
-											onCheckedChange={(enabled) =>
-												setItems(
-													items.map((item, i) =>
-														i === index ? { ...item, rule: { ...rule, enabled } } : item,
-													),
-												)
-											}
-										/>
-										<Button
-											variant="ghost"
-											size="icon"
-											aria-label={`Edit ${rule.id || `rule ${index + 1}`}`}
-											onClick={() => setEditing({ index, rule })}
-										>
-											<Pencil />
-										</Button>
-										<Button
-											variant="ghost"
-											size="icon"
-											aria-label={`Remove ${rule.id || `rule ${index + 1}`}`}
-											onClick={() => setItems(items.filter((_, i) => i !== index))}
-										>
-											<Trash2 />
-										</Button>
-									</div>
-								)}
-							</motion.li>
-						))}
-					</AnimatePresence>
-				</ul>
-			)}
+									{canWrite && (
+										<div className="flex items-center gap-1">
+											<Switch
+												aria-label={`${rule.enabled ? "Pause" : "Activate"} ${rule.id || `rule ${index + 1}`}`}
+												checked={rule.enabled}
+												onCheckedChange={(enabled) =>
+													setItems(
+														items.map((item, i) =>
+															i === index ? { ...item, rule: { ...rule, enabled } } : item,
+														),
+													)
+												}
+											/>
+											<Button
+												variant="ghost"
+												size="icon"
+												aria-label={`Edit ${rule.id || `rule ${index + 1}`}`}
+												onClick={() => setEditing({ index, rule })}
+											>
+												<Pencil />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												aria-label={`Remove ${rule.id || `rule ${index + 1}`}`}
+												onClick={() => setItems(items.filter((_, i) => i !== index))}
+											>
+												<Trash2 />
+											</Button>
+										</div>
+									)}
+								</motion.li>
+							))}
+						</AnimatePresence>
+					</ul>
+				)}
+			</Swap>
 
 			<AnimatePresence>
 				{canWrite && dirty && (
 					<motion.div
-						initial={{ opacity: 0, y: 8 }}
+						initial={reduced ? false : { opacity: 0, y: 8 }}
 						animate={{ opacity: 1, y: 0 }}
-						exit={{ opacity: 0, y: 8 }}
+						exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: 8 }}
+						transition={{ duration: SPEED.base, ease: EASE }}
 						className="glass sticky bottom-4 flex flex-wrap items-center justify-between gap-3 rounded-xl py-2 pr-2 pl-4"
 					>
 						<span className="text-[13px]">You have unsaved rule changes.</span>
 						<div className="flex gap-2">
-							<Button variant="ghost" onClick={() => setItems(keyed(data ?? []))}>
+							<Button variant="ghost" onClick={() => setItems(keyed(data, items))}>
 								Discard
 							</Button>
 							<Button disabled={save.isPending} onClick={() => save.mutate(rules)} pending={save.isPending}>

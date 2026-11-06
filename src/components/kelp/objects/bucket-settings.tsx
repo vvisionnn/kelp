@@ -1,6 +1,8 @@
 import type { Bucket } from "@shared/objects.ts";
 import { useEffect, useId, useState } from "react";
-import { Panel } from "@/components/kelp/page.tsx";
+import { Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
@@ -30,7 +32,10 @@ function QuotaPanel({ bucket }: { bucket: Bucket }) {
 	});
 	const dirty = !sameQuota(quota, bucket);
 	return (
-		<Panel title="Quota" description={`${formatBytes(bucket.logicalSize)} stored now.`}>
+		<Panel
+			title="Quota"
+			description={<TextMorph>{`${formatBytes(bucket.logicalSize)} stored now.`}</TextMorph>}
+		>
 			<div className="grid gap-4">
 				<QuotaInput value={quota} onChange={setQuota} disabled={!canWrite} />
 				{canWrite && (
@@ -126,5 +131,46 @@ export function BucketSettings({ bucket }: { bucket: Bucket }) {
 				<ProtectionPanel bucket={bucket} />
 			</div>
 		</div>
+	);
+}
+
+/** The real panels around ghost controls. */
+export function BucketSettingsGhost() {
+	const canWrite = useCanWrite();
+	return (
+		<LoadingRegion label="Loading settings" className="grid gap-3 lg:grid-cols-2">
+			<Panel title="Quota" description={<SkeletonBlock className="h-3 w-28" />}>
+				<div className="grid gap-4">
+					<div className="flex items-center justify-between gap-4">
+						<div className="grid gap-1">
+							<SkeletonBlock className="h-4 w-24" />
+							<SkeletonBlock className="h-3 w-56 max-w-full" />
+						</div>
+						<SkeletonBlock className="h-[18px] w-8 rounded-full" />
+					</div>
+					<SkeletonBlock className="h-8 w-full" />
+					{canWrite && <SkeletonBlock className="h-8 w-24" />}
+				</div>
+			</Panel>
+			<Panel title="Owner" description="Only this S3 identity and administrators can use the bucket.">
+				<div className="grid gap-4">
+					<SkeletonBlock className="h-8 w-full" />
+					{canWrite && <SkeletonBlock className="h-8 w-24" />}
+				</div>
+			</Panel>
+			<div className="lg:col-span-2">
+				<Panel title="Protection" description="Set when the bucket was created.">
+					<div className="grid gap-4 sm:grid-cols-2">
+						{["Versioning", "Object lock"].map((label) => (
+							<div key={label} className="grid gap-1">
+								<p className="text-[13px] text-muted-foreground">{label}</p>
+								<SkeletonBlock className="h-[18px] w-20" />
+								<SkeletonBlock className="h-3.5 w-3/4" />
+							</div>
+						))}
+					</div>
+				</Panel>
+			</div>
+		</LoadingRegion>
 	);
 }

@@ -3,15 +3,17 @@ import type { BucketTraffic } from "@shared/telemetry.ts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Database } from "lucide-react";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import { compact, RANGES, Sparkline, useRange } from "@/components/kelp/charts/index.ts";
 import { Segmented } from "@/components/kelp/controls.tsx";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
-import { BucketsDashboard } from "@/components/kelp/objects/bucket-dashboard.tsx";
+import { BucketsDashboard, BucketsDashboardGhost } from "@/components/kelp/objects/bucket-dashboard.tsx";
 import { BucketFlags } from "@/components/kelp/objects/bucket-flags.tsx";
 import { CreateBucketDialog } from "@/components/kelp/objects/create-bucket.tsx";
-import { trafficByBucket } from "@/components/kelp/objects/insights.ts";
-import { CapacityBar, EmptyState, PageHeader } from "@/components/kelp/page.tsx";
+import { settledTelemetry, trafficByBucket } from "@/components/kelp/objects/insights.ts";
+import { CapacityBar, EmptyState, PageHeader, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { objectQueries } from "@/lib/objects-queries.ts";
 import { queries } from "@/lib/queries.ts";
@@ -22,6 +24,8 @@ export const Route = createFileRoute("/_app/buckets/")({
 	loader: ({ context }) => void context.queryClient.prefetchQuery(objectQueries.buckets()),
 	component: BucketsPage,
 });
+
+const ghostCell = (width: string): ReactNode => <SkeletonBlock className={`h-3.5 ${width}`} />;
 
 export const bucketColumns: Array<Column<Bucket>> = [
 	{
@@ -40,6 +44,14 @@ export const bucketColumns: Array<Column<Bucket>> = [
 				<BucketFlags bucket={row.original} />
 			</div>
 		),
+		meta: {
+			skeleton: (
+				<div className="grid gap-1.5 py-0.5">
+					<SkeletonBlock className="h-4 w-32" />
+					<SkeletonBlock className="h-5 w-20" />
+				</div>
+			),
+		},
 		size: 280,
 	},
 	{
@@ -51,6 +63,7 @@ export const bucketColumns: Array<Column<Bucket>> = [
 				<p className="text-[12px] text-muted-foreground">{formatBytes(row.original.physicalSize)} on disk</p>
 			</div>
 		),
+		meta: { skeleton: ghostCell("w-20") },
 	},
 	{
 		id: "files",
@@ -61,6 +74,7 @@ export const bucketColumns: Array<Column<Bucket>> = [
 				{row.original.storedFiles === null ? "—" : formatCount(row.original.storedFiles)}
 			</span>
 		),
+		meta: { skeleton: ghostCell("w-10") },
 	},
 	{
 		id: "quota",
@@ -77,6 +91,7 @@ export const bucketColumns: Array<Column<Bucket>> = [
 			) : (
 				<span className="text-muted-foreground">No limit</span>
 			),
+		meta: { skeleton: ghostCell("w-24") },
 		size: 170,
 	},
 	{
@@ -88,6 +103,7 @@ export const bucketColumns: Array<Column<Bucket>> = [
 			) : (
 				<span className="text-muted-foreground">Admins only</span>
 			),
+		meta: { skeleton: ghostCell("w-20") },
 	},
 	{
 		accessorKey: "createdAt",
@@ -95,6 +111,7 @@ export const bucketColumns: Array<Column<Bucket>> = [
 		cell: ({ row }) => (
 			<span className="text-[12px] text-muted-foreground">{formatRelative(row.original.createdAt)}</span>
 		),
+		meta: { skeleton: ghostCell("w-16") },
 	},
 ];
 
@@ -114,23 +131,45 @@ function requestsColumn(traffic: Map<string, BucketTraffic>): Column<Bucket> {
 				</span>
 			);
 		},
+		meta: { skeleton: ghostCell("w-20") },
 	};
 }
 
 function BucketsPage() {
-	const { data, isPending, error, refetch } = useQuery(objectQueries.buckets());
+	const buckets = useQuery(objectQueries.buckets());
 	const [range, setRange] = useRange();
-	const telemetry = useQuery(queries.telemetry(range)).data;
+	const metrics = useQuery(queries.telemetry(range));
+	const telemetry = settledTelemetry(metrics);
 	const navigate = useNavigate();
 	const canWrite = useCanWrite();
 	const traffic = useMemo(() => trafficByBucket(telemetry), [telemetry]);
+	// While telemetry is on its way, the table holds the column it will most likely have.
+	const live = telemetry === undefined || Boolean(telemetry?.enabled);
 	const columns = useMemo(
 		() =>
-			telemetry?.enabled
+			live
 				? [...bucketColumns.slice(0, 3), requestsColumn(traffic), ...bucketColumns.slice(3)]
 				: bucketColumns,
-		[telemetry?.enabled, traffic],
+		[live, traffic],
 	);
+	const table = {
+		columns,
+		getRowId: (bucket: Bucket) => bucket.name,
+		onRowClick: (bucket: Bucket) => navigate({ to: "/buckets/$bucket", params: { bucket: bucket.name } }),
+		initialSorting: [{ id: "name", desc: false }],
+		empty: (
+			<EmptyState
+				icon={<Database />}
+				title="No buckets yet"
+				description={
+					canWrite
+						? "Create a bucket to start storing objects over S3."
+						: "An administrator can create buckets for S3 clients."
+				}
+				action={canWrite && <CreateBucketDialog />}
+			/>
+		),
+	};
 
 	return (
 		<>
@@ -139,38 +178,47 @@ function BucketsPage() {
 				description="S3 buckets, what they hold, how busy they are, and the rules they follow."
 				actions={
 					<>
-						{telemetry?.enabled && (
-							<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
-						)}
+						<Swap id={telemetry === undefined ? "pending" : telemetry?.enabled ? "ranges" : "none"}>
+							{telemetry === undefined ? (
+								<SkeletonBlock className="kelp-skeleton-in h-8 w-40" />
+							) : (
+								telemetry?.enabled && (
+									<Segmented label="Time range" items={RANGES} value={range} onChange={setRange} />
+								)
+							)}
+						</Swap>
 						{canWrite && <CreateBucketDialog />}
 					</>
 				}
 			/>
-			{data && data.length > 0 && <BucketsDashboard buckets={data} telemetry={telemetry} />}
-			<DataTable
-				data={data}
-				isLoading={isPending}
-				error={error}
-				onRetry={() => refetch()}
-				getRowId={(bucket) => bucket.name}
-				searchText={(bucket) => `${bucket.name} ${bucket.owner}`}
-				searchPlaceholder="Search buckets"
-				onRowClick={(bucket) => navigate({ to: "/buckets/$bucket", params: { bucket: bucket.name } })}
-				initialSorting={[{ id: "name", desc: false }]}
-				columns={columns}
-				empty={
-					<EmptyState
-						icon={<Database />}
-						title="No buckets yet"
-						description={
-							canWrite
-								? "Create a bucket to start storing objects over S3."
-								: "An administrator can create buckets for S3 clients."
-						}
-						action={canWrite && <CreateBucketDialog />}
-					/>
+			<Loaded
+				query={{
+					data: buckets.data && telemetry !== undefined ? { list: buckets.data, telemetry } : undefined,
+					error: buckets.data ? null : buckets.error,
+					refetch: buckets.refetch,
+				}}
+				skeleton={
+					<LoadingRegion label="Loading buckets">
+						<BucketsDashboardGhost />
+						<div aria-hidden="true">
+							<SkeletonBlock className="mb-3 h-8 w-full sm:w-64" />
+							<DataTable {...table} data={undefined} isLoading />
+						</div>
+					</LoadingRegion>
 				}
-			/>
+			>
+				{({ list, telemetry: metricsNow }) => (
+					<>
+						{list.length > 0 && <BucketsDashboard buckets={list} telemetry={metricsNow} />}
+						<DataTable
+							{...table}
+							data={list}
+							searchText={(bucket) => `${bucket.name} ${bucket.owner}`}
+							searchPlaceholder="Search buckets"
+						/>
+					</>
+				)}
+			</Loaded>
 		</>
 	);
 }

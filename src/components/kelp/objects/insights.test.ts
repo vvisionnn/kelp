@@ -8,6 +8,7 @@ import {
 	folderStats,
 	nearQuota,
 	quotaUsage,
+	settledTelemetry,
 	sizeColumns,
 	sizeShares,
 	trafficByBucket,
@@ -86,5 +87,15 @@ describe("object store insights", () => {
 		expect(stats.newest?.name).toBe("dir");
 		expect(stats.kinds.map((k) => k.kind)).toEqual(["Images", "Data"]);
 		expect(stats.largest[0]?.name).toBe("b.png");
+	});
+});
+
+describe("settledTelemetry", () => {
+	test("waits for an answer, and treats any failure as no telemetry", () => {
+		const telemetry = makeTelemetry();
+		expect(settledTelemetry({ data: undefined, error: null, failureCount: 0 })).toBeUndefined();
+		expect(settledTelemetry({ data: telemetry, error: null, failureCount: 0 })).toBe(telemetry);
+		expect(settledTelemetry({ data: undefined, error: null, failureCount: 1 })).toBeNull();
+		expect(settledTelemetry({ data: undefined, error: new Error("down"), failureCount: 3 })).toBeNull();
 	});
 });

@@ -16,7 +16,9 @@ import {
 	TimeChart,
 	trafficByType,
 } from "@/components/kelp/charts/index.ts";
-import { CapacityBar, Panel } from "@/components/kelp/page.tsx";
+import { CapacityBar, Panel, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { ChartGhost, KpiGhost, LoadingRegion, RowsGhost } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { formatBytes, formatCount, formatDateTime, formatPercent } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
 import { errorShare, nearQuota, quotaUsage, sizeColumns, sizeShares } from "./insights.ts";
@@ -25,13 +27,7 @@ import { errorShare, nearQuota, quotaUsage, sizeColumns, sizeShares } from "./in
  * The buckets page at a glance: totals and live S3 traffic, where the bytes are, which buckets
  * are busy and which are close to their quota.
  */
-export function BucketsDashboard({
-	buckets,
-	telemetry,
-}: {
-	buckets: Bucket[];
-	telemetry: Telemetry | undefined;
-}) {
+export function BucketsDashboard({ buckets, telemetry }: { buckets: Bucket[]; telemetry: Telemetry | null }) {
 	const live = Boolean(telemetry?.enabled);
 	const points = telemetry?.points ?? [];
 	const inventory = telemetry?.inventory ?? [];
@@ -149,9 +145,11 @@ export function BucketsDashboard({
 							center={
 								<>
 									<span className="font-rounded font-semibold text-[20px] leading-6 tracking-[-0.015em]">
-										{formatBytes(total)}
+										<RollingValue text={formatBytes(total)} />
 									</span>
-									<span className="text-[12px] text-muted-foreground">in {buckets.length} buckets</span>
+									<span className="text-[12px] text-muted-foreground">
+										<TextMorph>{`in ${buckets.length} buckets`}</TextMorph>
+									</span>
 								</>
 							}
 						/>
@@ -209,6 +207,46 @@ export function BucketsDashboard({
 	);
 }
 
+/** Stands where `BucketsDashboard` lands, assuming live metrics, which is the usual case. */
+export function BucketsDashboardGhost() {
+	return (
+		<div className="mb-8 space-y-3">
+			<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+				{[true, false, true, true, true, false].map((trend, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: ghosts have no identity.
+					<KpiGhost key={i} trend={trend} />
+				))}
+			</div>
+			<div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+				<Panel title="S3 traffic" description="Requests per second by request type" className="xl:col-span-8">
+					<ChartGhost height={220} />
+				</Panel>
+				<Panel title="Busiest buckets" description="Requests in this range" className="xl:col-span-4">
+					<RowsGhost rows={6} />
+				</Panel>
+			</div>
+			<div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+				<Panel title="Where the data is" description="Object data per bucket" className="xl:col-span-5">
+					<div className="flex items-center gap-6">
+						<SkeletonBlock className="size-[148px] shrink-0 rounded-full" />
+						<RowsGhost rows={5} className="min-w-0 flex-1" />
+					</div>
+				</Panel>
+				<Panel title="Quotas" description="Buckets with a quota, fullest first" className="xl:col-span-4">
+					<RowsGhost rows={4} className="space-y-7" />
+				</Panel>
+				<Panel
+					title="Object sizes"
+					description="Objects written since the filer started"
+					className="xl:col-span-3"
+				>
+					<SkeletonBlock className="h-[168px] rounded-md" />
+				</Panel>
+			</div>
+		</div>
+	);
+}
+
 /** Requests per second for one bucket, at each point of the range. */
 function bucketSeries(telemetry: Telemetry, bucket: string): Array<number | null> {
 	const found = telemetry.buckets.find((b) => b.bucket === bucket);
@@ -219,7 +257,7 @@ function bucketSeries(telemetry: Telemetry, bucket: string): Array<number | null
  * One bucket at a glance: how busy it is, how often requests fail, how full it is and everything
  * that governs it.
  */
-export function BucketDashboard({ bucket, telemetry }: { bucket: Bucket; telemetry: Telemetry | undefined }) {
+export function BucketDashboard({ bucket, telemetry }: { bucket: Bucket; telemetry: Telemetry | null }) {
 	const live = Boolean(telemetry?.enabled);
 	const traffic = telemetry?.buckets.find((b) => b.bucket === bucket.name);
 	const series = live && telemetry ? bucketSeries(telemetry, bucket.name) : [];
@@ -308,23 +346,69 @@ export function BucketDashboard({ bucket, telemetry }: { bucket: Bucket; telemet
 							: "Off"}
 					</Detail>
 					<Detail label="Lifecycle">
-						{bucket.lifecycle.rules
-							? `${bucket.lifecycle.enabled} of ${bucket.lifecycle.rules} rules active`
-							: "No rules"}
+						<TextMorph>
+							{bucket.lifecycle.rules
+								? `${bucket.lifecycle.enabled} of ${bucket.lifecycle.rules} rules active`
+								: "No rules"}
+						</TextMorph>
 					</Detail>
 					<Detail label="Policy">
-						{bucket.policyStatements
-							? `${bucket.policyStatements} ${bucket.policyStatements === 1 ? "statement" : "statements"}`
-							: "None"}
+						<TextMorph>
+							{bucket.policyStatements
+								? `${bucket.policyStatements} ${bucket.policyStatements === 1 ? "statement" : "statements"}`
+								: "None"}
+						</TextMorph>
 					</Detail>
-					{quota && (
-						<div className="px-4 py-3">
-							<CapacityBar used={bucket.logicalSize} total={bucket.quota.bytes} />
-						</div>
-					)}
+					{/* Every bucket has this row, so the sheet is one height before and after it loads. */}
+					<Detail label="Quota">
+						{quota ? (
+							<CapacityBar className="w-32" used={bucket.logicalSize} total={bucket.quota.bytes} />
+						) : (
+							<span className="text-muted-foreground">No limit</span>
+						)}
+					</Detail>
 				</dl>
 			</div>
 		</div>
+	);
+}
+
+const DETAILS = [
+	"Owner",
+	"Address",
+	"Created",
+	"On disk",
+	"Versioning",
+	"Object lock",
+	"Lifecycle",
+	"Policy",
+	"Quota",
+];
+
+/** Stands where `BucketDashboard` lands, assuming live metrics, which is the usual case. */
+export function BucketDashboardGhost() {
+	return (
+		<LoadingRegion label="Loading bucket" className="mb-8 space-y-3">
+			<div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+				{[true, false, false, false].map((trend, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: ghosts have no identity.
+					<KpiGhost key={i} trend={trend} className="pb-3" />
+				))}
+			</div>
+			<div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-12">
+				<Panel title="Traffic" description="S3 requests per second to this bucket" className="xl:col-span-8">
+					<ChartGhost height={200} legend={false} />
+				</Panel>
+				<div className="group-sheet divide-y divide-border text-[13px] xl:col-span-4">
+					{DETAILS.map((label) => (
+						<div key={label} className="flex min-h-10 items-center justify-between gap-4 px-4 py-2">
+							<span className="shrink-0 text-muted-foreground">{label}</span>
+							<SkeletonBlock className="h-3.5 w-24" />
+						</div>
+					))}
+				</div>
+			</div>
+		</LoadingRegion>
 	);
 }
 

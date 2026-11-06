@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { objectsApi } from "../../../../test/objects-fixtures.ts";
 import { choose } from "../../../../test/objects-helpers.ts";
 import { type ApiCall, renderApp, viewerUser } from "../../../../test/render-app.tsx";
@@ -127,6 +127,65 @@ describe("bucket page", () => {
 		);
 		for (const retry of screen.getAllByRole("button", { name: "Try again" })) fireEvent.click(retry);
 		expect(await screen.findAllByText("admin is unreachable")).toBeTruthy();
+	});
+});
+
+describe("bucket loading", () => {
+	const never = () => new Promise<never>(() => {});
+
+	test("the title, tabs and each tab's real structure stand while the bucket loads", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/media", { ...routes, "GET /buckets/media": never });
+		expect(await screen.findByRole("status", { name: "Loading bucket" })).toBeTruthy();
+		expect(screen.getByRole("heading", { name: "media" })).toBeTruthy();
+		expect((screen.getByRole("button", { name: "Delete bucket" }) as HTMLButtonElement).disabled).toBe(true);
+		expect(screen.getByRole("status", { name: "Loading folder" })).toBeTruthy();
+		for (const [tab, label] of [
+			["Settings", "Loading settings"],
+			["Lifecycle", "Loading lifecycle rules"],
+			["Policy", "Loading policy"],
+		] as const) {
+			fireEvent.click(screen.getByRole("tab", { name: tab }));
+			expect(await screen.findByRole("status", { name: label })).toBeTruthy();
+		}
+	});
+
+	test("nothing below the bucket is asked for until it is known to exist", async () => {
+		const { routes } = await objectsApi();
+		const app = renderApp("/buckets/media", { ...routes, "GET /buckets/media": never });
+		await screen.findByRole("status", { name: "Loading bucket" });
+		await settle();
+		expect(app.api.calls.some((call) => call.path === "/files/list")).toBe(false);
+	});
+
+	test("a telemetry failure does not hold the bucket back or call the metrics off early", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/media", {
+			...routes,
+			"GET /telemetry": () => Response.json({ error: "sampler down" }, { status: 500 }),
+		});
+		expect(await screen.findByText("Live metrics are off")).toBeTruthy();
+		expect(screen.queryByRole("radiogroup", { name: "Time range" })).toBeNull();
+	});
+
+	test("a bucket without a quota says so in its details", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/media", routes);
+		const details = await screen.findByLabelText("Bucket details");
+		expect(within(details).getByText("Quota")).toBeTruthy();
+		expect(within(details).getByText("No limit")).toBeTruthy();
+	});
+
+	test("lifecycle ghosts follow the bucket's own rule count", async () => {
+		const { routes } = await objectsApi();
+		for (const bucket of ["archive", "media"]) {
+			renderApp(`/buckets/${bucket}?tab=lifecycle`, {
+				...routes,
+				[`GET /buckets/${bucket}/lifecycle`]: never,
+			});
+			expect((await screen.findAllByRole("status", { name: "Loading lifecycle rules" })).length).toBe(1);
+			cleanup();
+		}
 	});
 });
 
@@ -286,6 +345,17 @@ describe("lifecycle tab", () => {
 				},
 			],
 		});
+	});
+
+	test("saving leaves the rows in place", async () => {
+		const { routes } = await objectsApi();
+		renderApp("/buckets/archive?tab=lifecycle", { ...routes, "PUT /buckets/archive/lifecycle": ok });
+		const row = (await screen.findByText("logs")).closest("li");
+		fireEvent.click(screen.getByRole("switch", { name: "Pause logs" }));
+		fireEvent.click(await screen.findByRole("button", { name: "Save rules" }));
+		expect(await screen.findByText("Lifecycle rules saved")).toBeTruthy();
+		await settle();
+		expect(screen.getByText("logs").closest("li")).toBe(row);
 	});
 
 	test("edits an existing rule and rejects duplicate names", async () => {

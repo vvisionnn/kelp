@@ -1,8 +1,11 @@
+import type { BucketPolicy } from "@shared/objects.ts";
 import { useQuery } from "@tanstack/react-query";
 import { FileJson, ShieldOff, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmDialog } from "@/components/kelp/confirm-dialog.tsx";
-import { ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { Loaded, Swap } from "@/components/kelp/transitions.tsx";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -16,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
+import { Appear } from "./appear.tsx";
 
 const VERSION = "2012-10-17";
 
@@ -111,11 +115,59 @@ export function parsePolicy(text: string): { policy: Record<string, unknown> } |
 
 const pretty = (value: unknown) => JSON.stringify(value, null, 2);
 
-export function PolicyEditor({ bucket }: { bucket: string }) {
+function EditorBar() {
+	return (
+		<div className="flex h-9 items-center gap-2 border-border border-b px-4 text-[12px] text-muted-foreground">
+			<FileJson className="size-3.5" />
+			<span className="font-mono">policy.json</span>
+		</div>
+	);
+}
+
+function PolicyGhost() {
 	const canWrite = useCanWrite();
-	const { data, isPending, error, refetch } = useQuery(objectQueries.policy(bucket));
-	const saved = data?.policy ? pretty(data.policy) : (data?.invalidText ?? "");
-	const [text, setText] = useState("");
+	return (
+		<LoadingRegion label="Loading policy" className="grid gap-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="max-w-prose flex-1 basis-80 space-y-1">
+					<SkeletonBlock className="my-0.5 h-4 w-full" />
+					<SkeletonBlock className="my-0.5 h-4 w-1/5" />
+				</div>
+				{canWrite && <SkeletonBlock className="h-8 w-44" />}
+			</div>
+			<div className="group-sheet overflow-hidden">
+				<EditorBar />
+				<div className="min-h-80 space-y-2.5 px-4 py-3">
+					{["w-16", "w-40", "w-32", "w-56", "w-44", "w-24"].map((width) => (
+						<SkeletonBlock key={width} className={`h-3.5 ${width}`} />
+					))}
+				</div>
+			</div>
+			{canWrite && <SkeletonBlock className="h-8 w-24" />}
+		</LoadingRegion>
+	);
+}
+
+export function PolicyEditor({
+	bucket,
+	ready = true,
+}: {
+	bucket: string;
+	/** False holds the policy back until the page knows the bucket exists. */
+	ready?: boolean;
+}) {
+	const policy = useQuery({ ...objectQueries.policy(bucket), enabled: ready });
+	return (
+		<Loaded query={policy} skeleton={<PolicyGhost />}>
+			{(data) => <PolicyForm key={bucket} bucket={bucket} data={data} />}
+		</Loaded>
+	);
+}
+
+function PolicyForm({ bucket, data }: { bucket: string; data: BucketPolicy }) {
+	const canWrite = useCanWrite();
+	const saved = data.policy ? pretty(data.policy) : (data.invalidText ?? "");
+	const [text, setText] = useState(saved);
 	useEffect(() => setText(saved), [saved]);
 	const parsed = useMemo(() => (text.trim() ? parsePolicy(text) : null), [text]);
 
@@ -130,9 +182,6 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 		invalidate: [objectKeys.bucket(bucket), objectKeys.buckets],
 	});
 
-	if (isPending) return <SkeletonBlock className="h-72 rounded-lg" />;
-	if (error) return <ErrorState error={error} onRetry={() => refetch()} />;
-
 	const hasPolicy = Boolean(data.policy || data.invalidText);
 	const dirty = text !== saved;
 	const problem = parsed && "problem" in parsed ? parsed.problem : null;
@@ -140,11 +189,13 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 	return (
 		<div className="grid gap-4">
 			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="max-w-prose text-muted-foreground text-sm">
-					{hasPolicy
-						? "This policy is checked on every S3 request to the bucket, alongside each identity's own permissions."
-						: "No bucket policy. Access comes only from each identity's own permissions."}
-				</p>
+				<Swap id={hasPolicy ? "policy" : "none"} className="max-w-prose flex-1 basis-80">
+					<p className="text-muted-foreground text-sm">
+						{hasPolicy
+							? "This policy is checked on every S3 request to the bucket, alongside each identity's own permissions."
+							: "No bucket policy. Access comes only from each identity's own permissions."}
+					</p>
+				</Swap>
 				{canWrite && (
 					<DropdownMenu>
 						<DropdownMenuTrigger render={<Button variant="outline" />}>
@@ -170,17 +221,14 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 				)}
 			</div>
 
-			{data.invalidText && (
+			<Appear show={Boolean(data.invalidText)}>
 				<p role="alert" className="rounded-lg bg-warning/10 px-4 py-2.5 text-[13px]">
 					SeaweedFS stored a policy it cannot read. Fix it below and save, or remove it.
 				</p>
-			)}
+			</Appear>
 
 			<div className="group-sheet overflow-hidden">
-				<div className="flex h-9 items-center gap-2 border-border border-b px-4 text-[12px] text-muted-foreground">
-					<FileJson className="size-3.5" />
-					<span className="font-mono">policy.json</span>
-				</div>
+				<EditorBar />
 				<Textarea
 					aria-label="Bucket policy JSON"
 					value={text}
@@ -190,11 +238,11 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 					className="min-h-80 resize-y rounded-none border-0 bg-transparent px-4 py-3 font-mono text-[13px] leading-relaxed shadow-none [font-variant-ligatures:none] dark:bg-transparent focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
 					onChange={(e) => setText(e.target.value)}
 				/>
-				{problem && (
+				<Appear show={Boolean(problem)} className="m-0 p-0">
 					<p role="alert" className="border-border border-t px-4 py-2.5 text-[12px] text-destructive">
 						{problem}
 					</p>
-				)}
+				</Appear>
 			</div>
 
 			{canWrite && (
@@ -206,15 +254,15 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 					>
 						Save policy
 					</Button>
-					{dirty && (
+					<Appear inline show={dirty}>
 						<Button variant="ghost" onClick={() => setText(saved)}>
 							Discard changes
 						</Button>
-					)}
-					{hasPolicy && (
+					</Appear>
+					<Appear inline show={hasPolicy} className="ml-auto">
 						<ConfirmDialog
 							trigger={
-								<Button variant="ghost" className="ml-auto text-destructive">
+								<Button variant="ghost" className="text-destructive">
 									<ShieldOff />
 									Remove policy
 								</Button>
@@ -225,7 +273,7 @@ export function PolicyEditor({ bucket }: { bucket: string }) {
 							destructive
 							onConfirm={() => remove.mutateAsync()}
 						/>
-					)}
+					</Appear>
 				</div>
 			)}
 		</div>

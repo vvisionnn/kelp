@@ -2,6 +2,7 @@ import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Appear } from "./appear.tsx";
 
 /** Why `name` is not a valid S3 bucket name, or null when it is. Mirrors the server's rules. */
 export function bucketNameProblem(name: string): string | null {
@@ -62,7 +63,7 @@ export function QuotaInput({
 					onCheckedChange={(enabled) => onChange({ ...value, enabled })}
 				/>
 			</div>
-			{value.enabled && (
+			<Appear show={value.enabled}>
 				<div className="flex gap-2">
 					<Input
 						aria-label="Quota size"
@@ -92,7 +93,7 @@ export function QuotaInput({
 						</SelectContent>
 					</Select>
 				</div>
-			)}
+			</Appear>
 		</div>
 	);
 }

@@ -1,11 +1,23 @@
 import type { FileEntry } from "@shared/objects.ts";
+import type { ReactNode } from "react";
 import { BarList, dataColor } from "@/components/kelp/charts/index.ts";
+import { SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { RollingValue, TextMorph } from "@/components/kelp/text-morph.tsx";
 import { formatBytes, formatCount, formatRelative } from "@/lib/format.ts";
 import { cn } from "@/lib/utils";
+import { Appear } from "./appear.tsx";
 import { folderStats } from "./insights.ts";
 
 /** Small folders show every file in the list already; ranking only helps past this many. */
 const LARGEST_AFTER = 10;
+
+/** Which panels a listing fills. Between folders of one shape, the numbers simply roll over. */
+export function summaryShape(entries: FileEntry[]): string {
+	if (entries.length === 0) return "none";
+	const { files } = folderStats(entries);
+	return files === 0 ? "counts" : files > LARGEST_AFTER ? "largest" : "types";
+}
 
 /**
  * What is in the folder being browsed: counts and bytes, what kinds of files take the space, and
@@ -24,17 +36,25 @@ export function FolderSummary({
 	const stats = folderStats(entries);
 	if (entries.length === 0) return null;
 	return (
-		<section aria-label="Folder summary" className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+		<section aria-label="Folder summary" className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
 			<dl className="group-sheet grid grid-cols-2 gap-x-4 gap-y-3 p-4 xl:col-span-4">
-				<Stat label="Folders" value={formatCount(stats.folders)} />
-				<Stat label="Files" value={formatCount(stats.files)} />
-				<Stat label="Size of files here" value={formatBytes(stats.bytes)} />
-				<Stat label="Last change" value={stats.newest ? formatRelative(stats.newest.modifiedAt) : "–"} />
-				{partial && (
-					<p className="col-span-full text-[12px] text-muted-foreground">
+				<Stat label="Folders">
+					<RollingValue text={formatCount(stats.folders)} />
+				</Stat>
+				<Stat label="Files">
+					<RollingValue text={formatCount(stats.files)} />
+				</Stat>
+				<Stat label="Size of files here">
+					<RollingValue text={formatBytes(stats.bytes)} />
+				</Stat>
+				<Stat label="Last change">
+					<TextMorph>{stats.newest ? formatRelative(stats.newest.modifiedAt) : "–"}</TextMorph>
+				</Stat>
+				<Appear show={partial} className="col-span-full">
+					<p className="text-[12px] text-muted-foreground">
 						Counts the first {formatCount(entries.length)} items; scroll the list to load more.
 					</p>
-				)}
+				</Appear>
 			</dl>
 			{stats.files > 0 && (
 				<>
@@ -80,13 +100,36 @@ export function FolderSummary({
 	);
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, children }: { label: string; children: ReactNode }) {
 	return (
 		<div className="min-w-0">
 			<dt className="text-[12px] text-muted-foreground">{label}</dt>
 			<dd className="truncate font-rounded font-semibold text-[20px] leading-6 tracking-[-0.015em]">
-				{value}
+				{children}
 			</dd>
 		</div>
+	);
+}
+
+/** Matches the summary's sheets. A folder holding only folders has just the counts. */
+export function FolderSummaryGhost({ foldersOnly }: { foldersOnly: boolean }) {
+	return (
+		<LoadingRegion label="Loading folder summary" className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
+			<div className="group-sheet grid min-h-[129px] grid-cols-2 gap-x-4 gap-y-3 p-4 xl:col-span-4">
+				{["Folders", "Files", "Size of files here", "Last change"].map((label) => (
+					<div key={label} className="min-w-0">
+						<p className="text-[12px] text-muted-foreground leading-[18px]">{label}</p>
+						<SkeletonBlock className="h-6 w-16" />
+					</div>
+				))}
+			</div>
+			{!foldersOnly && (
+				<div className="group-sheet p-4 xl:col-span-8">
+					<h3 className="mb-3 font-semibold text-[13px]">By type</h3>
+					<SkeletonBlock className="h-3.5 w-1/3" />
+					<SkeletonBlock className="mt-2 h-1.5 w-full" />
+				</div>
+			)}
+		</LoadingRegion>
 	);
 }
