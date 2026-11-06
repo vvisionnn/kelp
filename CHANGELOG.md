@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.6.0](https://github.com/vvisionnn/kelp/compare/v0.5.1...v0.6.0) - 2026-11-06
+
+### 🚀 Features
+
+- **web:** A docked sidebar that folds to an icon rail, and smoother motion for less work ([`2d9ac14`](https://github.com/vvisionnn/kelp/commit/2d9ac142c7b9b7f4d3ebacf6f5b5e82958822761))
+- **web:** A flat sidebar on a surface of its own, with a disk meter and the current page in indigo ([`709b520`](https://github.com/vvisionnn/kelp/commit/709b5208f2dff9971924e55ea50280dd6b9c19d0))
+- **web:** Roomy on large displays: a wider page column shared with the toolbar, more space between sheets ([`87e004e`](https://github.com/vvisionnn/kelp/commit/87e004e010dd99471bbd0578eda652f4691b01e5))
+
+### 🐛 Bug Fixes
+
+- **web:** Column chart labels no longer run into each other; the sheet light moves once a frame ([`c0889a3`](https://github.com/vvisionnn/kelp/commit/c0889a3ff2d506447241120870af2264c20a9804))
+- **web:** Users and Groups get distinct icons in the sidebar ([`494acee`](https://github.com/vvisionnn/kelp/commit/494aceeaf3c9c9b4d46586c6fd9f62e4c50109ca))
+- **web:** The theme previews in Settings draw the docked sidebar ([`011bd1b`](https://github.com/vvisionnn/kelp/commit/011bd1b76b250f97a3cfba4e9904e7d21b706a06))
+
+### ⚡ Performance
+
+- **server:** Send brotli or gzip copies of the build, compressed once at build time ([`7e849b8`](https://github.com/vvisionnn/kelp/commit/7e849b866be028ebf3075ff3718bead8ef6fe880))
+- **web:** First data on screen in half the time ([`1c48bbc`](https://github.com/vvisionnn/kelp/commit/1c48bbc8e5c169684abf5c04915e62db543ee390))
+- **web:** Route files export only their route, so pages' helpers leave the first download ([`5ad9edf`](https://github.com/vvisionnn/kelp/commit/5ad9edf40bd45c6e1804dafa6546e92743f75690))
+- **web:** Dialogs, sheets and the command menu open without dropping a frame ([`8c4b003`](https://github.com/vvisionnn/kelp/commit/8c4b0031587f5aa7efe206cd41c4ba0126c8a1bb))
+- **web:** Revisiting a page reads no layout: charts remember their width, the data grid reads dir from the attribute ([`c463891`](https://github.com/vvisionnn/kelp/commit/c463891ed914309d198ef72b1a5784d8fc9ffa6c))
+
+### 📚 Documentation
+
+- The performance budgets as measured on identical data ([`fcb2b19`](https://github.com/vvisionnn/kelp/commit/fcb2b19e605314f041897a6daedfc797292f2978))
 ## [0.5.1](https://github.com/vvisionnn/kelp/compare/v0.5.0...v0.5.1) - 2026-11-06
 
 ### 🐛 Bug Fixes
