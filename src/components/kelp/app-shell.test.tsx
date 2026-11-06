@@ -38,6 +38,13 @@ describe("app shell", () => {
 		expect(current.querySelector(".bg-accent\\/60")).toBeNull();
 	});
 
+	test("the sidebar says when the cluster can't be reached at all", async () => {
+		renderApp("/settings", {
+			"GET /overview": () => Response.json({ error: "SeaweedFS master is unreachable" }, { status: 400 }),
+		});
+		expect(await screen.findByText(/Can't reach the cluster/, {}, { timeout: 4000 })).toBeTruthy();
+	});
+
 	test("detail pages lead back to their list and name the item, not the raw URL segment", async () => {
 		const { routes, vacuumConfig } = await maintenanceApi();
 		renderApp("/maintenance/vacuum", routes);

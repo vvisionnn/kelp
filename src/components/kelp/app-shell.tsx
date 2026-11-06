@@ -63,20 +63,24 @@ function useDetailName(): string | undefined {
 }
 
 function ClusterStatus() {
-	const { data } = useQuery(queries.overview());
+	const { data, error } = useQuery(queries.overview());
 	const health = data ? healthSummary(data) : undefined;
-	const color = { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[health?.tone ?? "good"];
+	// With nothing loaded, a failed request means Kelp can't reach the cluster at all.
+	const unreachable = !data && Boolean(error);
+	const color = { good: "bg-success", warn: "bg-warning", bad: "bg-destructive" }[
+		unreachable ? "bad" : (health?.tone ?? "good")
+	];
 	return (
 		<span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
 			<span
 				className={cn(
 					"size-1.5 shrink-0 rounded-full transition-colors duration-500",
-					health ? color : "bg-tertiary",
+					health || unreachable ? color : "bg-tertiary",
 				)}
 			/>
 			<span className="truncate">
 				<TextMorph>
-					{`${health ? health.text.split(".")[0] : "Connecting"}${data ? `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}` : ""}`}
+					{`${health ? health.text.split(".")[0] : unreachable ? "Can't reach the cluster" : "Connecting"}${data ? `, SeaweedFS ${data.versions.version.split(" ")[0] || ""}` : ""}`}
 				</TextMorph>
 			</span>
 		</span>
