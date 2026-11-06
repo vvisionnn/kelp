@@ -39,7 +39,7 @@ export function Segmented<T extends string>({
 				textColor="var(--foreground)"
 				activeTextColor="var(--foreground)"
 				equalSlots={false}
-				className="shadow-none [&_[aria-hidden=true]]:shadow-[0_1px_3px_rgb(0_0_0/0.12)]"
+				className="w-max shadow-none [&_[aria-hidden=true]]:shadow-[0_1px_3px_rgb(0_0_0/0.12)]"
 			/>
 		</div>
 	);
