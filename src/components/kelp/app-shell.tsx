@@ -430,7 +430,7 @@ function Toolbar({
 				scrolled && "shadow-[0_1px_0_var(--border)]",
 			)}
 		>
-			<div className="flex h-13 items-center gap-1 px-4 xl:px-8">
+			<div className="page-column flex h-13 items-center gap-1">
 				<Button
 					variant="ghost"
 					size="icon"
@@ -571,10 +571,7 @@ export function AppShell() {
 					onShowSidebar={() => setSheetOpen(true)}
 					onSearch={() => command.setOpen(true)}
 				/>
-				<main
-					data-page=""
-					className="mx-auto flex w-full min-w-0 max-w-[1400px] flex-1 flex-col px-4 pb-16 xl:px-8"
-				>
+				<main data-page="" className="page-column flex w-full min-w-0 flex-1 flex-col pb-16 2xl:pb-24">
 					<Outlet />
 				</main>
 			</div>

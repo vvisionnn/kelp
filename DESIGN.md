@@ -202,7 +202,8 @@ Previews sit on a Raised surface with 12px radius. Images never bleed to the win
 ### Grid & Container
 
 - Window: the sidebar (240px, or the 56px rail) and the page, edge to edge.
-- Content column: 24px side padding (32px from 1280px), max width 1400px, left-aligned.
+- Content column (`page-column`, shared by the toolbar and the page so the breadcrumb stands over the title): up to 1760px, centered; side padding 16px, 32px from 1280px, 48px from 1536px, 64px from 1920px.
+- Roomy on large displays: from 1536px sheets in a page's grids sit 16px apart (20px from 1920px) and sections 40px apart, from one rule in `index.css` that skeletons share.
 - Overview and list pages use a 12-column grid with 16px gutters; widgets span 3, 4, 6 or 12 columns.
 
 ### Whitespace Philosophy
