@@ -165,8 +165,10 @@ function DataGridScrollArea({
     const container = containerRef.current
     if (!container) return
 
+    // Kelp: read the nearest dir attribute instead of the computed style. getComputedStyle in a
+    // layout effect forces a style pass over the whole page while it mounts, on every table.
     const readDirection = () => {
-      const next = getComputedStyle(container).direction === "rtl"
+      const next = container.closest("[dir]")?.getAttribute("dir") === "rtl"
       setIsLayoutRtl((prev) => (prev === next ? prev : next))
     }
 

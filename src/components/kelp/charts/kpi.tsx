@@ -61,7 +61,7 @@ export function Kpi({
 
 /** A full-width sparkline along the bottom of a stat tile, sized to the tile. */
 function KpiTrend({ values, color, label }: { values: Array<number | null>; color: string; label: string }) {
-	const [ref, width] = useWidth<HTMLDivElement>(160);
+	const [ref, width] = useWidth<HTMLDivElement>(160, `kpi:${label}`);
 	return (
 		<div ref={ref} className="mt-3 -mb-1 min-w-0 overflow-hidden">
 			<Sparkline

@@ -38,7 +38,7 @@ export function Columns({
 	label: string;
 	className?: string;
 }) {
-	const [ref, width] = useWidth<HTMLDivElement>();
+	const [ref, width] = useWidth<HTMLDivElement>(600, label);
 	const [active, setActive] = useState<number | null>(null);
 	const glided = useTween(
 		columns.map((c) => c.value),

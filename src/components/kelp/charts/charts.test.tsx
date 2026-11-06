@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { makeTelemetry } from "../../../../test/telemetry-fixtures.ts";
 import {
@@ -187,6 +187,27 @@ describe("other charts", () => {
 		fireEvent.focus(screen.getByRole("button", { name: "large: 0" }));
 		fireEvent.blur(screen.getByRole("button", { name: "large: 0" }));
 		expect(screen.queryByText("4")).toBeNull();
+	});
+
+	test("a chart shown again draws at the width it had, without measuring the page first", () => {
+		const real = HTMLElement.prototype.getBoundingClientRect;
+		HTMLElement.prototype.getBoundingClientRect = () => ({ width: 321 }) as DOMRect;
+		const columns = [{ label: "a", value: 1 }];
+		const first = render(<Columns label="Remembered width" columns={columns} />);
+		expect(first.container.querySelector("svg")?.getAttribute("width")).toBe("321");
+		first.unmount();
+		const measured = mock(() => ({ width: 0 }) as DOMRect);
+		HTMLElement.prototype.getBoundingClientRect = measured;
+		try {
+			const again = render(<Columns label="Remembered width" columns={columns} />);
+			expect(again.container.querySelector("svg")?.getAttribute("width")).toBe("321");
+			expect(measured).not.toHaveBeenCalled();
+			again.unmount();
+			const other = render(<Columns label="Never shown" columns={columns} />);
+			expect(other.container.querySelector("svg")?.getAttribute("width")).toBe("600");
+		} finally {
+			HTMLElement.prototype.getBoundingClientRect = real;
+		}
 	});
 
 	test("long column labels thin out instead of running into each other", () => {

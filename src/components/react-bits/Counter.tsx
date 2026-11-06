@@ -1,4 +1,5 @@
-// From React Bits (https://reactbits.dev), MIT + Commons Clause. Vendored unmodified unless noted.
+// From React Bits (https://reactbits.dev), MIT + Commons Clause. Vendored unmodified unless noted:
+// digit widths are measured from the ResizeObserver (see the measuring layout effect).
 'use client';
 
 import {
@@ -494,9 +495,11 @@ function Counter({
       e.widths = [...row.children].map(child => child.getBoundingClientRect().width);
       e.em = parseFloat(getComputedStyle(root).fontSize) || 16;
     };
-    measure();
-    document.fonts?.ready?.then(measure).catch(() => {});
+    // Kelp: measured by the observer's first callback (after layout, before paint) rather than
+    // here, where reading geometry would force the whole page to lay out while it mounts. A web
+    // font arriving later resizes the row, which the observer also sees.
     if (typeof ResizeObserver === 'undefined') {
+      measure();
       return () => {
         alive = false;
       };

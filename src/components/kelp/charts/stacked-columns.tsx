@@ -46,7 +46,7 @@ export function StackedColumns({
 	empty?: string;
 	className?: string;
 }) {
-	const [ref, width] = useWidth<HTMLDivElement>();
+	const [ref, width] = useWidth<HTMLDivElement>(600, label);
 	const [active, setActive] = useState<number | null>(null);
 	const totals = columns.map((c) => series.reduce((sum, s) => sum + (c.values[s.key] ?? 0), 0));
 	const max = Math.max(0, ...totals);
