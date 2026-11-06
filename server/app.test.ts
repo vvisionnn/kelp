@@ -189,4 +189,11 @@ describe("static UI", () => {
 		expect(page.headers.get("content-type")).toContain("text/html");
 		expect(await page.text()).toContain("<title>Kelp</title>");
 	});
+
+	test("a missing build file is a 404, not the app page, so an outdated tab can tell it needs reloading", async () => {
+		const response = await makeApp().request("/assets/tables-0ld.js");
+		expect(response.status).toBe(404);
+		expect(response.headers.get("content-type")).not.toContain("text/html");
+		expect(response.headers.get("cache-control")).toBe("no-store");
+	});
 });

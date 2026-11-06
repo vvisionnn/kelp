@@ -113,6 +113,14 @@ async function serveStatic(dir: string, path: string): Promise<Response> {
 			});
 		}
 	}
+	// A build file that isn't here belongs to an older or newer build. Answering with the app page
+	// would hand a script request HTML; a plain 404 lets the open tab see it needs to reload.
+	if (path.startsWith("/assets/")) {
+		return new Response("Not found", {
+			status: 404,
+			headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+		});
+	}
 	return new Response(Bun.file(join(root, "index.html")), {
 		headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" },
 	});

@@ -1,6 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import { NotFound } from "./components/kelp/not-found.tsx";
+import { RouteError } from "./components/kelp/route-error.tsx";
 import { ApiError } from "./lib/api.ts";
 import { routeTree } from "./routeTree.gen.ts";
 
@@ -27,6 +28,7 @@ export function createAppRouter(queryClient: QueryClient, history?: RouterHistor
 		context: { queryClient },
 		defaultPreload: "intent",
 		defaultNotFoundComponent: NotFound,
+		defaultErrorComponent: RouteError,
 		defaultPreloadStaleTime: 0,
 		scrollRestoration: true,
 		// Moving between pages crossfades the page area (see index.css); filters and tabs in the URL stay put.
