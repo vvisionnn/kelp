@@ -346,10 +346,16 @@ Motion is only worth having if it runs at the display's rate. These rules come f
 
 Budgets, measured with `bun scripts/perf-profile.ts` against a production build (`--cpu 4 --network 4g` for a slow laptop or phone on mobile data):
 
-| Measure                                             | Budget   | v0.5.1   | v0.6   |
-| --------------------------------------------------- | -------- | -------- | ------ |
-| Overview data on screen, cold, 4× CPU + 4G          | ≤ 2 s    | 3.2 s    | 1.6 s  |
-| Overview data on screen, cold, unthrottled          | ≤ 300 ms | 537 ms   | 116 ms |
-| Bytes on a first visit (compressed)                 | ≤ 450 KB | 1,466 KB | 437 KB |
-| Frames over 20 ms during a page change, unthrottled | ≤ 5%     | ~25%     | ~2%    |
-| Frames over 20 ms while scrolling, 4× CPU           | ≤ 5%     | 15%      | ≤ 4%   |
+| Measure (median of repeated runs, same data)          | Budget   | v0.5.1   | v0.6      |
+| ----------------------------------------------------- | -------- | -------- | --------- |
+| Overview data on screen, cold, 4× CPU + 4G            | ≤ 2 s    | 1,979 ms | 1,451 ms  |
+| Overview data on screen, cold, 4G                     |          | 1,754 ms | 1,183 ms  |
+| Overview data on screen, cold, Wi-Fi (50 Mbit, 20 ms) | ≤ 300 ms | 382 ms   | 282 ms    |
+| Code on a first visit (JS, CSS, fonts, compressed)    | ≤ 450 KB | 1,270 KB | 399 KB    |
+| Frames over 20 ms during interactions, unthrottled    | ≤ 1%     | 2.5%     | 0.6%      |
+| Frames over 20 ms during interactions, 4× CPU         | ≤ 5%     | 6.4%     | 4.6%      |
+| Frames over 20 ms during a page change, unthrottled   | ≤ 5%     | 1.8%     | 1.9%      |
+| Frames over 20 ms while scrolling, 4× CPU             | ≤ 5%     | 0%       | 1%        |
+| Click to painted page on a revisit, unthrottled       | ≤ 100 ms | 63–90 ms | 80–100 ms |
+
+Compare builds on the same data: telemetry lives in each server's memory, so a server that has run longer draws more points and looks slower. `bun scripts/interaction-profile.ts` measures everyday interactions; the overview's switch to a full 1h range (240 samples) is the heaviest, 144 ms at 4× CPU in both builds.
