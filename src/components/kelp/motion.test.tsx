@@ -74,14 +74,23 @@ describe("Loaded", () => {
 test("Swap crossfades to the view its id names, hiding the leaving one from assistive tech", async () => {
 	setMedia("(prefers-reduced-motion: reduce)", false);
 	MotionGlobalConfig.skipAnimations = false;
+	try {
+		const { rerender, unmount } = render(<Swap id="a">first</Swap>);
+		rerender(<Swap id="b">second</Swap>);
+		// Mid-fade, both views share the cell; only the arriving one is reachable.
+		const leaving = screen.getByText("first");
+		expect(leaving.getAttribute("aria-hidden")).toBe("true");
+		expect(leaving.hasAttribute("inert")).toBe(true);
+		expect(screen.getByText("second").hasAttribute("aria-hidden")).toBe(false);
+		unmount();
+	} finally {
+		MotionGlobalConfig.skipAnimations = true;
+	}
+	// With motion off the swap is immediate.
 	const { rerender } = render(<Swap id="a">first</Swap>);
 	rerender(<Swap id="b">second</Swap>);
-	const leaving = screen.getByText("first");
-	expect(leaving.getAttribute("aria-hidden")).toBe("true");
-	expect(leaving.hasAttribute("inert")).toBe(true);
-	MotionGlobalConfig.skipAnimations = true;
-	expect(screen.getByText("second")).toBeTruthy();
-	await waitFor(() => expect(screen.queryByText("first")).toBeNull());
+	await settle();
+	expect(screen.queryByText("first")).toBeNull();
 });
 
 test("the skeleton kit names what is loading", () => {
@@ -155,10 +164,7 @@ describe("tweens", () => {
 			try {
 				rerender({ to: [10] });
 				expect(result.current).toEqual([5]);
-				await act(async () => {
-					await new Promise((resolve) => setTimeout(resolve, 120));
-				});
-				expect(result.current[0]).toBeCloseTo(10);
+				await waitFor(() => expect(result.current[0]).toBeCloseTo(10));
 			} finally {
 				restore();
 			}
