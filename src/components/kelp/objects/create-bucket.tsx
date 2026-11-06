@@ -2,7 +2,6 @@ import type { ObjectLockMode } from "@shared/objects.ts";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { type FormEvent, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useAction } from "@/lib/mutations.ts";
 import { objectApi, objectKeys, objectQueries } from "@/lib/objects-queries.ts";
+import { Appear } from "./appear.tsx";
 import {
 	bucketNameProblem,
 	QuotaInput,
@@ -205,60 +205,48 @@ export function CreateBucketDialog() {
 							</label>
 							<Switch id={`${id}-lock`} checked={lock} onCheckedChange={setLock} />
 						</div>
-						<AnimatePresence initial={false}>
-							{lock && (
-								<motion.div
-									initial={{ height: 0, opacity: 0 }}
-									animate={{ height: "auto", opacity: 1 }}
-									exit={{ height: 0, opacity: 0 }}
-									transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-									className="grid gap-3 overflow-hidden"
+						<Appear show={lock}>
+							<div className="grid gap-3">
+								<RadioGroup
+									aria-label="Lock mode"
+									value={mode}
+									onValueChange={(value) => setMode(value as ObjectLockMode)}
+									className="grid gap-2"
 								>
-									<RadioGroup
-										aria-label="Lock mode"
-										value={mode}
-										onValueChange={(value) => setMode(value as ObjectLockMode)}
-										className="grid gap-2"
-									>
-										{LOCK_MODES.map((option) => (
-											<label
-												key={option.value}
-												htmlFor={`${id}-${option.value}`}
-												className="flex cursor-pointer items-start gap-3 rounded-md border p-2.5 has-data-checked:border-primary/50 has-data-checked:bg-primary/5"
-											>
-												<RadioGroupItem
-													id={`${id}-${option.value}`}
-													value={option.value}
-													className="mt-0.5"
-												/>
-												<span className="grid gap-0.5">
-													<span className="font-medium text-sm">{option.label}</span>
-													<span className="text-muted-foreground text-xs">{option.description}</span>
-												</span>
-											</label>
-										))}
-									</RadioGroup>
-									<Field>
-										<FieldLabel htmlFor={`${id}-retention`}>Default retention (days)</FieldLabel>
-										<Input
-											id={`${id}-retention`}
-											type="number"
-											min={1}
-											inputMode="numeric"
-											className="tabular"
-											placeholder="None"
-											value={retention ?? ""}
-											onChange={(event) =>
-												setRetention(event.target.value === "" ? null : event.target.valueAsNumber)
-											}
-										/>
-										<FieldDescription>
-											New objects are protected this long. Leave empty to set it per object.
-										</FieldDescription>
-									</Field>
-								</motion.div>
-							)}
-						</AnimatePresence>
+									{LOCK_MODES.map((option) => (
+										<label
+											key={option.value}
+											htmlFor={`${id}-${option.value}`}
+											className="flex cursor-pointer items-start gap-3 rounded-md border p-2.5 has-data-checked:border-primary/50 has-data-checked:bg-primary/5"
+										>
+											<RadioGroupItem id={`${id}-${option.value}`} value={option.value} className="mt-0.5" />
+											<span className="grid gap-0.5">
+												<span className="font-medium text-sm">{option.label}</span>
+												<span className="text-muted-foreground text-xs">{option.description}</span>
+											</span>
+										</label>
+									))}
+								</RadioGroup>
+								<Field>
+									<FieldLabel htmlFor={`${id}-retention`}>Default retention (days)</FieldLabel>
+									<Input
+										id={`${id}-retention`}
+										type="number"
+										min={1}
+										inputMode="numeric"
+										className="tabular"
+										placeholder="None"
+										value={retention ?? ""}
+										onChange={(event) =>
+											setRetention(event.target.value === "" ? null : event.target.valueAsNumber)
+										}
+									/>
+									<FieldDescription>
+										New objects are protected this long. Leave empty to set it per object.
+									</FieldDescription>
+								</Field>
+							</div>
+						</Appear>
 					</div>
 
 					<DialogFooter>

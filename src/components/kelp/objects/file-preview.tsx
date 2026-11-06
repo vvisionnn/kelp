@@ -1,9 +1,13 @@
 import type { FileDetails } from "@shared/objects.ts";
 import { useQuery } from "@tanstack/react-query";
 import { Download, FileQuestion, Plus, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
 import { CopyButton } from "@/components/kelp/copy-button.tsx";
-import { ErrorState, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { EASE, SPEED, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { SkeletonBlock } from "@/components/kelp/page.tsx";
+import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
+import { Loaded } from "@/components/kelp/transitions.tsx";
 import { FileType, getFileType } from "@/components/reui/file-type";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +17,8 @@ import { formatBytes, formatDateTime } from "@/lib/format.ts";
 import { useAction } from "@/lib/mutations.ts";
 import { contentUrl, objectApi, objectKeys, objectQueries, s3Url } from "@/lib/objects-queries.ts";
 import { useCanWrite } from "@/lib/session.ts";
+import { cn } from "@/lib/utils";
+import { Appear } from "./appear.tsx";
 
 /** Bytes of a text file Kelp loads for preview. */
 export const TEXT_PREVIEW_BYTES = 256 * 1024;
@@ -86,7 +92,7 @@ export function formatTtl(seconds: number): string {
 
 function TextPreview({ file }: { file: FileDetails }) {
 	const complete = file.size <= TEXT_PREVIEW_BYTES;
-	const { data, isPending, error } = useQuery({
+	const text = useQuery({
 		queryKey: [...objectKeys.entry(file.path), "text", file.modifiedAt],
 		queryFn: async () => {
 			const response = await fetch(contentUrl(file.path), {
@@ -96,18 +102,72 @@ function TextPreview({ file }: { file: FileDetails }) {
 			return response.text();
 		},
 	});
-	if (isPending) return <SkeletonBlock className="h-48 rounded-lg" />;
-	if (error) return <ErrorState error={error} />;
 	return (
-		<div className="grid gap-2">
-			<pre className="max-h-[50svh] overflow-auto rounded-md bg-card p-4 font-mono text-[12px] leading-relaxed [font-variant-ligatures:none]">
-				{formatText(data, file.name, complete)}
-			</pre>
-			{!complete && (
-				<p className="text-muted-foreground text-xs">
-					Showing the first {formatBytes(TEXT_PREVIEW_BYTES)} of {formatBytes(file.size)}.
-				</p>
+		<Loaded
+			query={{ data: text.data, error: text.error }}
+			skeleton={<SkeletonBlock className="h-48 rounded-lg" />}
+		>
+			{(data) => (
+				<div className="grid gap-2">
+					<pre className="max-h-[50svh] overflow-auto rounded-md bg-card p-4 font-mono text-[12px] leading-relaxed [font-variant-ligatures:none]">
+						{formatText(data, file.name, complete)}
+					</pre>
+					{!complete && (
+						<p className="text-muted-foreground text-xs">
+							Showing the first {formatBytes(TEXT_PREVIEW_BYTES)} of {formatBytes(file.size)}.
+						</p>
+					)}
+				</div>
 			)}
+		</Loaded>
+	);
+}
+
+/** The space media takes before and after it loads, so the sheet below never jumps. */
+const STAGE: Partial<Record<PreviewKind, string>> = {
+	image: "h-[50svh] min-h-56",
+	video: "h-[50svh] min-h-56",
+	pdf: "h-[60svh]",
+	text: "h-48",
+};
+
+/**
+ * Media loads in its own time: a ghost holds the stage, then the picture sharpens out of a blur.
+ * A file that fails to load shows through too, with the browser's own broken state.
+ */
+function MediaStage({
+	className,
+	children,
+}: {
+	className: string | undefined;
+	children: (onReady: () => void) => ReactNode;
+}) {
+	const reduced = usePrefersReducedMotion();
+	const [ready, setReady] = useState(false);
+	const blurred = reduced ? { opacity: 0 } : { opacity: 0, filter: "blur(10px)" };
+	const sharp = reduced
+		? { opacity: 1 }
+		: { opacity: 1, filter: "blur(0px)", transitionEnd: { filter: "none" } };
+	return (
+		<div className={cn("grid grid-rows-[minmax(0,1fr)] *:col-start-1 *:row-start-1", className)}>
+			<AnimatePresence initial={false}>
+				{!ready && (
+					<motion.div
+						className="kelp-skeleton-in"
+						exit={{ opacity: 0, transition: { duration: reduced ? 0 : SPEED.base } }}
+					>
+						<SkeletonBlock className="size-full rounded-md" />
+					</motion.div>
+				)}
+			</AnimatePresence>
+			<motion.div
+				className="flex min-h-0 min-w-0 items-center justify-center"
+				initial={false}
+				animate={ready ? sharp : blurred}
+				transition={{ duration: reduced ? 0 : SPEED.slow, ease: EASE }}
+			>
+				{children(() => setReady(true))}
+			</motion.div>
 		</div>
 	);
 }
@@ -118,18 +178,36 @@ function Preview({ file }: { file: FileDetails }) {
 	switch (kind) {
 		case "image":
 			return (
-				<div className="flex min-w-0 justify-center">
-					<img
-						src={src}
-						alt={file.name}
-						className="max-h-[50svh] min-w-0 max-w-full rounded-md bg-[repeating-conic-gradient(var(--muted)_0_25%,var(--card)_0_50%)] bg-[length:16px_16px] object-contain shadow-(--float-shadow)"
-					/>
-				</div>
+				<MediaStage className={STAGE.image}>
+					{(onReady) => (
+						<img
+							// A cached image has finished before React can listen for `load`.
+							ref={(image) => {
+								if (image?.complete && image.naturalWidth > 0) onReady();
+							}}
+							src={src}
+							alt={file.name}
+							onLoad={onReady}
+							onError={onReady}
+							className="max-h-full min-w-0 max-w-full rounded-md bg-[repeating-conic-gradient(var(--muted)_0_25%,var(--card)_0_50%)] bg-[length:16px_16px] object-contain shadow-(--float-shadow)"
+						/>
+					)}
+				</MediaStage>
 			);
 		case "video":
 			return (
-				// biome-ignore lint/a11y/useMediaCaption: stored files have no caption track to offer.
-				<video src={src} controls className="max-h-[50svh] w-full rounded-md bg-black" />
+				<MediaStage className={STAGE.video}>
+					{(onReady) => (
+						// biome-ignore lint/a11y/useMediaCaption: stored files have no caption track to offer.
+						<video
+							src={src}
+							controls
+							onLoadedMetadata={onReady}
+							onError={onReady}
+							className="max-h-full w-full rounded-md bg-black"
+						/>
+					)}
+				</MediaStage>
 			);
 		case "audio":
 			return (
@@ -137,7 +215,13 @@ function Preview({ file }: { file: FileDetails }) {
 				<audio src={src} controls className="w-full" />
 			);
 		case "pdf":
-			return <iframe src={src} title={file.name} className="h-[60svh] w-full rounded-md bg-white" />;
+			return (
+				<MediaStage className={STAGE.pdf}>
+					{(onReady) => (
+						<iframe src={src} title={file.name} onLoad={onReady} className="size-full rounded-md bg-white" />
+					)}
+				</MediaStage>
+			);
 		case "text":
 			return <TextPreview file={file} />;
 		default:
@@ -219,7 +303,7 @@ function TagsEditor({ file }: { file: FileDetails }) {
 						<Plus />
 						Add tag
 					</Button>
-					{dirty && (
+					<Appear inline show={dirty}>
 						<Button
 							size="sm"
 							disabled={!keysValid || save.isPending}
@@ -228,7 +312,7 @@ function TagsEditor({ file }: { file: FileDetails }) {
 						>
 							Save tags
 						</Button>
-					)}
+					</Appear>
 					{!keysValid && (
 						<span className="text-destructive text-xs">Keys use letters, numbers and hyphens.</span>
 					)}
@@ -241,7 +325,7 @@ function TagsEditor({ file }: { file: FileDetails }) {
 function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string | null | undefined }) {
 	const url = s3Url(s3Endpoint, file.path);
 	return (
-		<div className="grid grid-cols-[minmax(0,1fr)] gap-5 px-4 pb-6">
+		<div className="grid grid-cols-[minmax(0,1fr)] gap-5">
 			<div className="rounded-xl bg-raised p-3 dark:bg-card">
 				<Preview file={file} />
 			</div>
@@ -376,14 +460,38 @@ function Details({ file, s3Endpoint }: { file: FileDetails; s3Endpoint: string |
 	);
 }
 
+/** Stands where `Details` lands: the preview's stage, the download button and the properties. */
+function DetailsGhost({ name }: { name: string }) {
+	const kind = previewKind({ name, mime: "", isDirectory: false });
+	return (
+		<LoadingRegion label="Loading file" className="grid grid-cols-[minmax(0,1fr)] gap-5">
+			<div className="rounded-xl bg-raised p-3 dark:bg-card">
+				<SkeletonBlock className={cn("rounded-md", STAGE[kind] ?? "h-36")} />
+			</div>
+			<SkeletonBlock className="h-8 w-28" />
+			<section>
+				<h3 className="mb-1.5 px-1 font-semibold text-[13px]">Properties</h3>
+				<dl className="group-sheet divide-y divide-border">
+					{["Path", "Size", "Type", "Modified", "Created", "Expires", "Permissions"].map((label) => (
+						<Property key={label} label={label}>
+							<SkeletonBlock className="my-0.5 h-3.5 w-3/5" />
+						</Property>
+					))}
+				</dl>
+			</section>
+		</LoadingRegion>
+	);
+}
+
 /** Side sheet with a preview, properties and tags for one file. */
 export function FilePreviewSheet({ path, onClose }: { path: string | null; onClose: () => void }) {
-	const { data, isPending, error, refetch } = useQuery({
-		...objectQueries.entry(path ?? ""),
-		enabled: path !== null,
-	});
+	// The sheet slides away showing the file it had, not an empty one.
+	const [shown, setShown] = useState(path);
+	if (path !== null && path !== shown) setShown(path);
+	const file = path ?? shown;
+	const entry = useQuery({ ...objectQueries.entry(file ?? ""), enabled: path !== null });
 	const { data: s3Endpoint } = useQuery(objectQueries.s3Endpoint());
-	const name = path?.slice(path.lastIndexOf("/") + 1) ?? "";
+	const name = file?.slice(file.lastIndexOf("/") + 1) ?? "";
 	return (
 		<Sheet open={path !== null} onOpenChange={(open) => !open && onClose()}>
 			<SheetContent className="w-full gap-0 overflow-x-hidden overflow-y-auto sm:max-w-xl">
@@ -391,21 +499,12 @@ export function FilePreviewSheet({ path, onClose }: { path: string | null; onClo
 					<FileType type={getFileType(name)} size="sm" aria-hidden="true" />
 					<div className="min-w-0">
 						<SheetTitle className="truncate">{name}</SheetTitle>
-						<SheetDescription className="truncate font-mono text-xs">{path}</SheetDescription>
+						<SheetDescription className="truncate font-mono text-xs">{file}</SheetDescription>
 					</div>
 				</SheetHeader>
-				{isPending ? (
-					<div className="grid gap-3 px-4">
-						<SkeletonBlock className="h-56 rounded-xl" />
-						<SkeletonBlock className="h-40 rounded-lg" />
-					</div>
-				) : error ? (
-					<div className="px-4">
-						<ErrorState error={error} onRetry={() => refetch()} />
-					</div>
-				) : (
-					<Details file={data} s3Endpoint={s3Endpoint} />
-				)}
+				<Loaded query={entry} className="px-4 pb-6" skeleton={<DetailsGhost name={name} />}>
+					{(data) => <Details file={data} s3Endpoint={s3Endpoint} />}
+				</Loaded>
 			</SheetContent>
 		</Sheet>
 	);

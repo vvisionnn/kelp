@@ -3,6 +3,8 @@ import { CircleAlert, CircleCheck, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { EASE, SPEED, SPRING, usePrefersReducedMotion } from "@/components/kelp/motion.ts";
+import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Button } from "@/components/ui/button";
 import { formatBytes } from "@/lib/format.ts";
 import { joinPath, objectKeys, uploadFile } from "@/lib/objects-queries.ts";
@@ -81,22 +83,25 @@ export function useUploads() {
 export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: () => void }) {
 	const finished = uploads.filter((u) => u.status === "done").length;
 	const busy = uploads.some((u) => u.status === "uploading" || u.status === "queued");
+	const reduced = usePrefersReducedMotion();
 	return (
 		<AnimatePresence>
 			{uploads.length > 0 && (
 				<motion.section
 					aria-label="Uploads"
-					initial={{ opacity: 0, y: 16, scale: 0.98 }}
+					initial={reduced ? false : { opacity: 0, y: 16, scale: 0.98 }}
 					animate={{ opacity: 1, y: 0, scale: 1 }}
-					exit={{ opacity: 0, y: 16, scale: 0.98 }}
-					transition={{ type: "spring", stiffness: 380, damping: 32 }}
+					exit={reduced ? { opacity: 0, transition: { duration: 0 } } : { opacity: 0, y: 16, scale: 0.98 }}
+					transition={SPRING}
 					className="fixed right-4 bottom-4 z-40 w-80 overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-(--float-shadow)"
 				>
 					<header className="flex h-11 items-center justify-between gap-2 border-border border-b px-4">
 						<p className="font-semibold text-[13px]">
-							{busy
-								? `Uploading ${finished} of ${uploads.length}`
-								: `${finished} of ${uploads.length} uploaded`}
+							<TextMorph>
+								{busy
+									? `Uploading ${finished} of ${uploads.length}`
+									: `${finished} of ${uploads.length} uploaded`}
+							</TextMorph>
 						</p>
 						{!busy && (
 							<Button variant="ghost" size="icon-xs" aria-label="Close uploads" onClick={onClear}>
@@ -137,7 +142,7 @@ export function UploadTray({ uploads, onClear }: { uploads: Upload[]; onClear: (
 													: "h-full rounded-full bg-primary"
 											}
 											animate={{ width: `${upload.progress * 100}%` }}
-											transition={{ ease: "easeOut", duration: 0.2 }}
+											transition={{ ease: EASE, duration: reduced ? 0 : SPEED.fast }}
 										/>
 									</div>
 								)}
