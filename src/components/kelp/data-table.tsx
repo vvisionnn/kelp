@@ -16,7 +16,7 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
-import { EASE, SPEED } from "./motion.ts";
+import { ARRIVAL_MS, EASE, SPEED } from "./motion.ts";
 import { ErrorState } from "./page.tsx";
 import { TextMorph } from "./text-morph.tsx";
 import { Swap } from "./transitions.tsx";
@@ -76,7 +76,10 @@ export function DataTable<T extends object>({
 	bulkActions,
 }: DataTableProps<T>) {
 	const [query, setQuery] = useState("");
+	// Rows rise only when they replace this table's own skeleton, for the length of that entrance;
+	// a revisit with cached rows, paging and sorting leave them still.
 	const sawLoading = useRef(false);
+	const landedAt = useRef<number | null>(null);
 	const [sorting, setSorting] = useState<SortingState>(initialSorting);
 	const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize });
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -143,14 +146,15 @@ export function DataTable<T extends object>({
 	if (error && !data) return <ErrorState error={error} {...(onRetry ? { onRetry } : {})} />;
 
 	const showEmpty = !isLoading && data !== undefined && data.length === 0;
-	// Rows rise only when they replace this table's own skeleton, not on a revisit with cached rows.
 	if (isLoading) sawLoading.current = true;
+	else if (sawLoading.current && landedAt.current === null) landedAt.current = performance.now();
+	const rising = landedAt.current !== null && performance.now() - landedAt.current < ARRIVAL_MS;
 	// The skeleton matches what was here last time, so the page keeps its height when data lands.
 	const rowMemory = `${window.location.pathname}:${columns.length}`;
 	if (!isLoading && data) knownRows.set(rowMemory, Math.min(rows.length, pagination.pageSize));
 
 	return (
-		<div className="space-y-3" data-arrived={sawLoading.current ? "" : undefined}>
+		<div className="space-y-3" data-arrived={rising ? "" : undefined}>
 			{(searchText || toolbar) && (
 				<div className="flex flex-wrap items-center gap-2">
 					{searchText && (

@@ -32,7 +32,7 @@ function Arrival({ arriving, children }: { arriving: boolean; children: ReactNod
 	}, [on]);
 	return (
 		<ArrivalContext.Provider value={on}>
-			<div data-arrived={arriving ? "" : undefined} className="contents">
+			<div data-arrived={on ? "" : undefined} className="contents">
 				{children}
 			</div>
 		</ArrivalContext.Provider>

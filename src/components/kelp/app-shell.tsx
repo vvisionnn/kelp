@@ -239,15 +239,19 @@ function ThemeSwitch() {
 			onClick={() => setTheme(next)}
 			className="text-muted-foreground hover:text-foreground"
 		>
-			<motion.span
-				key={resolvedTheme}
-				initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
-				animate={{ rotate: 0, opacity: 1, scale: 1 }}
-				transition={{ type: "spring", stiffness: 400, damping: 22 }}
-				className="flex"
-			>
-				{resolvedTheme === "dark" ? <Moon /> : <Sun />}
-			</motion.span>
+			{/* The icon turns when the theme changes, not when the page loads. */}
+			<AnimatePresence initial={false} mode="popLayout">
+				<motion.span
+					key={resolvedTheme}
+					initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+					animate={{ rotate: 0, opacity: 1, scale: 1 }}
+					exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+					transition={{ type: "spring", stiffness: 400, damping: 22 }}
+					className="flex"
+				>
+					{resolvedTheme === "dark" ? <Moon /> : <Sun />}
+				</motion.span>
+			</AnimatePresence>
 		</Button>
 	);
 }
