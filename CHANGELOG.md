@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.6.3](https://github.com/vvisionnn/kelp/compare/v0.6.2...v0.6.3) - 2026-11-07
+
+### 📦 Packaging
+
+- The image ships without source maps ([`45d7e30`](https://github.com/vvisionnn/kelp/commit/45d7e3060bf85d6d8145f43a3c20d986d279608b))
 ## [0.6.2](https://github.com/vvisionnn/kelp/compare/v0.6.1...v0.6.2) - 2026-11-07
 
 ### 🐛 Bug Fixes
