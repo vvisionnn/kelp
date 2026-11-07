@@ -5,8 +5,8 @@ import { ArrowLeft, Eraser, HardDrive, Lock, LockOpen } from "lucide-react";
 import { BarList, dataColor } from "@/components/kelp/charts/index.ts";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
-	AuroraCard,
 	EmptyState,
+	FeatureSheet,
 	InfoList,
 	PageHeader,
 	Section,
@@ -284,7 +284,7 @@ function VolumeDetail({
 			/>
 			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<Section title="Fill" className="mt-0 min-w-0 lg:col-span-8">
-					<AuroraCard className="p-4">
+					<FeatureSheet className="p-4">
 						<SheetCaption
 							title={
 								<span className="metric text-[20px]">
@@ -303,9 +303,9 @@ function VolumeDetail({
 								limit={inventory.volumeSizeLimitBytes}
 							/>
 						</div>
-					</AuroraCard>
+					</FeatureSheet>
 					{volume.replicas.length > 1 && (
-						<AuroraCard className="mt-3 p-4">
+						<FeatureSheet className="mt-3 p-4">
 							<SheetCaption title="Copies compared">
 								Copies that drift apart are still catching up
 							</SheetCaption>
@@ -320,7 +320,7 @@ function VolumeDetail({
 									display: formatBytes(r.size),
 								}))}
 							/>
-						</AuroraCard>
+						</FeatureSheet>
 					)}
 				</Section>
 				<Section title="Details" className="mt-0 lg:col-span-4">
@@ -383,7 +383,7 @@ function VolumeSkeleton({ canWrite }: { canWrite: boolean }) {
 			<StatsGhost className="[&>:nth-child(-n+2)]:pb-[18px]" />
 			<div className="mt-8 grid items-start gap-x-6 gap-y-8 lg:grid-cols-12">
 				<Section title="Fill" className="mt-0 min-w-0 lg:col-span-8">
-					<AuroraCard className="p-4">
+					<FeatureSheet className="p-4">
 						<div className="flex h-[30px] items-center justify-between gap-4">
 							<SkeletonBlock className="h-6 w-24" />
 							<SkeletonBlock className="h-3 w-36" />
@@ -397,7 +397,7 @@ function VolumeSkeleton({ canWrite }: { canWrite: boolean }) {
 								</div>
 							))}
 						</div>
-					</AuroraCard>
+					</FeatureSheet>
 				</Section>
 				<Section title="Details" className="mt-0 lg:col-span-4">
 					<InfoList

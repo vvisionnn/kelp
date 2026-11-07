@@ -5,8 +5,8 @@ import { ArrowLeft, Blocks } from "lucide-react";
 import { useMemo } from "react";
 import { type Column, DataTable } from "@/components/kelp/data-table.tsx";
 import {
-	AuroraCard,
 	EmptyState,
+	FeatureSheet,
 	PageHeader,
 	Section,
 	SkeletonBlock,
@@ -191,7 +191,7 @@ function EcDetail({ ec }: { ec: EcVolume }) {
 						: `${plural(ec.totalShards, "shard")}. Hover a shard to see where it lives.`
 				}
 			>
-				<AuroraCard className="space-y-4 overflow-x-auto p-4">
+				<FeatureSheet className="space-y-4 overflow-x-auto p-4">
 					<ShardMap ec={ec} palette={palette} size="lg" />
 					<ServerLegend
 						palette={palette}
@@ -199,7 +199,7 @@ function EcDetail({ ec }: { ec: EcVolume }) {
 						showMissing={ec.missingShards.length > 0}
 						showParity={ec.dataShards > 0}
 					/>
-				</AuroraCard>
+				</FeatureSheet>
 			</Section>
 			<Section title="Servers" description="Where each shard is stored.">
 				<DataTable
@@ -220,7 +220,7 @@ function EcVolumeSkeleton() {
 		<LoadingRegion label="Loading">
 			<StatsGhost />
 			<Section title="Shard map" description="Hover a shard to see where it lives.">
-				<AuroraCard className="space-y-4 overflow-x-auto p-4">
+				<FeatureSheet className="space-y-4 overflow-x-auto p-4">
 					<div className="flex flex-wrap items-end gap-4">
 						{[10, 4].map((shards) => (
 							<div key={shards}>
@@ -237,7 +237,7 @@ function EcVolumeSkeleton() {
 						))}
 					</div>
 					<SkeletonBlock className="h-[18px] w-80 max-w-full max-sm:h-10" />
-				</AuroraCard>
+				</FeatureSheet>
 			</Section>
 			<Section title="Servers" description="Where each shard is stored.">
 				<Frozen>

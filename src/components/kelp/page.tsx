@@ -223,7 +223,7 @@ export function StatBand({
 }
 
 /** A featured sheet for the one visual a page is about (a chart, a map, a gauge). */
-export function AuroraCard({ children, className }: { children: ReactNode; className?: string }) {
+export function FeatureSheet({ children, className }: { children: ReactNode; className?: string }) {
 	return <div className={cn("group-sheet relative overflow-hidden", className)}>{children}</div>;
 }
 

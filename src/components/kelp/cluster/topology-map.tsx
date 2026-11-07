@@ -1,7 +1,7 @@
 import type { TopologyDataCenter } from "@shared/api.ts";
 import { useQuery } from "@tanstack/react-query";
 import { Server } from "lucide-react";
-import { AuroraCard, CapacityBar, SkeletonBlock } from "@/components/kelp/page.tsx";
+import { CapacityBar, FeatureSheet, SkeletonBlock } from "@/components/kelp/page.tsx";
 import { LoadingRegion } from "@/components/kelp/skeletons.tsx";
 import { TextMorph } from "@/components/kelp/text-morph.tsx";
 import { Loaded } from "@/components/kelp/transitions.tsx";
@@ -24,7 +24,7 @@ export function TopologyMap() {
 function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
 	const racks = dataCenters.reduce((sum, dc) => sum + dc.racks.length, 0);
 	return (
-		<AuroraCard className="p-4">
+		<FeatureSheet className="p-4">
 			<div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
 				<h2 className="font-semibold text-[13px]">Topology</h2>
 				<p className="text-[12px] text-muted-foreground">
@@ -70,7 +70,7 @@ function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
 					</section>
 				))}
 			</div>
-		</AuroraCard>
+		</FeatureSheet>
 	);
 }
 
@@ -78,7 +78,7 @@ function Topology({ dataCenters }: { dataCenters: TopologyDataCenter[] }) {
 function TopologySkeleton() {
 	return (
 		<LoadingRegion label="Loading topology">
-			<AuroraCard className="p-4">
+			<FeatureSheet className="p-4">
 				<div className="flex items-baseline justify-between gap-4">
 					<h2 className="font-semibold text-[13px]">Topology</h2>
 					<SkeletonBlock className="h-3 w-32" />
@@ -101,7 +101,7 @@ function TopologySkeleton() {
 						</div>
 					</div>
 				</div>
-			</AuroraCard>
+			</FeatureSheet>
 		</LoadingRegion>
 	);
 }
