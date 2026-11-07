@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here. Versions follow [Semantic Versioning](https://semver.org).
 
+## [0.6.2](https://github.com/vvisionnn/kelp/compare/v0.6.1...v0.6.2) - 2026-11-07
+
+### 🐛 Bug Fixes
+
+- **web:** The sidebar's current-page tint glides with the page instead of jumping ([`f650f95`](https://github.com/vvisionnn/kelp/commit/f650f9502c2633fdb58683a7d77c29e5b233a231))
+- **web:** Tables no longer crashes after Files when an S3 endpoint is set ([`e5bc632`](https://github.com/vvisionnn/kelp/commit/e5bc6321d1d2ba1aa4b9fc4b27be1a7a8b5ce1df))
+- **web:** The sidebar's current row changes without flashing ([`ac21f00`](https://github.com/vvisionnn/kelp/commit/ac21f0090f11603e199d0a3723398afd3947425a))
 ## [0.6.1](https://github.com/vvisionnn/kelp/compare/v0.6.0...v0.6.1) - 2026-11-06
 
 ### 🐛 Bug Fixes
