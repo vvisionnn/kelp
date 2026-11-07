@@ -32,10 +32,18 @@ describe("app shell", () => {
 		const overview = within(pages).getByRole("link", { name: "Overview" });
 		fireEvent.pointerEnter(overview);
 		await waitFor(() => expect(overview.querySelector(".bg-accent\\/60")).toBeTruthy());
+		expect(overview.querySelector(".bg-accent\\/60")?.parentElement?.classList.contains("opacity-0")).toBe(
+			false,
+		);
+		// On the current page the tint is there but invisible, so on arrival it fades under the pill.
 		const current = within(pages).getByRole("link", { name: "Nodes" });
 		fireEvent.pointerEnter(current);
-		await waitFor(() => expect(overview.querySelector(".bg-accent\\/60")).toBeNull());
-		expect(current.querySelector(".bg-accent\\/60")).toBeNull();
+		await waitFor(() => expect(current.querySelector(".bg-accent\\/60")).toBeTruthy());
+		expect(current.querySelector(".bg-accent\\/60")?.parentElement?.classList.contains("opacity-0")).toBe(
+			true,
+		);
+		fireEvent.pointerLeave(pages);
+		await waitFor(() => expect(current.querySelector(".bg-accent\\/60")).toBeNull());
 	});
 
 	test("the sidebar says when the cluster can't be reached at all", async () => {

@@ -257,18 +257,28 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 													aria-current={active ? "page" : undefined}
 													className="group/nav relative isolate flex h-8 items-center gap-2.5 rounded-lg px-3 text-[13px] text-foreground/75 transition-colors hover:text-foreground active:scale-[0.98] data-active:font-medium data-active:text-foreground"
 												>
-													<AnimatePresence>
-														{hovered === item.to && !active && (
-															<motion.span
-																layoutId="sidebar-hover"
-																className="absolute inset-0 -z-10 rounded-lg bg-accent/60"
-																initial={{ opacity: 0 }}
-																animate={{ opacity: 1 }}
-																exit={{ opacity: 0 }}
-																transition={SPRING}
-															/>
+													{/* The hover tint fades out under the arriving pill with a CSS transition, which
+													    starts once the new page is on screen; a JS fade would play out while the page
+													    change freezes the screen and leave the row blank for a moment. */}
+													<span
+														className={cn(
+															"absolute inset-0 -z-10 transition-opacity duration-300",
+															active && "opacity-0",
 														)}
-													</AnimatePresence>
+													>
+														<AnimatePresence>
+															{hovered === item.to && (
+																<motion.span
+																	layoutId="sidebar-hover"
+																	className="absolute inset-0 rounded-lg bg-accent/60"
+																	initial={{ opacity: 0 }}
+																	animate={{ opacity: 1 }}
+																	exit={{ opacity: 0 }}
+																	transition={SPRING}
+																/>
+															)}
+														</AnimatePresence>
+													</span>
 													{active && (
 														// The current page rests on a flat tint of the brand indigo. The page change
 														// moves it (a view-transition name, see index.css), not a JS spring: the
@@ -279,11 +289,15 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 															className="absolute inset-0 -z-10 rounded-lg bg-[var(--nav-current)] shadow-[var(--nav-current-shadow)]"
 														/>
 													)}
-													<item.icon
-														className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/nav:text-foreground group-data-active/nav:text-[var(--nav-current-icon)]"
-														strokeWidth={1.75}
-													/>
-													<span className={fade}>{item.title}</span>
+													{/* Icon and words take part in the page change above the moving pill, so they
+													    cross-fade to their new colour and never sit under it. */}
+													<span data-nav-label="" className="flex min-w-0 items-center gap-2.5">
+														<item.icon
+															className="size-4 shrink-0 text-muted-foreground transition-colors group-hover/nav:text-foreground group-data-active/nav:text-[var(--nav-current-icon)]"
+															strokeWidth={1.75}
+														/>
+														<span className={fade}>{item.title}</span>
+													</span>
 												</Link>
 											</RailTip>
 										</li>

@@ -402,8 +402,23 @@ aside [data-nav-current] {
 	view-transition-name: nav-current;
 }
 ::view-transition-group(nav-current) {
+	z-index: 1;
 	animation-duration: 0.34s;
 	animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Every row's icon and words ride above the pill (a pill drawn over text tints it, and the text
+   would visibly brighten when the pill lands), cross-fading to their new colour and weight. */
+aside [data-nav-label] {
+	view-transition-name: match-element;
+	view-transition-class: nav-label;
+}
+::view-transition-group(*.nav-label) {
+	z-index: 2;
+	animation-duration: 0.34s;
+}
+::view-transition-old(*.nav-label),
+::view-transition-new(*.nav-label) {
+	animation-duration: 0.34s;
 }
 ::view-transition-old(nav-current) {
 	animation: none;
@@ -425,7 +440,8 @@ html[data-transition="theme"] {
 	view-transition-name: root;
 }
 html[data-transition="theme"] [data-page],
-html[data-transition="theme"] [data-nav-current] {
+html[data-transition="theme"] [data-nav-current],
+html[data-transition="theme"] [data-nav-label] {
 	view-transition-name: none;
 }
 html[data-transition="theme"]::view-transition-old(root) {
