@@ -395,6 +395,23 @@ html:not([data-transition="theme"])::view-transition {
 		transform: translateY(10px);
 	}
 }
+/* The sidebar's current-page tint glides to the new page in the same transition, on the
+   compositor, starting once the new page is ready, so none of the move is lost to the frozen frame.
+   Only the docked sidebar carries the name (the sheet closes as you navigate). */
+aside [data-nav-current] {
+	view-transition-name: nav-current;
+}
+::view-transition-group(nav-current) {
+	animation-duration: 0.34s;
+	animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-old(nav-current) {
+	animation: none;
+	opacity: 0;
+}
+::view-transition-new(nav-current) {
+	animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
 	::view-transition-group(*),
 	::view-transition-old(*),
@@ -407,7 +424,8 @@ html:not([data-transition="theme"])::view-transition {
 html[data-transition="theme"] {
 	view-transition-name: root;
 }
-html[data-transition="theme"] [data-page] {
+html[data-transition="theme"] [data-page],
+html[data-transition="theme"] [data-nav-current] {
 	view-transition-name: none;
 }
 html[data-transition="theme"]::view-transition-old(root) {

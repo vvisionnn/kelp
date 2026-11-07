@@ -1,5 +1,5 @@
 import { type QueryClient, useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Outlet, useMatches, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { Link, Outlet, useMatches, useNavigate, useRouter } from "@tanstack/react-router";
 import { ChevronRight, ChevronsUpDown, LogOut, Monitor, Moon, PanelLeft, Search, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { lazy, type ReactElement, type ReactNode, Suspense, useEffect, useState } from "react";
@@ -45,6 +45,15 @@ declare module "@tanstack/react-router" {
 /** Whether `pathname` belongs to the nav item at `to` (the overview only matches itself). */
 export function isActivePath(pathname: string, to: string): boolean {
 	return to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(`${to}/`);
+}
+
+/**
+ * The path of the page on screen. Not `location.pathname`: the router sets that as soon as a
+ * navigation starts, before the new page renders, so the sidebar and breadcrumb would change a
+ * moment ahead of the page and outside its transition. Matches are committed with the page.
+ */
+function useShownPath(): string {
+	return useMatches({ select: (matches) => matches.at(-1)?.pathname.replace(/(.)\/$/, "$1") ?? "/" });
 }
 
 /** The deepest route with a title: it names the page and, on detail pages, the item. */
@@ -173,7 +182,7 @@ function SidebarCapacity({ rail, onNavigate }: { rail: boolean; onNavigate?: (()
  * brand tile and the avatar sit on one vertical line, so folding to the rail only hides the words.
  */
 function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; rail?: boolean }) {
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const pathname = useShownPath();
 	const current = itemFor(pathname);
 	const status = useClusterStatus();
 	const [hovered, setHovered] = useState<string | null>(null);
@@ -261,11 +270,13 @@ function SidebarBody({ onNavigate, rail = false }: { onNavigate?: () => void; ra
 														)}
 													</AnimatePresence>
 													{active && (
-														// The current page rests on a flat tint of the brand indigo.
-														<motion.span
-															layoutId="sidebar-active"
+														// The current page rests on a flat tint of the brand indigo. The page change
+														// moves it (a view-transition name, see index.css), not a JS spring: the
+														// screen is frozen while the new page renders, and a spring started then
+														// shows up already halfway, as a jump.
+														<span
+															data-nav-current=""
 															className="absolute inset-0 -z-10 rounded-lg bg-[var(--nav-current)] shadow-[var(--nav-current-shadow)]"
-															transition={SPRING}
 														/>
 													)}
 													<item.icon
@@ -415,7 +426,7 @@ function Toolbar({
 	rail: boolean;
 	onSearch: () => void;
 }) {
-	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const pathname = useShownPath();
 	const leaf = useLeaf();
 	const item = itemFor(pathname);
 	const detail = useDetailName();
