@@ -164,6 +164,7 @@ src/            React 19, TanStack Router and Query, Tailwind 4, Base UI, motion
   lib/          API client, queries and formatting
 fixtures/       Real responses captured from SeaweedFS 4.52, used by the unit tests
 e2e/            Playwright specs
+DESIGN.md       Kelp's design system: color, type, components, layout and motion
 scripts/        Local stack, seed data, review environment, releases
 ```
 
