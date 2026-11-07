@@ -73,7 +73,7 @@
 }
 
 /*
- * Kelp design system (see DESIGN.md): a calm instrument. Monochrome canvas and sheets, one
+ * Kelp's design system: a calm instrument. Monochrome canvas and sheets, one
  * interaction color (Tide), status colors only for state, identity tiles for pages.
  */
 :root {
@@ -128,7 +128,7 @@
 	/* The current page: a flat tint of the brand indigo, the one color in the sidebar's rows. */
 	--nav-current: rgb(85 82 224 / 0.09);
 	--nav-current-shadow: none;
-	/* The x.ai spectrum: the one gradient, for meters and the brand moments. */
+	/* The spectrum: the one gradient, for meters and the brand moments. */
 	--spectrum: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #f97316, #eab308);
 	--radius: 0.75rem;
 }
@@ -486,7 +486,7 @@ html[data-transition="theme"]::view-transition-new(root) {
 	font-variant-numeric: tabular-nums;
 }
 
-/* Rounded tabular numerals for metrics, like Apple widgets. */
+/* Rounded tabular numerals for metrics. */
 @utility metric {
 	font-family: var(--font-rounded);
 	font-variant-numeric: tabular-nums;

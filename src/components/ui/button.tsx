@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 import { Spinner } from "@/components/ui/spinner"
 
-// Kelp: compact rounded rectangles for a dense console, Tide for the primary action; see DESIGN.md.
+// Kelp: compact rounded rectangles for a dense console, Tide for the primary action.
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-[color,background-color,box-shadow,opacity,transform] duration-150 outline-none select-none active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {

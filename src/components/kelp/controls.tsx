@@ -4,7 +4,7 @@ import RubberSegment from "@/components/react-bits/RubberSegment.tsx";
 import { cn } from "@/lib/utils";
 
 /**
- * Kelp's segmented control (DESIGN.md): a raised track with a thumb that springs between
+ * Kelp's segmented control: a raised track with a thumb that springs between
  * segments. Use it for filters and view switches; each segment is a radio for assistive tech.
  */
 export function Segmented<T extends string>({

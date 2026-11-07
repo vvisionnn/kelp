@@ -20,7 +20,7 @@
   <img src="docs/screenshots/overview-light.png" alt="Kelp overview: live S3 traffic, latency, capacity and the busiest buckets">
 </picture>
 
-Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: a calm design of its own (see [DESIGN.md](DESIGN.md)), live charts sampled from SeaweedFS's own metrics, sign-in with read-only accounts, safer destructive actions, light and dark themes, a command menu (⌘K) and a sidebar that folds to icons (⌘B), and pages that explain what they show.
+Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: a calm design of its own, live charts sampled from SeaweedFS's own metrics, sign-in with read-only accounts, safer destructive actions, light and dark themes, a command menu (⌘K) and a sidebar that folds to icons (⌘B), and pages that explain what they show.
 
 ## What you can do
 
@@ -142,7 +142,7 @@ bun run dev        # Kelp API on :3001 and Vite on :5173, signed in as admin / k
 bun run seed       # optional: a realistic studio's buckets, users, tables and topics
 ```
 
-`bun run review` does all of that in one step on a fresh data folder, with a message broker and light synthetic S3 traffic for the charts. It serves a production build on port 3000 (admin `review-admin`, viewer `review-viewer`). The README's screenshots come from it: after about 15 minutes of traffic, `bun scripts/screenshots.ts` captures every page in light and dark.
+`bun run review` does all of that in one step on a fresh data folder, with a message broker and light synthetic S3 traffic for the charts. It serves a production build on port 3000 (admin `review-admin`, viewer `review-viewer`).
 
 | Command                 | What it checks                                                                                                         |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -164,8 +164,7 @@ src/            React 19, TanStack Router and Query, Tailwind 4, Base UI, motion
   lib/          API client, queries and formatting
 fixtures/       Real responses captured from SeaweedFS 4.52, used by the unit tests
 e2e/            Playwright specs
-DESIGN.md       Kelp's design system: color, type, components, layout and motion
-scripts/        Local stack, seed data, review environment, profiling, screenshots, releases
+scripts/        Local stack, seed data, review environment, releases
 ```
 
 ### Releasing

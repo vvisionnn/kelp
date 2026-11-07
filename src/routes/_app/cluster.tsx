@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_app/cluster")({
 	component: ClusterPage,
 });
 
-/** Tabs drawn as a segmented control (DESIGN.md), scrolling sideways on narrow screens. */
+/** Tabs drawn as a segmented control, scrolling sideways on narrow screens. */
 const SEGMENTED_TABS = "mb-4 h-8 max-w-full justify-start overflow-x-auto rounded-lg bg-secondary p-0.5";
 const SEGMENT =
 	"h-7 flex-none rounded-md px-3 text-[13px] text-foreground/80 data-active:bg-[var(--thumb)] data-active:text-foreground data-active:shadow-[0_1px_3px_rgb(0_0_0/0.12)]";

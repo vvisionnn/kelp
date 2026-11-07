@@ -13,7 +13,6 @@
 			"!coverage",
 			"!**/*.lock",
 			"!CHANGELOG.md",
-			"!DESIGN-preview.html",
 			"!src/routeTree.gen.ts",
 			"!src/components/ui",
 			"!src/components/reui",

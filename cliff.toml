@@ -41,16 +41,29 @@ protect_breaking_commits = true
 filter_commits = false
 tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-.+)?$"
 sort_commits = "oldest"
+# The changelog is for people running Kelp: what changed in the product. How it was built (tests,
+# CI, docs, tooling, dev data, merges) stays in the git history.
+commit_preprocessors = [
+  { pattern = '^feat\(design\): \S+-informed color.*', replace = "feat(design): A new color system: monochrome actions, spectrum accents and a colorblind-safe data palette; quiet sidebar icons" },
+  { pattern = '^feat\(design\): \S+-grade dashboard foundation', replace = "feat(design): A dashboard foundation: grouped sheets, rounded metrics and a calmer shell" },
+  { pattern = '^feat: one-command review environment[^;]*; non-blocking', replace = "feat: Non-blocking" },
+  { pattern = '; shared pickSegment test helper', replace = "" },
+  { pattern = ', e2e for segmented controls', replace = "" },
+  { pattern = ' from doubling for search and tests', replace = " from being read twice" },
+  { pattern = ', and shift failures name what moved', replace = "" },
+  { pattern = '^perf\(web\): route files export only their route.*', replace = "perf(web): A smaller first download: each page's code arrives with the page" },
+  { pattern = '^perf\(web\): revisiting a page reads no layout.*', replace = "perf(web): Revisited pages draw at once, at their final size" },
+]
 commit_parsers = [
   { message = "^chore\\(release\\)", skip = true },
-  { message = "^chore\\(deps.*\\)", group = "<!-- 7 -->📦 Dependencies" },
+  { message = "^fix\\(seaweedfs\\): (format the LKG file|close compatibility issues)", skip = true },
+  { message = "^fix: track .env.example", skip = true },
+  { message = "^\\w+\\((seed|review|deps)\\)", skip = true },
+  { message = "^(test|ci|docs?|refactor|chore|style)", skip = true },
   { message = "^feat", group = "<!-- 0 -->🚀 Features" },
   { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
   { message = "^perf", group = "<!-- 2 -->⚡ Performance" },
-  { message = "^refactor", group = "<!-- 3 -->♻️ Refactoring" },
-  { message = "^doc", group = "<!-- 4 -->📚 Documentation" },
-  { message = "^test", group = "<!-- 5 -->🧪 Tests" },
-  { message = "^(ci|build)", group = "<!-- 6 -->⚙️ CI & Build" },
-  { message = "^(chore|style)", group = "<!-- 8 -->🧹 Chores" },
+  { message = "^build", group = "<!-- 3 -->📦 Packaging" },
   { body = ".*security", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = ".*", skip = true },
 ]
