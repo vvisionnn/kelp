@@ -71,6 +71,11 @@ try {
 	});
 	check("maintenance worker registered", workerJoined);
 
+	// The image ships the built app only: no source maps, which would publish the source.
+	const entry = (await (await fetch(kelp)).text()).match(/\/assets\/index-[\w-]+\.js/)?.[0];
+	const map = entry ? await fetch(`${kelp}${entry}.map`) : undefined;
+	check("no source maps served", Boolean(entry) && map?.status === 404, String(map?.status));
+
 	const s3 = new S3Client({
 		accessKeyId: env.S3_ACCESS_KEY,
 		secretAccessKey: env.S3_SECRET_KEY,

@@ -67,7 +67,8 @@ export default defineConfig({
 	},
 	build: {
 		outDir: "dist",
-		sourcemap: true,
+		// Maps stay on the build machine for debugging; bundles don't point to them and the image drops them.
+		sourcemap: "hidden",
 		rolldownOptions: {
 			output: {
 				// Libraries in a few files of their own: fewer requests on a first visit, and they stay

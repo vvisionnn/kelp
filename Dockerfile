@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY . .
-RUN bun run routes && bun run build && bun run build:server
+RUN bun run routes && bun run build && bun run build:server && find dist -name "*.map*" -delete
 
 FROM oven/bun:${BUN_VERSION}-slim
 WORKDIR /app
