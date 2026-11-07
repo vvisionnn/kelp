@@ -13,21 +13,13 @@ import type {
 } from "@shared/maintenance.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "./api.ts";
+import { type SystemConfig, systemConfigQuery } from "./system-config.ts";
+
+export type { SystemConfig };
 
 /** Maintenance changes on a scale of seconds; keep it live without hammering the admin. */
 const LIVE = 10_000;
 const FEED = 5_000;
-
-export interface SystemConfig {
-	masterAddress: string;
-	dataDir: string;
-	maintenanceEnabled: boolean;
-	maintenanceRunning: boolean;
-	cacheExpiration: string;
-	filerCacheExpiration: string;
-	s3PublicEndpoint: string;
-	kelp: { version: string; s3Endpoint: string | null };
-}
 
 export interface JobFilters {
 	jobType?: string | undefined;
@@ -97,11 +89,7 @@ export const maintenanceQueries = {
 			queryFn: async () => (await api.get<{ runs: JobRun[] }>(`/maintenance/job-types/${jobType}/runs`)).runs,
 			refetchInterval: LIVE,
 		}),
-	systemConfig: () =>
-		queryOptions({
-			queryKey: ["system", "config"],
-			queryFn: () => api.get<SystemConfig>("/system/config"),
-		}),
+	systemConfig: systemConfigQuery,
 	kelpSettings: () =>
 		queryOptions({
 			queryKey: ["system", "kelp"],

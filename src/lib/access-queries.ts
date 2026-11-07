@@ -1,6 +1,7 @@
 import type { IamGroup, IamPolicy, IamUser, ServiceAccount } from "@shared/iam.ts";
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "./api.ts";
+import { s3EndpointQuery } from "./system-config.ts";
 
 /** Every Access query lives under this key, so one invalidation refreshes the whole area. */
 export const ACCESS_KEY = ["iam"] as const;
@@ -46,13 +47,7 @@ export const accessQueries = {
 				(await api.get<{ policy: IamPolicy }>(`/iam/policies/${encodeURIComponent(name)}`)).policy,
 		}),
 	/** Where S3 clients connect, for the environment snippet shown with new keys. */
-	s3Endpoint: () =>
-		queryOptions({
-			queryKey: [...ACCESS_KEY, "s3-endpoint"],
-			queryFn: async () =>
-				(await api.get<{ kelp: { s3Endpoint: string | null } }>("/system/config")).kelp.s3Endpoint,
-			staleTime: 5 * 60_000,
-		}),
+	s3Endpoint: s3EndpointQuery,
 	principals: () =>
 		queryOptions({
 			queryKey: [...ACCESS_KEY, "principals"],

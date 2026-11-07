@@ -2,6 +2,7 @@ import type { MessagingOverview, TopicDetail } from "@shared/messaging.ts";
 import type { TableBucketDetail, TableBucketList, TableDetail, TablePreview } from "@shared/tables.ts";
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { api } from "./api.ts";
+import { systemConfigQuery } from "./system-config.ts";
 
 const LIVE = 15_000;
 
@@ -28,12 +29,7 @@ export const streamsQueries = {
 			refetchInterval: LIVE,
 		}),
 	/** Kelp's own settings; the S3 endpoint tells engines where the Iceberg catalog lives. */
-	kelpEndpoints: () =>
-		queryOptions({
-			queryKey: ["system", "config"],
-			queryFn: () => api.get<{ kelp: { s3Endpoint: string | null } }>("/system/config"),
-			staleTime: 5 * 60_000,
-		}),
+	kelpEndpoints: () => queryOptions({ ...systemConfigQuery(), staleTime: 5 * 60_000 }),
 	tableBuckets: () =>
 		queryOptions({
 			queryKey: ["tables", "buckets"],

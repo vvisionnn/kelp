@@ -9,6 +9,7 @@ import type {
 } from "@shared/objects.ts";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { ApiError, api, UNAUTHORIZED_EVENT } from "./api.ts";
+import { s3EndpointQuery } from "./system-config.ts";
 
 const LIVE = 15_000;
 const PAGE_SIZE = 200;
@@ -66,13 +67,7 @@ export const objectQueries = {
 			queryFn: () => api.get<FileDetails>("/files/entry", { path }),
 		}),
 	/** Kelp's public S3 endpoint, used to build object URLs. */
-	s3Endpoint: () =>
-		queryOptions({
-			queryKey: ["system", "config"],
-			queryFn: async () =>
-				(await api.get<{ kelp: { s3Endpoint: string | null } }>("/system/config")).kelp.s3Endpoint,
-			staleTime: 5 * 60_000,
-		}),
+	s3Endpoint: s3EndpointQuery,
 };
 
 export const objectApi = {
