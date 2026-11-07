@@ -15,14 +15,18 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/vvisionnn/kelp?color=0e7a6d" alt="MIT license"></a>
 </p>
 
-![Kelp overview: live S3 traffic, latency, capacity and the busiest buckets](docs/screenshots/overview.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/overview-dark.png">
+  <img src="docs/screenshots/overview-light.png" alt="Kelp overview: live S3 traffic, latency, capacity and the busiest buckets">
+</picture>
 
-Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: an Apple-grade dashboard design of its own (see [DESIGN.md](DESIGN.md)), sign-in with read-only accounts, safer destructive actions, skeleton loading, light and dark themes, and pages that explain what they show.
+Kelp manages a SeaweedFS cluster without changing it. It drives the native admin API, the master, the filer and their gRPC services, and adds what the built-in pages lack: a calm design of its own (see [DESIGN.md](DESIGN.md)), live charts sampled from SeaweedFS's own metrics, sign-in with read-only accounts, safer destructive actions, light and dark themes, a command menu (⌘K) and a sidebar that folds to icons (⌘B), and pages that explain what they show.
 
 ## What you can do
 
 | Area             | In Kelp                                                                                                                                                                                                                                                                                                                             |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview**     | Live S3 traffic by request type, latency percentiles and errors, capacity, the busiest buckets, volume server and filer activity, over the last 15 minutes to 24 hours.                                                                                                                                                             |
 | **Cluster**      | Health at a glance, disk capacity, storage tiers, version drift. Topology by data center and rack. Masters (with the Raft leader), volume servers, filers, S3 gateways, message brokers and FUSE mounts.                                                                                                                            |
 | **Storage**      | Every volume with size, files, garbage and replica health. Vacuum a volume or the whole cluster, freeze and unfreeze volumes, grow volumes into a collection, delete collections. An animated shard map for every erasure-coded volume, with rebuild guidance when shards go missing.                                               |
 | **Object store** | Create buckets with quota, owner, versioning and object lock. Lifecycle rules, bucket policies with templates, and a file browser for the whole filer: streaming uploads with drag and drop, folders, rename, bulk delete, previews for images, video, audio, PDF, text and JSON. Version history for objects in versioned buckets. |
@@ -30,20 +34,20 @@ Kelp manages a SeaweedFS cluster without changing it. It drives the native admin
 | **Access**       | Users, access keys, groups, service accounts and IAM policies. New secrets show once and are never sent again: Kelp strips every secret the admin API returns. Policies are validated by SeaweedFS as you type.                                                                                                                     |
 | **Maintenance**  | The admin's job system in plain language: every job type with a settings form generated from SeaweedFS's own field descriptions, "check for work" and "run now", run history, job timelines and a live activity feed.                                                                                                               |
 | **Messaging**    | Brokers and the elected leader, topics with partition rings, retention and purging.                                                                                                                                                                                                                                                 |
-| **Settings**     | Theme (system, light or dark), cluster configuration, and how Kelp is connected.                                                                                                                                                                                                                                                    |
+| **Settings**     | Theme (automatic, light or dark), cluster configuration, and how Kelp is connected.                                                                                                                                                                                                                                                 |
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/volumes.png" alt="Volumes: fill, traffic and garbage at a glance"></td>
-    <td><img src="docs/screenshots/erasure-coding.png" alt="Erasure coding: shards per server and space saved"></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/volumes-dark.png"><img src="docs/screenshots/volumes-light.png" alt="Volumes: fill, traffic and garbage at a glance"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/erasure-coding-dark.png"><img src="docs/screenshots/erasure-coding-light.png" alt="Erasure coding: shards per server and space saved"></picture></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/buckets.png" alt="Buckets: traffic per bucket, quotas and object sizes"></td>
-    <td><img src="docs/screenshots/table.png" alt="An Iceberg table: records over time and recent commits"></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/buckets-dark.png"><img src="docs/screenshots/buckets-light.png" alt="Buckets: traffic per bucket, quotas and object sizes"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/table-dark.png"><img src="docs/screenshots/table-light.png" alt="An Iceberg table: records over time and recent commits"></picture></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/maintenance.png" alt="Maintenance: checks, outcomes and where worker time goes"></td>
-    <td><img src="docs/screenshots/users.png" alt="Users: who can reach which bucket, and keys to rotate"></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/maintenance-dark.png"><img src="docs/screenshots/maintenance-light.png" alt="Maintenance: checks, outcomes and where worker time goes"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/users-dark.png"><img src="docs/screenshots/users-light.png" alt="Users: who can reach which bucket, and keys to rotate"></picture></td>
   </tr>
 </table>
 
@@ -87,9 +91,10 @@ Create a **Docker Compose** resource from this repository (or paste the release'
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY`           | yes      | Bootstrap S3 admin identity. Create scoped users and keys in Kelp afterwards.    |
 | `SEAWEEDFS_WORKER_KEY`                     | yes      | Shared secret between the native admin and the maintenance worker.               |
 | `KELP_VIEWER_USER`, `KELP_VIEWER_PASSWORD` | no       | An optional read-only account.                                                   |
-| `KELP_S3_ENDPOINT`                         | no       | Public S3 URL, used for copyable object URLs.                                    |
+| `KELP_S3_ENDPOINT`                         | no       | Public S3 URL, used for object URLs, new-key snippets and the Iceberg catalog.   |
 | `KELP_SESSION_TTL_HOURS`                   | no       | How long a sign-in lasts (default 12).                                           |
 | `KELP_METRICS_URLS`                        | no       | SeaweedFS Prometheus endpoints for the live charts. The compose file sets them.  |
+| `SEAWEEDFS_VOLUME_SIZE_LIMIT_MB`           | no       | Size at which SeaweedFS starts a new volume (default 1024).                      |
 | `KELP_VERSION`, `SEAWEEDFS_VERSION`        | no       | Image versions. Each Kelp release pins the SeaweedFS version it was tested with. |
 | `KELP_PORT`, `S3_PORT`                     | no       | Published ports (defaults 3000 and 8333).                                        |
 
@@ -137,7 +142,7 @@ bun run dev        # Kelp API on :3001 and Vite on :5173, signed in as admin / k
 bun run seed       # optional: a realistic studio's buckets, users, tables and topics
 ```
 
-`bun run review` does all of that in one step on a fresh data folder, with a message broker. It serves a production build on port 3000 (admin `review-admin`, viewer `review-viewer`).
+`bun run review` does all of that in one step on a fresh data folder, with a message broker and light synthetic S3 traffic for the charts. It serves a production build on port 3000 (admin `review-admin`, viewer `review-viewer`). The README's screenshots come from it: after about 15 minutes of traffic, `bun scripts/screenshots.ts` captures every page in light and dark.
 
 | Command                 | What it checks                                                                                                         |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -151,14 +156,16 @@ The code is organized as follows:
 server/         Hono gateway: auth, sessions, one router per area, mappers for SeaweedFS JSON
   upstream/     HTTP and gRPC clients (protos vendored from SeaweedFS in proto/)
   iceberg/      Avro manifest reader for Iceberg tables
+  telemetry/    Samples SeaweedFS's Prometheus metrics for the live charts
 shared/         Types shared by the server and the web app
 src/            React 19, TanStack Router and Query, Tailwind 4, Base UI, motion
   routes/       File-based routes, one folder per area
   components/   kelp/ is Kelp's own; ui/, reui/ and react-bits/ are vendored registries
+  lib/          API client, queries and formatting
 fixtures/       Real responses captured from SeaweedFS 4.52, used by the unit tests
 e2e/            Playwright specs
 DESIGN.md       Kelp's design system: color, type, components, layout and motion
-scripts/        Local stack, seed data, review environment, releases
+scripts/        Local stack, seed data, review environment, profiling, screenshots, releases
 ```
 
 ### Releasing
